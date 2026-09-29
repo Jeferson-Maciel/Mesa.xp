@@ -162,7 +162,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.36rem 0.8rem;
+  /* 34px de altura, a mesma do ícone do logo: mais que isso cresce o topo, e o painel de
+     entrada do Ordens, que gruda a 59px, passa a correr por baixo dele. */
+  padding: 0.3rem 0.8rem;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   color: var(--texto);

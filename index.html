@@ -42,6 +42,11 @@
       </nav>
 
       <div class="header-actions">
+        <button id="btn-historico" class="header-btn" data-so-na-aba="ordens" title="Histórico de ordens (Alt + H)">
+          Histórico
+          <span id="contador-historico" class="counter-badge">0</span>
+        </button>
+
         <button id="btn-tema" class="header-btn icone" type="button" aria-label="Alternar tema">
           <svg class="icone-sol" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4.2" />
@@ -55,7 +60,77 @@
     </header>
 
     <main>
-      <section id="modulo-ordens" class="modulo" aria-label="Ordens"></section>
+      <section id="modulo-ordens" class="modulo" aria-label="Ordens">
+        <div class="container">
+          <section class="panel" id="painel-entrada">
+            <div class="panel-header-row">
+              <h2 class="panel-title">Solicitação</h2>
+              <span id="contador-linhas" class="meta-counter">0 linhas</span>
+            </div>
+
+            <textarea
+              id="entrada"
+              spellcheck="false"
+              placeholder="Cole aqui a solicitação, do jeito que ela chegou — inclusive colada direto do grupo.&#10;&#10;7000001&#10;COMPRA&#10;IVVB11 - 7 qntds&#10;via email"
+            ></textarea>
+
+            <div class="button-group">
+              <button class="primary" id="btn-analisar" title="Analisar (Ctrl + Enter)">Analisar</button>
+              <button class="secondary" id="btn-colar">Colar e analisar</button>
+              <button class="danger" id="btn-limpar" title="Limpar (Esc)">Limpar</button>
+            </div>
+
+            <div class="presets-toolbar">
+              <span class="presets-label">Exemplos</span>
+              <div class="presets-buttons" id="presets"></div>
+            </div>
+          </section>
+
+          <section class="panel" id="painel-formatos">
+            <div class="panel-header-row">
+              <h2 class="panel-title">Formatos de saída</h2>
+              <span id="deteccao" class="meta-counter"></span>
+            </div>
+
+            <div class="formatos" id="formatos">
+              <label class="formato"><input type="checkbox" value="email" /><span>Ordem por e-mail</span></label>
+              <label class="formato"><input type="checkbox" value="auditoria" /><span>E-mail em tabela</span></label>
+              <label class="formato"><input type="checkbox" value="lote" /><span>Lote Simples</span></label>
+              <label class="formato"><input type="checkbox" value="twap" /><span>Lote TWAP</span></label>
+            </div>
+          </section>
+
+          <div id="solicitacoes"></div>
+
+          <section class="panel" id="vazio">
+            <div class="empty-state">
+              <p>Nada analisado ainda.</p>
+              <span>Cole uma solicitação acima, ou comece por um dos exemplos.</span>
+            </div>
+          </section>
+        </div>
+
+        <div id="overlay-historico" class="drawer-overlay"></div>
+        <aside id="drawer-historico" class="history-drawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div class="drawer-title-group">
+              <strong>Histórico</strong>
+              <span class="meta-counter">últimas ordens copiadas</span>
+            </div>
+            <button id="btn-fechar-historico" class="icon-close-btn" title="Fechar (Esc)">&times;</button>
+          </div>
+
+          <div class="drawer-search">
+            <input type="text" id="busca-historico" placeholder="Buscar por conta, ticker ou formato..." />
+          </div>
+
+          <div id="lista-historico" class="history-list"></div>
+
+          <div class="drawer-footer">
+            <button id="btn-limpar-historico" class="btn-clear-history">Limpar histórico</button>
+          </div>
+        </aside>
+      </section>
       <section id="modulo-rendafixa" class="modulo" aria-label="Renda Fixa" hidden></section>
       <section id="modulo-calendario" class="modulo" aria-label="Calendário" hidden></section>
     </main>

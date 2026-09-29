@@ -2,6 +2,7 @@ import './ui/base.css';
 import './ui/componentes.css';
 import './shell/casca.css';
 
+import { iniciarOrdens } from './modulos/ordens/index.js';
 import { ligarAbas } from './shell/abas.js';
 import { esc } from './ui/html.js';
 import { ligarBotaoDeTema } from './ui/tema.js';
@@ -27,7 +28,8 @@ const provisorio = (nome) => (secao) => {
 
 ligarBotaoDeTema(document.getElementById('btn-tema'));
 
-provisorio('Ordens')(document.getElementById('modulo-ordens'));
+// O Ordens inicia com a página, como sempre: é a aba padrão e não depende de rede.
+iniciarOrdens(document.getElementById('modulo-ordens'));
 
 ligarAbas({
   preguicosos: {

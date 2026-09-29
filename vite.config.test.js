@@ -57,5 +57,6 @@ describe('build de arquivo único', () => {
   it('embute a casca e as três ferramentas', () => {
     const [, codigo] = html.match(/<script type="module">([\s\S]*?)<\/script>/);
     expect(codigo).toContain('Esta ferramenta não abriu');
+    expect(codigo).toContain('A mercado');
   });
 });

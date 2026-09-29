@@ -424,6 +424,9 @@ texto, caractere por caractere, e o mesmo resultado.
 
 - **As exportações reais da XP ficam em `src/modulos/rendafixa/fixtures/*.xlsx` e nunca vão para o
   git** — o repositório é público. Estão no `.gitignore`. Sem elas, os goldens delas são pulados.
+- Nome curto: `produtos-renda-fixa-emissao-bancaria (2).xlsx` entra como `xp-2.xlsx`, e o golden
+  sai `xp-2.primario.json`. Com o nome da XP, o caminho do golden passava de 260 caracteres numa
+  pasta funda e o Git no Windows não conseguia fazer o checkout.
 - `fixtures/sintetica.js` é uma planilha inventada, com as 34 colunas da XP e uma linha por regra do
   motor. O golden dela roda sempre, inclusive no repositório público.
 - Os goldens das exportações reais estão versionados: são texto derivado (taxas e nomes de produto

@@ -149,9 +149,18 @@
   display: flex;
   align-items: center;
   gap: var(--esp-2);
+  min-width: 0;
+  max-width: 100%;
   margin-left: auto;
   color: var(--texto-fraco);
   font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* O select cresce até o nome mais longo; sem limite, um nome comprido empurra a página de lado. */
+.cal .cal-filtro select {
+  flex: 1 1 auto;
+  max-width: 16rem;
 }
 
 /* ── Matriz ─────────────────────────────────────────────────────────────────────────── */

@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Node 22: o @supabase/supabase-js e o Vitest 5 exigem Node 22 ou mais novo, e o Node 20 saiu de
+# suporte em abril de 2026.
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

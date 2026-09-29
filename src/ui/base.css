@@ -1,0 +1,299 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Mesa XP — sistema visual (herdado do Assistente de Ordens)
+
+   Esta é uma ferramenta de expediente: fica aberta o dia todo e é lida por horas seguidas.
+   Todas as decisões abaixo saem daí.
+
+   • Nenhum extremo. O modo claro não usa branco puro no fundo nem preto puro no texto; o
+     escuro não usa preto puro. Os extremos são o que cansa a vista ao longo do dia, porque
+     forçam a pupila a se readaptar a cada troca de foco entre a tela e o resto da sala.
+   • Cor com parcimônia. O âmbar da marca aparece em poucos lugares; verde, vermelho e âmbar
+     carregam significado (compra, venda, atenção) e por isso não decoram nada.
+   • Saturação baixa no escuro. Cor saturada sobre fundo escuro vibra na retina — os mesmos
+     tons aparecem aqui suavizados, não os do modo claro reaproveitados.
+   • Movimento curto e com motivo. Nada que chame atenção duas vezes para a mesma coisa.
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+/* Este arquivo guarda o que as três ferramentas dividem: tokens, base, avisos e movimento
+   reduzido. Os componentes compartilhados estão em componentes.css; o resto é de cada módulo. */
+
+/* ── Tokens ─────────────────────────────────────────────────────────────────────────────
+   O tema é um atributo do <html>, aplicado por um script inline antes da primeira pintura. */
+
+:root {
+  /* Escalas que não dependem do tema */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.5rem;
+  --esp-6: 2rem;
+
+  --fonte: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto,
+    'Helvetica Neue', sans-serif;
+  --fonte-titulo: 'Segoe UI Variable Display', 'Segoe UI', -apple-system, BlinkMacSystemFont,
+    Roboto, sans-serif;
+  --fonte-mono: 'Cascadia Mono', ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* Movimento: curto o bastante para não fazer esperar, longo o bastante para orientar. */
+  --t-rapido: 120ms;
+  --t-medio: 180ms;
+  --t-lento: 260ms;
+  --curva: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Modo escuro — cinza-azulado profundo, nunca preto. O contraste do texto principal fica
+   por volta de 11:1: legível com folga, sem o branco estourado que deixa halo na vista. */
+:root[data-tema='escuro'] {
+  --fundo: #16181d;
+  --fundo-sutil: #1b1e24;
+  --superficie: #1e2128;
+  --superficie-alta: #242831;
+  --superficie-afundada: #141619;
+
+  --borda: #2c313a;
+  --borda-forte: #3a404b;
+
+  --texto-forte: #e3e6ec;
+  --texto: #b3bac6;
+  /* Não desce mais que isto: rótulos e contadores usam corpo pequeno, e abaixo de 4.5:1
+     viram esforço de leitura em vez de informação secundária. */
+  --texto-fraco: #8c95a2;
+
+  --marca: #e0a44e;
+  --marca-fundo: rgba(224, 164, 78, 0.12);
+  --marca-borda: rgba(224, 164, 78, 0.34);
+
+  --positivo: #5cb98a;
+  --positivo-fundo: rgba(92, 185, 138, 0.13);
+  --positivo-borda: rgba(92, 185, 138, 0.32);
+
+  --negativo: #e0837c;
+  --negativo-fundo: rgba(224, 131, 124, 0.12);
+  --negativo-borda: rgba(224, 131, 124, 0.3);
+
+  --atencao: #d9a951;
+  --atencao-fundo: rgba(217, 169, 81, 0.12);
+  --atencao-borda: rgba(217, 169, 81, 0.3);
+
+  --info: #6fa8d6;
+
+  /* Classes de ativo — os mesmos matizes do modo claro, clareados e dessaturados para não
+     vibrarem sobre fundo escuro. */
+  --classe-acao: #7cb0e0;
+  --classe-fii: #5fc0ae;
+  --classe-bdr: #b096e0;
+  --classe-etf: #71b6d6;
+  --classe-fiagro: #a3c26e;
+  --classe-fundo: #d3a276;
+  --classe-outros: #9aa3b0;
+  --classe-cetipado: #bb9ad8;
+
+  --veu: rgba(8, 10, 14, 0.58);
+
+  /* No escuro a sombra quase não aparece: a separação vem da borda e do nível de superfície. */
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sombra-alta: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --foco: 0 0 0 3px rgba(224, 164, 78, 0.28);
+}
+
+/* Modo claro — neutro morno em quatro níveis, não branco sobre branco.
+
+   O tom é levemente quente de propósito. Combina com o âmbar da marca, e uma luz de fundo com
+   menos azul é percebida como mais macia em leitura longa do que o branco azulado de tela.
+
+   Os níveis vão do mais escuro ao mais claro e cada um tem um papel fixo: a página afunda, o
+   cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco puro fica reservado
+   ao que flutua por cima de tudo. É a hierarquia que faltava quando o cartão era branco puro
+   sobre um fundo quase branco — sem diferença entre os níveis, a tela vira uma chapa só. */
+:root[data-tema='claro'] {
+  --fundo-sutil: #e4e1d9; /* cabeçalho de tabela, trilho dos segmentados, fichas */
+  --fundo: #edeae3; /* a página */
+  --superficie-afundada: #f5f3ee; /* campos, blocos de saída, itens de lista */
+  --superficie: #fcfbf8; /* cartões e cabeçalho — off-white morno, nunca branco puro */
+  --superficie-alta: #ffffff; /* só o que flutua: gaveta e avisos */
+
+  --borda: #e0dbd2;
+  --borda-forte: #c8c2b6;
+
+  /* Grafite morno, não preto: em cartão claro o preto puro produz contraste duro demais para
+     quem passa o dia lendo a tela. */
+  --texto-forte: #33302b;
+  --texto: #524f49;
+  --texto-fraco: #6b675f;
+
+  --marca: #945c06;
+  --marca-fundo: rgba(214, 145, 28, 0.14);
+  --marca-borda: rgba(173, 113, 16, 0.36);
+
+  --positivo: #1d7348;
+  --positivo-fundo: rgba(29, 115, 72, 0.11);
+  --positivo-borda: rgba(29, 115, 72, 0.28);
+
+  --negativo: #ad3a2f;
+  --negativo-fundo: rgba(173, 58, 47, 0.1);
+  --negativo-borda: rgba(173, 58, 47, 0.26);
+
+  --atencao: #855805;
+  --atencao-fundo: rgba(214, 145, 28, 0.14);
+  --atencao-borda: rgba(173, 113, 16, 0.3);
+
+  --info: #2b6a9c;
+
+  /* Classes de ativo — ver a nota em "Cores de classe de ativo". */
+  --classe-acao: #2f6296;
+  --classe-fii: #1c7365;
+  --classe-bdr: #6a4c99;
+  --classe-etf: #2a6a87;
+  --classe-fiagro: #4b7024;
+  --classe-fundo: #8a5729;
+  --classe-outros: #5c6068;
+  --classe-cetipado: #7a5195;
+
+  --veu: rgba(48, 43, 36, 0.3);
+  --sombra: 0 1px 2px rgba(56, 48, 36, 0.07);
+  --sombra-alta: 0 12px 32px rgba(56, 48, 36, 0.13);
+  --foco: 0 0 0 3px rgba(173, 113, 16, 0.24);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* A troca de tema atravessa a página inteira; sem isto ela pisca. */
+  transition: background-color var(--t-lento) var(--curva);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--t-lento) var(--curva), color var(--t-lento) var(--curva);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-titulo);
+  color: var(--texto-forte);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--marca-fundo);
+  color: var(--texto-forte);
+}
+
+:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--borda-forte);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--texto-fraco);
+  background-clip: content-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* O reset acima zera a margem de tudo, e é a margem automática que centraliza o <dialog>
+   aberto com showModal(). Sem esta regra a janela gruda no canto superior esquerdo. */
+dialog {
+  margin: auto;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ── Avisos de tela ─────────────────────────────────────────────────────────────────── */
+
+#toasts {
+  position: fixed;
+  right: var(--esp-5);
+  bottom: var(--esp-5);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  pointer-events: none;
+}
+
+.toast {
+  padding: 0.65rem 1rem;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-left: 3px solid var(--marca);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sombra-alta);
+  color: var(--texto-forte);
+  font-size: 0.84rem;
+  /* No celular o aviso não passa da borda esquerda da tela. */
+  max-width: min(24rem, calc(100vw - 2 * var(--esp-5)));
+  animation: toast-entra var(--t-lento) var(--curva) both;
+}
+
+/* Erro leva a cor de erro e fica mais tempo (ver src/ui/avisos.js). */
+.toast.erro {
+  border-left-color: var(--negativo);
+}
+
+@keyframes toast-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Movimento reduzido ─────────────────────────────────────────────────────────────────
+   Quem pediu menos movimento no sistema recebe a interface sem nenhum: as animações existem
+   para orientar, e para essas pessoas elas atrapalham em vez de orientar. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

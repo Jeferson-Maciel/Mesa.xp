@@ -1,0 +1,224 @@
+/* ── Componentes compartilhados ─────────────────────────────────────────────────────────
+   Painel, segmentado, selo, botão de copiar, alerta e estado vazio: nasceram no Ordens e
+   agora servem às três ferramentas. Um componente novo só entra aqui quando dois módulos o
+   usam; o que é de um módulo só fica escopado no CSS dele. */
+
+/* ── Painéis ────────────────────────────────────────────────────────────────────────── */
+
+.panel {
+  padding: var(--esp-5);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+  transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva);
+}
+
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  margin-bottom: var(--esp-4);
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-family: var(--fonte-titulo);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.meta-counter {
+  font-family: var(--fonte-mono);
+  font-size: 0.73rem;
+  color: var(--texto-fraco);
+  text-align: right;
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Controle segmentado ────────────────────────────────────────────────────────────────
+   As opções ficam todas à vista. Num select fechado só a atual aparece, e conferir uma cesta
+   de dez ativos exigiria abrir linha por linha. */
+
+.segmentado {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--fundo-sutil);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+}
+
+.seg {
+  padding: 0.24rem 0.55rem;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--texto-fraco);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.seg:hover:not(.ativo) {
+  color: var(--texto-forte);
+}
+
+.seg.ativo {
+  background: var(--superficie);
+  color: var(--texto-forte);
+  box-shadow: var(--sombra);
+}
+
+/* Compra e venda ganham cor só quando escolhidas: a cor aqui responde "o que vai ser feito",
+   e pintar as duas o tempo todo tiraria a resposta. */
+.seg.compra.ativo {
+  background: var(--positivo-fundo);
+  color: var(--positivo);
+}
+
+.seg.venda.ativo {
+  background: var(--negativo-fundo);
+  color: var(--negativo);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--r-sm);
+  background: var(--fundo-sutil);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.badge.buy {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
+}
+
+.badge.sell {
+  background: var(--negativo-fundo);
+  border-color: var(--negativo-borda);
+  color: var(--negativo);
+}
+
+.copy-btn {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.9rem;
+  background: var(--superficie);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva),
+    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
+    transform var(--t-rapido) var(--curva);
+}
+
+.copy-btn:hover {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+  color: var(--marca);
+}
+
+.copy-btn:active {
+  transform: translateY(1px);
+}
+
+/* ── Alertas ────────────────────────────────────────────────────────────────────────── */
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.alert + .alert {
+  margin-top: var(--esp-2);
+}
+
+.alert-danger {
+  background: var(--superficie);
+  border-color: var(--negativo-borda);
+  color: var(--texto-forte);
+}
+
+.alert-warning {
+  background: var(--atencao-fundo);
+  border-color: var(--atencao-borda);
+  color: var(--texto-forte);
+}
+
+/* ── Estado vazio ───────────────────────────────────────────────────────────────────── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-6) var(--esp-4);
+  text-align: center;
+}
+
+.empty-state p {
+  color: var(--texto);
+  font-weight: 500;
+}
+
+.empty-state span {
+  color: var(--texto-fraco);
+  font-size: 0.85rem;
+}
+
+.empty-state.pequeno {
+  padding: var(--esp-5) var(--esp-4);
+}
+
+.icon-close-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--texto-fraco);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.icon-close-btn:hover {
+  background: var(--fundo-sutil);
+  color: var(--texto-forte);
+}

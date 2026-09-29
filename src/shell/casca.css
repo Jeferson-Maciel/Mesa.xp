@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Casca da Mesa XP — o topo com as abas.
+
+   É o cabeçalho do Assistente de Ordens, que virou o topo das três ferramentas. A altura
+   continua 59px: o painel de entrada do Ordens gruda logo abaixo dele (`#painel-entrada`).
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cabeçalho ──────────────────────────────────────────────────────────────────────── */
+
+.casca-topo {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  padding: var(--esp-3) var(--esp-6);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.logo > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+}
+
+.logo strong {
+  font-family: var(--fonte-titulo);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--texto-forte);
+  letter-spacing: -0.01em;
+}
+
+.logo-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+  background: var(--marca-fundo);
+  border: 1px solid var(--marca-borda);
+  color: var(--marca);
+  font-family: var(--fonte-titulo);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sub-badge {
+  font-family: var(--fonte-mono);
+  font-size: 0.68rem;
+  color: var(--texto-fraco);
+  letter-spacing: 0.02em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: 0.44rem 0.8rem;
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva),
+    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.header-btn:hover {
+  background: var(--fundo-sutil);
+  border-color: var(--borda-forte);
+  color: var(--texto-forte);
+}
+
+.header-btn:active {
+  transform: translateY(1px);
+}
+
+.counter-badge {
+  min-width: 1.35rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: var(--fundo-sutil);
+  border: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Botão de tema ──────────────────────────────────────────────────────────────────── */
+
+.header-btn.icone {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.header-btn.icone svg {
+  grid-area: 1 / 1;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity var(--t-medio) var(--curva), transform var(--t-lento) var(--curva);
+}
+
+/* Cada ícone mostra o destino, não o estado atual: no escuro aparece o sol, porque clicar leva
+   ao claro. Eles giram um para dentro e outro para fora, em vez de trocar bruscamente. */
+:root[data-tema='escuro'] .icone-lua,
+:root[data-tema='claro'] .icone-sol {
+  opacity: 0;
+  transform: rotate(-70deg) scale(0.5);
+}
+
+:root[data-tema='escuro'] .icone-sol,
+:root[data-tema='claro'] .icone-lua {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+/* ── Abas ───────────────────────────────────────────────────────────────────────────────
+   Três ferramentas, um link. A aba ativa usa o mesmo realce do formato marcado no Ordens:
+   fundo e borda da marca, sem sublinhado nem animação de deslize. */
+
+.abas {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--esp-1);
+  margin-left: var(--esp-4);
+}
+
+.aba {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.36rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font-size: 0.87rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--t-rapido) var(--curva),
+    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.aba:hover {
+  background: var(--fundo-sutil);
+  color: var(--texto-forte);
+}
+
+.aba[aria-current='page'] {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+  color: var(--marca);
+}
+
+/* No celular as abas descem para uma segunda linha, dividindo a largura entre si. */
+@media (max-width: 720px) {
+  .casca-topo {
+    flex-wrap: wrap;
+    row-gap: var(--esp-2);
+    padding: var(--esp-3) var(--esp-4);
+  }
+
+  .abas {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .aba {
+    flex: 1 1 0;
+    padding-inline: var(--esp-2);
+  }
+
+  .sub-badge {
+    display: none;
+  }
+}
+
+/* Falha ao iniciar uma ferramenta: aparece no lugar dela, sem derrubar as outras. */
+.falha-modulo {
+  max-width: 44rem;
+  margin: var(--esp-6) auto;
+  padding: 0 var(--esp-4);
+}

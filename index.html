@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mesa XP</title>
+    <meta
+      name="description"
+      content="Ordens de renda variável, disparo de renda fixa e calendário de presença da mesa, num link só."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <script>
+      // Antes da primeira pintura, senão a tela pisca no tema errado a cada carregamento.
+      // Navegador sem escolha gravada abre no escuro (ver src/ui/tema.js).
+      (() => {
+        let tema = null;
+        try {
+          tema = localStorage.getItem('xp_tema');
+        } catch {}
+        if (tema !== 'claro' && tema !== 'escuro') tema = 'escuro';
+        document.documentElement.dataset.tema = tema;
+        document.documentElement.style.colorScheme = tema === 'claro' ? 'light' : 'dark';
+      })();
+    </script>
+  </head>
+
+  <body>
+    <header class="casca-topo">
+      <div class="logo">
+        <span class="logo-icon" aria-hidden="true">XP</span>
+        <div>
+          <strong>Mesa XP</strong>
+          <span class="sub-badge">back office</span>
+        </div>
+      </div>
+
+      <nav class="abas" aria-label="Ferramentas">
+        <a class="aba" href="#ordens" data-aba="ordens" title="Ordens (Alt + 1)">Ordens</a>
+        <a class="aba" href="#rendafixa" data-aba="rendafixa" title="Renda Fixa (Alt + 2)">Renda Fixa</a>
+        <a class="aba" href="#calendario" data-aba="calendario" title="Calendário (Alt + 3)">Calendário</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="btn-tema" class="header-btn icone" type="button" aria-label="Alternar tema">
+          <svg class="icone-sol" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2" />
+            <path d="M12 2.6v2.4M12 19v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.6 12h2.4M19 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7" />
+          </svg>
+          <svg class="icone-lua" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 14.2A8.2 8.2 0 1 1 9.8 4a6.6 6.6 0 0 0 10.2 10.2z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section id="modulo-ordens" class="modulo" aria-label="Ordens"></section>
+      <section id="modulo-rendafixa" class="modulo" aria-label="Renda Fixa" hidden></section>
+      <section id="modulo-calendario" class="modulo" aria-label="Calendário" hidden></section>
+    </main>
+
+    <div id="toasts"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

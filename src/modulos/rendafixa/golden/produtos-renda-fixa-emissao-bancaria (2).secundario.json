@@ -1,0 +1,137 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐ (MERCADO SECUNDÁRIO)\n\n*Taxas pré fixadas:*\n-> 1 ano - CDB 14,45% a.a. (ORIGINAL)\n\n*Taxas Pós-fixadas:*\n-> 2 anos - CDB 121% CDI (DIGIMAIS)\n-> 4 anos - CDB 115% CDI (DIGIMAIS)\n\n*Taxas IPCA+:*\n-> 1 ano - CDB IPCA + 8,50% a.a. (FIBRA)\n-> 2 anos - CDB IPCA + 8,40% a.a. (C6)\n-> 3 anos - CDB IPCA + 7,90% a.a. (XP)\n\n*LCAs/LCIs ISENTA DE IR*\n-> 1 ano – LCA 11,40% a.a. (AGROLEND)\n-> 2 anos – LCA 86,20% CDI (RABOBANK)\n-> 2 anos – LCA IPCA +5,50% (BTG PACTUAL)",
+  "resultado": {
+    "secundario": true,
+    "linhaCabecalho": 0,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 890,
+      "noMercado": 409,
+      "elegiveis": 83,
+      "vencedores": 11,
+      "exibidos": 9
+    },
+    "descartes": {
+      "modo": 481,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 303,
+      "tipo": 0,
+      "isento": 23
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 14.45,
+            "indexador": "PRE",
+            "emissor": "ORIGINAL",
+            "ativo": "CDB ORIGINAL - JUL/2027"
+          }
+        ]
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 121,
+            "indexador": "CDI",
+            "emissor": "DIGIMAIS",
+            "ativo": "CDB BANCO DIGIMAIS S.A. - JUL/2028"
+          },
+          {
+            "prazo": 4,
+            "tipo": "CDB",
+            "taxa": 115,
+            "indexador": "CDI",
+            "emissor": "DIGIMAIS",
+            "ativo": "CDB BANCO DIGIMAIS S.A. - SET/2030"
+          }
+        ]
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 8.5,
+            "indexador": "IPCA",
+            "emissor": "FIBRA",
+            "ativo": "CDB FIBRA - JUN/2027"
+          },
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 8.4,
+            "indexador": "IPCA",
+            "emissor": "C6",
+            "ativo": "CDB BANCO C6 S.A. - AGO/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 7.9,
+            "indexador": "IPCA",
+            "emissor": "XP",
+            "ativo": "CDB BANCO XP S.A. - JUL/2029"
+          }
+        ]
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "LCA",
+            "taxa": 11.4,
+            "indexador": "PRE",
+            "emissor": "AGROLEND",
+            "ativo": "LCA AGROLEND - JUL/2027",
+            "sub": "PRE"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCA",
+            "taxa": 86.2,
+            "indexador": "CDI",
+            "emissor": "RABOBANK",
+            "ativo": "LCA RABOBANK - SET/2028",
+            "sub": "CDI"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCA",
+            "taxa": 5.5,
+            "indexador": "IPCA",
+            "emissor": "BTG PACTUAL",
+            "ativo": "LCA BTG PACTUAL - SET/2028",
+            "sub": "IPCA"
+          }
+        ]
+      }
+    ]
+  }
+}

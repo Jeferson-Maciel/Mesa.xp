@@ -81,5 +81,10 @@ export default defineConfig({
     cssCodeSplit: false,
     modulePreload: { polyfill: false },
     copyPublicDir: false
+  },
+  test: {
+    // O fuso da mesa. Os goldens do Renda Fixa contam o prazo a partir de uma data fixa em
+    // Brasília, e o Calendário gera chaves de dia no fuso local; em UTC os dois dariam outro dia.
+    env: { TZ: 'America/Sao_Paulo' }
   }
 });

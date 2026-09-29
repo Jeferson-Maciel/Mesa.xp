@@ -66,6 +66,11 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
 
     for (const aba of ABAS) secaoDe(aba).hidden = aba !== id;
 
+    // Trocar de aba pelo teclado deixaria o foco num campo agora escondido — e as teclas seguintes
+    // iriam para ele, não para a aba à vista (o "m" do Renda Fixa cairia na caixa do Ordens).
+    const foco = document.activeElement;
+    if (foco && foco !== document.body && foco.closest('.modulo[hidden]')) foco.blur();
+
     for (const link of document.querySelectorAll('.aba')) {
       if (link.dataset.aba === id) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
@@ -81,9 +86,11 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
     const id = abaDoAtalho(e);
     if (!id) return;
     e.preventDefault();
-    // Mudar o hash dispara o hashchange; se já é o mesmo, não dispara, e mostrar direto é inócuo.
-    if (abaDoHash(location.hash) === id && location.hash) mostrar(id);
-    else location.hash = id;
+    // Mostra já, sem esperar o hashchange: ele chega numa tarefa seguinte, e a próxima tecla,
+    // digitada logo depois do Alt+2, iria para a aba anterior. O hashchange que vem depois só
+    // repete a mesma aba, o que não tem efeito.
+    mostrar(id);
+    if (location.hash !== `#${id}`) location.hash = id;
   });
 
   mostrar(abaDoHash(location.hash));

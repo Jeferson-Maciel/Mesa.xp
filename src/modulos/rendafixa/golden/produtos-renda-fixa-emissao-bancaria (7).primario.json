@@ -1,0 +1,101 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐\n\n*Taxas pré fixadas:*\n-> 2 anos - CDB 14,08% a.a.\n-> 3 anos - CDB 14,10% a.a.\n\n*Taxas Pós-fixadas:*\n-> 2 anos - CDB 105% CDI\n\n*Taxas IPCA+:*\n-> 2 anos - CDB IPCA + 8,23% a.a.\n-> 3 anos - CDB IPCA + 8,22% a.a.\n",
+  "resultado": {
+    "secundario": false,
+    "linhaCabecalho": 0,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 512,
+      "noMercado": 409,
+      "elegiveis": 22,
+      "vencedores": 6,
+      "exibidos": 5
+    },
+    "descartes": {
+      "modo": 103,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 387,
+      "tipo": 0,
+      "isento": 0
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 14.08,
+            "indexador": "PRE",
+            "emissor": "BMG",
+            "ativo": "CDB BMG - OUT/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 14.1,
+            "indexador": "PRE",
+            "emissor": "BMG",
+            "ativo": "CDB BMG - SET/2029"
+          }
+        ]
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 105,
+            "indexador": "CDI",
+            "emissor": "SEMEAR",
+            "ativo": "CDB SEMEAR - OUT/2028"
+          }
+        ]
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 8.23,
+            "indexador": "IPCA",
+            "emissor": "BMG",
+            "ativo": "CDB BMG - OUT/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 8.22,
+            "indexador": "IPCA",
+            "emissor": "BMG",
+            "ativo": "CDB BMG - SET/2029"
+          }
+        ]
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐\n\n*Taxas pré fixadas:*\n-> 1 ano - CDB 14,20% a.a.\n-> 2 anos - CDB 14,30% a.a.\n-> 3 anos - CDB 14,70% a.a.\n-> 4 anos - LF 14,55% a.a.\n-> 5 anos - CDB 14,60% a.a.\n\n*Taxas Pós-fixadas:*\n-> 2 anos - CDB 105% CDI\n-> 4 anos - CDB 106,50% CDI\n-> 6 anos - CDB CDI + 0,80% a.a.\n\n*Taxas IPCA+:*\n-> 1 ano - CDB IPCA + 6,60% a.a.\n-> 2 anos - CDB IPCA + 8,40% a.a.\n-> 3 anos - CDB IPCA + 8,15% a.a.\n\n*LCAs/LCIs ISENTA DE IR*\n-> 1 ano – CDB 11% a.a.\n-> 2 anos – LCI 11,83% a.a.\n-> 3 anos – LCA 12,12% a.a.\n-> 2 anos – LCA 89% CDI\n-> 2 anos – LCI IPCA +5,20%",
+  "resultado": {
+    "secundario": false,
+    "linhaCabecalho": 1,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 39,
+      "noMercado": 34,
+      "elegiveis": 25,
+      "vencedores": 19,
+      "exibidos": 16
+    },
+    "descartes": {
+      "modo": 5,
+      "pu": 0,
+      "publico": 2,
+      "liquidez": 1,
+      "taxa": 1,
+      "prazo": 2,
+      "tipo": 1,
+      "isento": 2
+    },
+    "bloqueados": [
+      {
+        "ativo": "CDB RESTRITO - SET/2028",
+        "motivo": "Investidor qualificado"
+      },
+      {
+        "ativo": "LF PROFISSIONAL - SET/2029",
+        "motivo": "Investidor profissional"
+      }
+    ],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 14.2,
+            "indexador": "PRE",
+            "emissor": "ALFA",
+            "ativo": "CDB BANCO ALFA S.A. - SET/2027"
+          },
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 14.3,
+            "indexador": "PRE",
+            "emissor": "BETA",
+            "ativo": "CDB BANCO BETA - SET/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 14.7,
+            "indexador": "PRE",
+            "emissor": "SO MAXIMA",
+            "ativo": "CDB SO MAXIMA - SET/2029"
+          },
+          {
+            "prazo": 4,
+            "tipo": "LF",
+            "taxa": 14.555,
+            "indexador": "PRE",
+            "emissor": "EPSILON",
+            "ativo": "LF BANCO EPSILON S/A - SET/2030"
+          },
+          {
+            "prazo": 5,
+            "tipo": "CDB",
+            "taxa": 14.6,
+            "indexador": "PRE",
+            "emissor": "ZETA",
+            "ativo": "CDB ZETA - SET/2031"
+          }
+        ]
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 105,
+            "indexador": "CDI",
+            "emissor": "TETA",
+            "ativo": "CDB TETA - SET/2028"
+          },
+          {
+            "prazo": 4,
+            "tipo": "CDB",
+            "taxa": 106.5,
+            "indexador": "CDI",
+            "emissor": "KAPA",
+            "ativo": "CDB KAPA - SET/2030"
+          },
+          {
+            "prazo": 6,
+            "tipo": "CDB",
+            "taxa": 0.8,
+            "indexador": "CDI+",
+            "emissor": "LAMBDA",
+            "ativo": "CDB LAMBDA - SET/2032"
+          }
+        ]
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 6.6,
+            "indexador": "IPCA",
+            "emissor": "NI",
+            "ativo": "CDB BANCO NI S.A. - SET/2027"
+          },
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 8.4,
+            "indexador": "IPCA",
+            "emissor": "XI",
+            "ativo": "CDB XI - SET/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 8.15,
+            "indexador": "IPCA",
+            "emissor": "OMICRON",
+            "ativo": "CDB OMICRON - SET/2029"
+          }
+        ]
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 11,
+            "indexador": "PRE",
+            "emissor": "ISENTO",
+            "ativo": "CDB ISENTO - SET/2027",
+            "sub": "PRE"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCI",
+            "taxa": 11.83,
+            "indexador": "PRE",
+            "emissor": "SIGMA",
+            "ativo": "LCI SIGMA - SET/2028",
+            "sub": "PRE"
+          },
+          {
+            "prazo": 3,
+            "tipo": "LCA",
+            "taxa": 12.12,
+            "indexador": "PRE",
+            "emissor": "UPSILON",
+            "ativo": "LCA UPSILON - SET/2029",
+            "sub": "PRE"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCA",
+            "taxa": 89,
+            "indexador": "CDI",
+            "emissor": "CHI",
+            "ativo": "LCA CHI - SET/2028",
+            "sub": "CDI"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCI",
+            "taxa": 5.2,
+            "indexador": "IPCA",
+            "emissor": "OMEGA",
+            "ativo": "LCI OMEGA - SET/2028",
+            "sub": "IPCA"
+          }
+        ]
+      }
+    ]
+  }
+}

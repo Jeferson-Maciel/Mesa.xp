@@ -1,0 +1,68 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐ (MERCADO SECUNDÁRIO)\n\n*LCAs/LCIs ISENTA DE IR*\n-> 2 anos – LCA 81,50% CDI (BNDES)",
+  "resultado": {
+    "secundario": true,
+    "linhaCabecalho": 0,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 512,
+      "noMercado": 103,
+      "elegiveis": 9,
+      "vencedores": 3,
+      "exibidos": 1
+    },
+    "descartes": {
+      "modo": 409,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 92,
+      "tipo": 0,
+      "isento": 2
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": []
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": []
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": []
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "LCA",
+            "taxa": 81.5,
+            "indexador": "CDI",
+            "emissor": "BNDES",
+            "ativo": "LCA BNDES - JUN/2028",
+            "sub": "CDI"
+          }
+        ]
+      }
+    ]
+  }
+}

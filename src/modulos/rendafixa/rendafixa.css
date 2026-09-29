@@ -1,0 +1,721 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Renda Fixa — o que é só desta aba.
+
+   Tudo escopado em `.rf`: o CSS do Ordens tem seletores de elemento e classes genéricas, e o
+   daqui não pode vazar para lá nem receber de lá. Painel, segmentado, selo (`.badge`), botão
+   de copiar e estado vazio vêm de src/ui/componentes.css.
+
+   Cor só com significado: variação para cima em verde, para baixo em vermelho, e o âmbar da
+   marca só na ação principal (Copiar mensagem) e na última etapa do funil — o que vai para o
+   cliente. Escreva sempre pelo token.
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+.rf {
+  max-width: 1520px;
+  margin: var(--esp-5) auto;
+  padding: 0 var(--esp-5);
+}
+
+.rf .rf-grade {
+  display: grid;
+  /* minmax(0, 1fr): a coluna de resultado encolhe em vez de empurrar a página para o lado. */
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: var(--esp-5);
+  align-items: start;
+}
+
+.rf .rf-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-5);
+}
+
+.rf .rf-historico {
+  margin-top: var(--esp-5);
+}
+
+@media (max-width: 1180px) {
+  .rf {
+    padding: 0 var(--esp-4);
+  }
+
+  .rf .rf-grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rf .rf-nota {
+  margin-top: var(--esp-3);
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+}
+
+.rf .rf-link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--texto-fraco);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.rf .rf-link:hover {
+  color: var(--texto-forte);
+}
+
+.rf .copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rf .copy-btn:disabled:hover {
+  background: var(--superficie);
+  border-color: var(--borda-forte);
+  color: var(--texto);
+}
+
+/* A ação principal da aba, no mesmo tom do Analisar do Ordens. */
+.rf .rf-primario:not(:disabled) {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+  color: var(--marca);
+}
+
+.rf .rf-primario:not(:disabled):hover {
+  border-color: var(--marca);
+}
+
+/* ── Planilha ───────────────────────────────────────────────────────────────────────── */
+
+.rf .rf-soltar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-1);
+  width: 100%;
+  padding: var(--esp-6) var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-md);
+  color: var(--texto);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+}
+
+.rf .rf-soltar strong {
+  color: var(--texto-forte);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.rf .rf-soltar span {
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+}
+
+.rf .rf-soltar:hover,
+.rf.arrastando .rf-soltar {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+}
+
+/* Arrastando com uma planilha já carregada: o cartão do arquivo avisa que vai ser trocado. */
+.rf.arrastando .rf-arquivo {
+  border-color: var(--marca-borda);
+  background: var(--marca-fundo);
+}
+
+.rf .rf-arquivo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+}
+
+.rf .rf-arquivo-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rf .rf-arquivo-info strong {
+  overflow: hidden;
+  color: var(--texto-forte);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf .rf-arquivo-info .meta-counter {
+  text-align: left;
+}
+
+.rf .rf-excluir {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 0.35rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--texto-fraco);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.rf .rf-excluir:hover,
+.rf .rf-excluir.armado {
+  background: var(--negativo-fundo);
+  border-color: var(--negativo-borda);
+  color: var(--negativo);
+}
+
+.rf .rf-excluir.armado {
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+/* ── Mercado e visão ────────────────────────────────────────────────────────────────── */
+
+.rf .segmentado {
+  display: flex;
+}
+
+.rf .segmentado .seg {
+  flex: 1 1 auto;
+}
+
+/* ── Funil ──────────────────────────────────────────────────────────────────────────── */
+
+.rf .rf-funil {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.rf .rf-funil-rotulo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-1);
+  font-size: 0.82rem;
+}
+
+.rf .rf-funil-rotulo span:first-child {
+  flex: 1;
+  color: var(--texto);
+}
+
+.rf .rf-funil-pct {
+  color: var(--texto-fraco);
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+}
+
+.rf .rf-funil-rotulo b {
+  min-width: 3.2rem;
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.rf .rf-funil-trilho {
+  height: 6px;
+  overflow: hidden;
+  background: var(--fundo-sutil);
+  border-radius: 999px;
+}
+
+.rf .rf-funil-barra {
+  height: 100%;
+  background: var(--borda-forte);
+  border-radius: 999px;
+  transition: width var(--t-lento) var(--curva);
+}
+
+.rf .rf-funil-final .rf-funil-barra {
+  background: var(--marca);
+}
+
+.rf .rf-quadro {
+  margin-top: var(--esp-4);
+  font-size: 0.82rem;
+}
+
+.rf .rf-quadro + .rf-quadro {
+  margin-top: var(--esp-2);
+}
+
+.rf .rf-quadro summary,
+.rf .rf-bloqueados summary {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  color: var(--texto);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rf .rf-quadro summary::-webkit-details-marker,
+.rf .rf-bloqueados summary::-webkit-details-marker {
+  display: none;
+}
+
+.rf .rf-quadro summary::before,
+.rf .rf-bloqueados summary::before {
+  content: '▸';
+  color: var(--texto-fraco);
+  transition: transform var(--t-medio) var(--curva);
+}
+
+.rf .rf-quadro[open] summary::before,
+.rf .rf-bloqueados[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.rf .rf-motivos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  margin-top: var(--esp-3);
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  list-style: none;
+}
+
+.rf .rf-motivos li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  color: var(--texto);
+}
+
+.rf .rf-motivos b {
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+}
+
+.rf .rf-motivos .rf-separa {
+  margin-top: var(--esp-1);
+  padding-top: var(--esp-2);
+  border-top: 1px solid var(--borda);
+}
+
+.rf .rf-colunas {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--esp-1) var(--esp-3);
+  margin-top: var(--esp-3);
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.rf .rf-colunas dt {
+  color: var(--texto-fraco);
+}
+
+.rf .rf-colunas dd {
+  overflow: hidden;
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Resultado ──────────────────────────────────────────────────────────────────────── */
+
+.rf .rf-resultado-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-4);
+}
+
+.rf .rf-resultado-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  min-width: 0;
+}
+
+.rf .rf-resultado-titulo .meta-counter {
+  text-align: left;
+}
+
+.rf .rf-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.rf .rf-corpo {
+  min-height: 12rem;
+}
+
+.rf .rf-corpo .empty-state button {
+  margin-top: var(--esp-3);
+}
+
+.rf .rf-secoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--esp-4);
+}
+
+.rf .rf-secao {
+  padding: var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  animation: entrar var(--t-medio) var(--curva) backwards;
+}
+
+.rf .rf-secao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-3);
+}
+
+.rf .rf-secao-titulo {
+  display: flex;
+  flex-direction: column;
+}
+
+.rf .rf-secao-titulo strong {
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.rf .rf-secao-titulo span {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+.rf .rf-curva {
+  flex: 0 0 auto;
+  width: 112px;
+  height: 36px;
+  overflow: visible;
+}
+
+.rf .rf-curva path {
+  fill: none;
+  stroke: var(--texto-fraco);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.rf .rf-curva circle {
+  fill: var(--superficie-afundada);
+  stroke: var(--texto-fraco);
+  stroke-width: 1.5;
+}
+
+.rf .rf-linhas {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.rf .rf-linha {
+  display: grid;
+  grid-template-columns: 3.4rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-2) 0;
+  border-top: 1px solid var(--borda);
+  font-size: 0.84rem;
+}
+
+.rf .rf-linha:first-child {
+  border-top: none;
+}
+
+.rf .rf-prazo {
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+  font-weight: 600;
+}
+
+.rf .rf-prazo small {
+  margin-left: 0.25rem;
+  color: var(--texto-fraco);
+  font-family: var(--fonte);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.rf .rf-ativo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  min-width: 0;
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+}
+
+.rf .rf-ativo > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf .rf-emissor {
+  flex: 0 0 auto;
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.rf .rf-taxa {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.rf .rf-taxa-valor {
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rf .rf-taxa-pre,
+.rf .rf-taxa-suf {
+  color: var(--texto-fraco);
+  font-family: var(--fonte);
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+.rf .rf-delta {
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.rf .rf-sobe {
+  color: var(--positivo);
+}
+
+.rf .rf-desce {
+  color: var(--negativo);
+}
+
+/* A mensagem como vai chegar no WhatsApp: fonte do texto, quebras preservadas, negrito aplicado. */
+.rf .rf-bolha {
+  max-width: 34rem;
+  padding: var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  color: var(--texto-forte);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rf .rf-bolha strong {
+  font-weight: 700;
+}
+
+.rf .rf-bloqueados {
+  margin-top: var(--esp-4);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--atencao-fundo);
+  border: 1px solid var(--atencao-borda);
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+}
+
+.rf .rf-bloqueados summary {
+  flex-wrap: wrap;
+  color: var(--atencao);
+}
+
+.rf .rf-bloqueados summary span {
+  color: var(--texto-fraco);
+  font-weight: 500;
+}
+
+.rf .rf-bloqueados ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  margin-top: var(--esp-3);
+  list-style: none;
+}
+
+.rf .rf-bloqueados li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  color: var(--texto);
+}
+
+.rf .rf-bloqueados li span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf .rf-motivo {
+  flex: 0 0 auto;
+  color: var(--texto-fraco);
+}
+
+/* ── Histórico ──────────────────────────────────────────────────────────────────────── */
+
+.rf .rf-historico .panel-title .counter-badge {
+  font-family: var(--fonte-mono);
+}
+
+.rf .rf-historico-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--esp-3);
+  margin-top: var(--esp-4);
+}
+
+.rf .rf-historico-lista .empty-state {
+  grid-column: 1 / -1;
+}
+
+.rf .rf-hist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  font-size: 0.8rem;
+}
+
+.rf .rf-hist-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+}
+
+.rf .rf-hist-quando {
+  color: var(--texto-fraco);
+}
+
+.rf .rf-hist-quando strong {
+  color: var(--texto-forte);
+}
+
+.rf .rf-hist-arquivo {
+  overflow: hidden;
+  color: var(--texto-fraco);
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf .rf-hist-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  color: var(--texto-fraco);
+}
+
+.rf .rf-hist-numeros b {
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+}
+
+.rf .rf-hist-previa {
+  max-height: 4.6rem;
+  overflow: hidden;
+  color: var(--texto);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rf .rf-hist.aberto .rf-hist-previa {
+  max-height: none;
+}
+
+.rf .rf-hist-acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  margin-top: auto;
+}
+
+.rf .rf-hist-acoes .rf-link {
+  margin-right: auto;
+}
+
+/* ── Atalhos ────────────────────────────────────────────────────────────────────────── */
+
+.rf .rf-atalhos {
+  width: min(26rem, calc(100vw - 2 * var(--esp-4)));
+  padding: var(--esp-5);
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta);
+  color: var(--texto);
+}
+
+.rf .rf-atalhos::backdrop {
+  background: var(--veu);
+}
+
+.rf .rf-atalhos dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.rf .rf-atalhos dl div {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  font-size: 0.85rem;
+}
+
+.rf .rf-atalhos kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.7rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--fundo-sutil);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font-family: var(--fonte-mono);
+  font-size: 0.78rem;
+}

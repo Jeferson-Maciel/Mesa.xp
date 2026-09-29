@@ -29,10 +29,20 @@ describe('build de arquivo único', () => {
     expect(saidas.map((s) => s.fileName)).toEqual(['index.html']);
   });
 
+  // Só a marcação: o JS embutido tem strings com `href="` (o SheetJS escreve HTML de planilha).
   it('não aponta para arquivo nenhum', () => {
-    expect(html).not.toMatch(/<script[^>]*\ssrc=/);
-    expect(html).not.toMatch(/<link[^>]*rel="stylesheet"/);
-    expect(html).not.toMatch(/(?:src|href)="(?!data:)[^"#]/);
+    const marcacao = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/g, '<script></script>')
+      .replace(/<style>[\s\S]*?<\/style>/g, '<style></style>');
+    expect(marcacao).not.toMatch(/<script[^>]*\ssrc=/);
+    expect(marcacao).not.toMatch(/<link[^>]*rel="stylesheet"/);
+    expect(marcacao).not.toMatch(/(?:src|href)="(?!data:)[^"#]/);
+  });
+
+  // Um import() dinâmico que sobrasse no código tentaria buscar um arquivo que não existe.
+  it('não deixa import() dinâmico no código', () => {
+    const [, codigo] = html.match(/<script type="module">([\s\S]*?)<\/script>/);
+    expect(codigo).not.toMatch(/import\s*\(/);
   });
 
   it('embute o script e o estilo', () => {
@@ -58,5 +68,7 @@ describe('build de arquivo único', () => {
     const [, codigo] = html.match(/<script type="module">([\s\S]*?)<\/script>/);
     expect(codigo).toContain('Esta ferramenta não abriu');
     expect(codigo).toContain('A mercado');
+    expect(codigo).toContain('Oportunidades de RENDA FIXA hoje!');
+    expect(codigo).toContain('0.20.1');
   });
 });

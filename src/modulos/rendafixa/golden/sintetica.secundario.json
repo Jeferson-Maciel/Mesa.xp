@@ -1,0 +1,103 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐ (MERCADO SECUNDÁRIO)\n\n*Taxas pré fixadas:*\n-> 1 ano - CDB 15,40% a.a. (MASTER)\n\n*Taxas Pós-fixadas:*\n-> 2 anos - CDB 121% CDI (DIGIMAIS)\n-> 4 anos - CDB CDI + 1,10% a.a. (FIBRA)\n\n*Taxas IPCA+:*\n-> 3 anos - CDB IPCA + 7,85% a.a. (PINE)\n\n*LCAs/LCIs ISENTA DE IR*\n-> 2 anos – LCD CDI +0,50% (BNDES)",
+  "resultado": {
+    "secundario": true,
+    "linhaCabecalho": 1,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 39,
+      "noMercado": 5,
+      "elegiveis": 5,
+      "vencedores": 5,
+      "exibidos": 5
+    },
+    "descartes": {
+      "modo": 34,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 0,
+      "tipo": 0,
+      "isento": 0
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 15.4,
+            "indexador": "PRE",
+            "emissor": "MASTER",
+            "ativo": "CDB MASTER S/A - SET/2027"
+          }
+        ]
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 121,
+            "indexador": "CDI",
+            "emissor": "DIGIMAIS",
+            "ativo": "CDB BANCO DIGIMAIS S.A. - SET/2028"
+          },
+          {
+            "prazo": 4,
+            "tipo": "CDB",
+            "taxa": 1.1,
+            "indexador": "CDI+",
+            "emissor": "FIBRA",
+            "ativo": "CDB FIBRA - SET/2030"
+          }
+        ]
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": [
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 7.85,
+            "indexador": "IPCA",
+            "emissor": "PINE",
+            "ativo": "CDB PINE - SET/2029"
+          }
+        ]
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "LCD",
+            "taxa": 0.5,
+            "indexador": "CDI+",
+            "emissor": "BNDES",
+            "ativo": "LCD BNDES - SET/2028",
+            "sub": "CDI"
+          }
+        ]
+      }
+    ]
+  }
+}

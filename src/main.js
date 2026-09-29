@@ -2,6 +2,7 @@ import './ui/base.css';
 import './ui/componentes.css';
 import './shell/casca.css';
 
+import { iniciarCalendario } from './modulos/calendario/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
 import { iniciarRendaFixa } from './modulos/rendafixa/index.js';
 import { ligarAbas } from './shell/abas.js';
@@ -23,10 +24,6 @@ const falhar = (id, secao, erro) => {
     </div>`;
 };
 
-const provisorio = (nome) => (secao) => {
-  secao.innerHTML = `<div class="falha-modulo"><div class="empty-state"><p>${esc(nome)}</p><span>Em migração para a Mesa XP.</span></div></div>`;
-};
-
 ligarBotaoDeTema(document.getElementById('btn-tema'));
 
 // O Ordens inicia com a página, como sempre: é a aba padrão e não depende de rede.
@@ -35,7 +32,7 @@ iniciarOrdens(document.getElementById('modulo-ordens'));
 ligarAbas({
   preguicosos: {
     rendafixa: iniciarRendaFixa,
-    calendario: provisorio('Calendário')
+    calendario: iniciarCalendario
   },
   aoFalhar: falhar
 });

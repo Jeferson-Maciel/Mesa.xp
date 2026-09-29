@@ -11,9 +11,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tickers:update": "node scripts/atualizar-tickers.mjs",
-    "fundos:update": "node scripts/atualizar-fundos.mjs"
+    "fundos:update": "node scripts/atualizar-fundos.mjs",
+    "golden:rendafixa": "node scripts/gerar-golden-rendafixa.mjs",
+    "verificar": "node scripts/verificar-navegador.mjs",
+    "verificar:supabase": "node scripts/verificar-supabase.mjs"
   },
   "devDependencies": {
+    "playwright": "^1.63.0",
     "vite": "^8.2.0",
     "vitest": "^5.0.1"
   },

@@ -1,9 +1,89 @@
-# O que falta
+# Roadmap
+
+Defeitos conhecidos, sugestões e próximos passos. **Nada aqui está implementado**: a Mesa XP nasceu
+de uma fusão que, de propósito, não acrescentou funcionalidade. O que apareceu durante a fusão veio
+para cá em vez de entrar no código.
+
+## Mesa XP — levantado na fusão (29/09/2026)
+
+### Antes de distribuir o link
+
+1. **O projeto Supabase do Calendário não responde.** Em 29/09/2026, `ekughbuuvjoojgfgbqbz.supabase.co`
+   não existia no DNS (NXDOMAIN, também no DNS do Google) — o sintoma de projeto pausado por
+   inatividade no plano gratuito. O Calendário antigo, na Vercel, está no mesmo banco e também não
+   conecta. Retomar no painel do Supabase e, se a mesa depende disso, avaliar um plano que não pause.
+2. **O teste contra o banco real não foi feito** por causa do item 1. Com o projeto de volta, rodar
+   `npm run verificar:supabase`: leitura, gravação, exclusão em cascata, Realtime entre
+   duas abas e as duas quedas de rede (ao abrir e no meio do salvamento), num colaborador de teste
+   apagado no fim. Até lá, o adaptador do Supabase só foi exercitado contra o fake.
+3. **Segurança do Calendário — fase 2** (ver [`CLAUDE.md`](../CLAUDE.md#pendência-de-segurança--fase-2)):
+   hoje a chave anon, pública, lê e escreve tudo, e os dados têm nomes e motivos de ausência.
+   Supabase Auth, políticas RLS fechadas para a equipe e repositório privado.
+4. **Aposentar os três links antigos** (Ordens no Netlify, RendaFixa Pro, Calendário na Vercel)
+   depois que a mesa migrar. Enquanto conviverem, o Calendário antigo e o novo dividem o mesmo banco,
+   com as mesmas tabelas — o novo foi escrito para isso.
+
+### Renda Fixa
+
+- **Sem Tax.Mín nem Tax.Máx, o motor usa o ROA como taxa.** Quando as duas colunas de taxa estão
+  vazias, o motor procura a primeira célula da linha com "%" — e na planilha da XP essa é a
+  "ROA E. Aprox.". Um título sem taxa entraria com o ROA na disputa. Achado ao montar a planilha
+  sintética; o golden dela registra o comportamento atual (linha `CDB SO ROA`). Corrigir exige
+  decidir com o assessor e atualizar os goldens à mão.
+- Limitações herdadas do RendaFixa Pro:
+  - lê só a primeira aba da planilha;
+  - as regras (PU máximo, prazos exibidos, janela de arredondamento, lista de bancos) estão fixas em
+    `motor.js`;
+  - o título da seção de isentos continua "LCAs/LCIs ISENTA DE IR" mesmo quando o vencedor é uma LCD;
+  - as variações dependem de salvar as análises: sem uma análise salva antes de hoje, elas não
+    aparecem;
+  - o histórico fica só no navegador em que foi salvo.
+- **Tamanho do arquivo.** O SheetJS completo é a maior parte do `dist/index.html` (~1,3 MB). Vale
+  medir se o build `xlsx.mini.min.js` da mesma versão lê a exportação da XP (.xlsx) e os .xls/.csv
+  que a tela aceita; se ler, o arquivo cai para perto da metade.
+
+### Calendário
+
+- **O erro de rede demora ~12 s para aparecer**: o supabase-js tenta de novo antes de desistir. Nesse
+  tempo o status diz "carregando…". Um "tentando conectar…" com contagem, ou menos tentativas,
+  deixaria claro que a rede caiu.
+- **O aviso de horário inválido aparece atrás do fundo escurecido da janela do dia.** Melhor mostrar
+  a validação dentro da própria janela, como já acontece com o erro ao salvar.
+- A matriz mostra o horário indisponível mas não o motivo, para não expor dado de saúde na tela
+  aberta. Se a mesa sentir falta, um ícone com o motivo no `title` é o meio-termo — decidir junto
+  com a fase 2.
+
+### Casca e visual
+
+- O ícone da aba do navegador é o logo padrão do Vite, herdado do Ordens. Trocar por um da Mesa XP.
+- Atalhos visíveis: as abas mostram Alt+1/2/3 no `title` e o Renda Fixa tem a lista no "?", mas os
+  do Ordens (Ctrl+Enter, Alt+H) continuam só no `title` dos botões. Uma lista única, por aba, ajudaria
+  (F20 abaixo).
+- Os avisos de tela se acumulam sem limite quando muitos saem juntos.
+
+### Engenharia
+
+- `npm run verificar` precisa do Chromium do Playwright instalado à parte
+  (`npx playwright install chromium`). Um CI (GitHub Actions) com `npm test`, `npm run build` e a
+  verificação no navegador pegaria regressão de fiação antes do deploy — os testes do core não
+  veem a tela.
+- As exportações reais da XP ficam fora do git; num CI, os goldens delas seriam pulados. Se o
+  repositório virar privado (fase 2), dá para versioná-las.
+
+---
+
+## Ordens — levantamento anterior à fusão
+
+O que segue é o roadmap do Assistente de Ordens, de 22/09 a 28/09/2026, mantido como estava. Os
+caminhos citados (`src/core/`, `src/main.js`…) hoje ficam em `src/modulos/ordens/`, e o item F17
+(git) está resolvido.
+
+### O que falta
 
 Levantamento feito em 22/09/2026, sondando o sistema com entradas que os testes ainda não cobriam.
 Os defeitos abaixo foram **reproduzidos**, não deduzidos: cada um traz a entrada e a saída real.
 
-## Os quatro defeitos, em ordem de risco
+### Os quatro defeitos, em ordem de risco
 
 > **Situação em 22/09, fim do dia:** os defeitos 1, 2 e 4 foram corrigidos — ver "A correção"
 > logo abaixo. O defeito 3 (tabela de posições) continua aberto e espera decisão do operador.
@@ -15,7 +95,7 @@ diz que dado crítico faltando bloqueia a geração. O que estes casos mostram �
 faltando — é dado que o sistema **viu, jogou fora, e substituiu por um padrão**. Uma saída ausente
 custa um clique; uma saída plausível e errada custa a ordem.
 
-### 1. Preço sem a palavra "preço" é descartado, e a ordem sai a mercado
+#### 1. Preço sem a palavra "preço" é descartado, e a ordem sai a mercado
 
 ```
 Entrada:  PETR4 100 a 39,50
@@ -39,7 +119,7 @@ Uma ordem limite vira ordem a mercado, sem aviso nenhum. É o defeito mais caro 
 **Correção:** `lerPreco` passa a reconhecer as outras formas, e — mais importante — qualquer número
 sobrando na linha depois de extraída a quantidade vira **bloqueio de ambiguidade**, não silêncio.
 
-### 2. Quantidade com preço em reais: a quantidade some
+#### 2. Quantidade com preço em reais: a quantidade some
 
 ```
 Entrada:  PETR4 100 R$ 39,50
@@ -56,7 +136,7 @@ passa direto e gera a linha errada.**
 papéis diferentes, e a ambiguidade entre "R$ é o valor da ordem" e "R$ é o preço unitário" precisa
 bloquear em vez de escolher.
 
-### 3. Tabela de posições colada lê a coluna errada
+#### 3. Tabela de posições colada lê a coluna errada
 
 ```
 Entrada:  Ativo   Qtd. Teórica   Qtd. Atual
@@ -81,7 +161,7 @@ papéis que o cliente não tem mais. Não fazer seria seguro; fazer errado não 
 excluir `≤ 0` com aviso), ou detectar a tabela e recusá-la explicitamente. As duas são aceitáveis;
 o estado atual não é.
 
-### 4. Dois números soltos na linha: escolhe o primeiro
+#### 4. Dois números soltos na linha: escolhe o primeiro
 
 ```
 Entrada:  PETR4 100 200
@@ -93,7 +173,7 @@ Ambiguidade resolvida por posição. Deve bloquear.
 
 ---
 
-## Lacunas funcionais
+### Lacunas funcionais
 
 Nenhuma destas é defeito — são coisas que o sistema não faz e que o uso diário vai cobrar.
 
@@ -113,7 +193,7 @@ Nenhuma destas é defeito — são coisas que o sistema não faz e que o uso di�
 - **Conta escrita depois das ordens** deixa as ordens órfãs numa solicitação sem conta. Bloqueia,
   então não é perigoso, mas obriga a reescrever.
 
-## Lacunas de engenharia
+### Lacunas de engenharia
 
 205 testes cobrem o núcleo com densidade boa. O que está descoberto:
 
@@ -132,12 +212,12 @@ um teste sequer.
 Não há lint nem formatador configurado, e o projeto não está em **git** — o que significa que não
 existe histórico, nem desfazer, nem como saber o que mudou entre duas versões.
 
-## Funcionalidades
+### Funcionalidades
 
 Agrupadas pelo que cada uma compra. Custo é estimativa grosseira de esforço, não de tempo de
 relógio.
 
-### Segurança — o sistema pegando erro que hoje passa
+#### Segurança — o sistema pegando erro que hoje passa
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
@@ -147,7 +227,7 @@ relógio.
 | F4 | **Conferência do que sobrou.** Depois de gerar, mostrar o texto colado com as partes que viraram ordem marcadas; o que ficar sem marcação é o que o sistema ignorou. É a defesa geral contra a classe de defeito da primeira seção — não depende de prever cada jeito de escrever. | médio |
 | F5 | **Modo conferência.** Colar a ordem já enviada junto da solicitação original e receber as divergências. É o caso de uso "auditoria" levado a sério, em vez de só um e-mail com texto diferente. | alto |
 
-### Tempo — menos passos por ordem
+#### Tempo — menos passos por ordem
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
@@ -158,7 +238,7 @@ relógio.
 | F10 | **Abrir o e-mail já preenchido** por `mailto:`. Ressalva real: `mailto:` tem limite de tamanho e perde formatação, então serve para ordens curtas e o botão de copiar continua sendo o caminho principal. | baixo |
 | F11 | **Copiar tudo** quando o bloco tem várias contas. | baixo |
 
-### Ajuste ao fluxo real do grupo
+#### Ajuste ao fluxo real do grupo
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
@@ -166,7 +246,7 @@ relógio.
 | F13 | **Estado por solicitação:** pendente / enviado mesa / confirmado. O grupo já responde "Enviado mesa." — o sistema espelharia o que vocês fazem, em vez de ignorar. | médio |
 | F14 | **Resumo do dia.** O que foi processado, por conta, com totais. Serve de conferência de fim de expediente. | médio |
 
-### Entrada
+#### Entrada
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
@@ -174,7 +254,7 @@ relógio.
 | F16 | **Cestas favoritas.** Modelos para as combinações que se repetem. Só vale depois de alguns dias de uso mostrarem quais se repetem. | médio |
 | F23 | **Reconhecimento de fundo cetipado pelo nome.** Construído — ver abaixo. Falta só decidir se entra no fluxo de geração. | feito |
 
-### F23 — fundos cetipados pelo nome
+#### F23 — fundos cetipados pelo nome
 
 `src/core/validate/fundosXP.js` guarda os 146 fundos da prateleira de distribuição da XP (32 deles
 também negociados em bolsa), e `fundo.js` faz a busca por nome. A prateleira **não é dado público**
@@ -204,7 +284,7 @@ peça torna o caminho do **e-mail** viável para eles, com confirmação obrigat
 **lote continua impossível** — a coluna `Ativo` do TSV precisa de um código, e esses fundos não têm.
 Mudar o escopo é decisão do operador; a capacidade está pronta e testada de qualquer forma.
 
-### Plataforma
+#### Plataforma
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
@@ -215,7 +295,7 @@ Mudar o escopo é decisão do operador; a capacidade está pronta e testada de q
 | F21 | **Segmentados como `radiogroup`.** Hoje cada linha gasta seis paradas de tabulação; seriam duas. | baixo |
 | F22 | **Push**, se e quando voltar ao escopo. | — |
 
-## Ordem sugerida
+### Ordem sugerida
 
 **Git (F17) primeiro.** Depois os defeitos 1, 2 e 4, que são risco de dinheiro e vivem em duas
 funções pequenas (`lerPreco` e `lerValor`), com teste antes. Em seguida o defeito 3, decidindo com
@@ -234,7 +314,7 @@ seria escolher no escuro.
 
 ---
 
-## Corrigido em 22/09 — alarme falso em série nos fundos listados
+### Corrigido em 22/09 — alarme falso em série nos fundos listados
 
 Um pedido real de auditoria com sete FIIs listados (`JGPT11`, `VICA11`, `VGIE11`, `IMOV11`,
 `XPHF11`, `PIER11`, `PAAG11`) saía com **quatro bloqueios de "ticker suspeito" e três avisos de
@@ -250,7 +330,7 @@ aí o aviso verdadeiro, o `KCNR11` no lugar do `KNCR11`, passa junto.
 
 ---
 
-## A correção dos defeitos 1, 2 e 4
+### A correção dos defeitos 1, 2 e 4
 
 O remendo óbvio seria ensinar `lerPreco` as palavras que faltavam. Seria remendo mesmo: o próximo
 jeito de escrever preço cairia no mesmo buraco calado. A correção tem duas camadas, e a que
@@ -288,7 +368,7 @@ número que o sistema não souber explicar para de sumir.
 
 ---
 
-## Corrigido em 28/09 — financeiro sem R$ e a variedade dos pedidos
+### Corrigido em 28/09 — financeiro sem R$ e a variedade dos pedidos
 
 Um pedido real (`7000002 - compra via email` e seis FIIs com `3.000,00`, `5.000,00`...) saía com
 as seis ordens sem operação e lidas como **cotas**. Sondando 45 variações de como as ordens
@@ -312,7 +392,7 @@ do WhatsApp, e o descarte da linha com dois ativos ou com conta e ordem juntas.
 não aceita o `F`. E `PETR4 39,50` sozinho vira uma ordem de R$ 39,50 — foi a decisão do operador
 (centavos são financeiro), mas pode ter sido um preço sem quantidade, e o preview é quem pega.
 
-### Mesmo dia — valor na linha de baixo
+#### Mesmo dia — valor na linha de baixo
 
 Um pedido real de sete fundos cetipados trazia o nome numa linha e `R$ 16.000,00` na de baixo. Os
 sete nomes batiam exatos com a prateleira, e mesmo assim nenhum virava ordem: o nome ia para os

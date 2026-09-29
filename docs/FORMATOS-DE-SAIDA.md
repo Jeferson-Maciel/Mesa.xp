@@ -1,6 +1,6 @@
 # Formatos de saída
 
-Fonte da verdade dos literais das 4 saídas. Os formatters em `src/core/formatters/` devem
+Fonte da verdade dos literais das 4 saídas. Os formatters em `src/modulos/ordens/core/format/` devem
 reproduzir exatamente o que está aqui — pontuação, ponto-e-vírgula, acento, ordem das colunas.
 
 Os cabeçalhos TSV estão escritos como **string literal JavaScript** para que o separador seja

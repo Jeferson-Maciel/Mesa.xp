@@ -435,10 +435,48 @@ table.preview td:last-child {
   text-align: right;
 }
 
-.col-valor {
+/* ── Alinhamento das linhas do preview ─────────────────────────────────────────────────
+   Toda célula é célula de tabela de verdade — um `display: flex` direto no <td> tirava a célula da
+   linha: a borda de baixo dela ficava mais alta que a das vizinhas (a "linha quebrada") e o
+   conteúdo subia. O arranjo lado a lado mora num <div class="linha-campos"> dentro da célula.
+
+   Todos os controles da linha têm a mesma altura (32px) e a linha alinha pelo alto: assim o campo
+   do ativo, o Compra/Venda, o Qtd/R$, o valor, o preço e o × ficam na mesma linha de base, mesmo
+   quando a célula do ativo cresce para baixo com os candidatos de um fundo ambíguo. */
+table.preview tbody td {
+  vertical-align: top;
+}
+
+.linha-campos {
   display: flex;
   align-items: center;
   gap: var(--esp-2);
+  white-space: nowrap;
+}
+
+/* O selo da classe (AÇÃO, ETF, SUSPEITO…) vai ao lado do ticker, e não embaixo dele. */
+.linha-campos .selo {
+  margin-left: 0;
+}
+
+table.preview .campo {
+  height: 32px;
+}
+
+table.preview .segmentado {
+  height: 32px;
+  align-items: stretch;
+}
+
+table.preview .seg {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+}
+
+table.preview .btn-remover {
+  width: 32px;
+  height: 32px;
 }
 
 /* ── Resumo da cesta ────────────────────────────────────────────────────────────────── */

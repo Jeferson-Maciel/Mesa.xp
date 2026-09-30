@@ -127,12 +127,16 @@ const segmentado = (campo, opcoes, atual) => `
 const origemDaLinha = (ordem) =>
   [ordem.ticker?.nome, ordem.linha ? 'Lido de: ' + ordem.linha : null].filter(Boolean).join('\n');
 
+// As células continuam células de tabela — é o que mantém a borda da linha inteira e todos os
+// controles na mesma altura; o arranjo lado a lado fica num <div> dentro delas (ordens.css).
 const linha = (ordem, i) => `
   <tr data-ordem="${i}" title="${esc(origemDaLinha(ordem))}">
     <td class="col-ativo">
-      <input class="campo campo-ativo" value="${esc(ordem.ativo)}"
-             size="${Math.min(Math.max(String(ordem.ativo ?? '').length, 8), 30)}" />
-      ${selo(ordem)}
+      <div class="linha-campos">
+        <input class="campo campo-ativo" value="${esc(ordem.ativo)}"
+               size="${Math.min(Math.max(String(ordem.ativo ?? '').length, 8), 30)}" />
+        ${selo(ordem)}
+      </div>
       ${candidatosDeFundo(ordem)}
     </td>
     <td>
@@ -146,16 +150,18 @@ const linha = (ordem, i) => `
       )}
     </td>
     <td class="col-valor">
-      ${segmentado(
-        'tipo',
-        [
-          { valor: 'quantidade', texto: 'Qtd' },
-          { valor: 'financeiro', texto: 'R$' }
-        ],
-        tipoDe(ordem)
-      )}
-      <input class="campo campo-valor" value="${esc(valorVisivel(ordem))}" size="11"
-             placeholder="${tipoDe(ordem) === 'financeiro' ? 'R$ 0,00' : '0'}" />
+      <div class="linha-campos">
+        ${segmentado(
+          'tipo',
+          [
+            { valor: 'quantidade', texto: 'Qtd' },
+            { valor: 'financeiro', texto: 'R$' }
+          ],
+          tipoDe(ordem)
+        )}
+        <input class="campo campo-valor" value="${esc(valorVisivel(ordem))}" size="11"
+               placeholder="${tipoDe(ordem) === 'financeiro' ? 'R$ 0,00' : '0'}" />
+      </div>
     </td>
     <td><input class="campo campo-preco" value="${esc(ordem.preco ?? '')}" placeholder="A mercado" size="10" /></td>
     <td><button class="btn-remover" title="Remover esta ordem" aria-label="Remover ${esc(ordem.ativo)}">&times;</button></td>

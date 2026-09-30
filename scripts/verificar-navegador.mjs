@@ -178,6 +178,22 @@ try {
 
       await pagina.click('#presets [data-exemplo="Cesta em R$"]');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Ordens com uma cesta, sem rolagem lateral`);
+      // Cada linha do preview: os controles na mesma altura e a borda de baixo inteira. Um
+      // `display: flex` direto num <td> tirava a célula da linha e quebrava as duas coisas.
+      const desalinhadas = await pagina.$$eval('table.preview tbody tr', (linhas) =>
+        linhas
+          .map((tr, i) => {
+            const tds = [...tr.children];
+            const centros = tds
+              .map((td) => td.querySelector('input, .segmentado'))
+              .filter(Boolean)
+              .map((el) => Math.round(el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2));
+            const bases = tds.map((td) => Math.round(td.getBoundingClientRect().bottom));
+            return new Set(centros).size === 1 && new Set(bases).size === 1 ? null : i + 1;
+          })
+          .filter(Boolean)
+      );
+      ok(desalinhadas.length === 0, `${tema} ${largura}px: Ordens, controles de cada linha alinhados e borda inteira ${desalinhadas.length ? 'linhas ' + desalinhadas : ''}`);
 
       await pagina.keyboard.press('Alt+2');
       await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);

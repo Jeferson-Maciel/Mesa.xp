@@ -78,10 +78,6 @@
   letter-spacing: 0.02em;
 }
 
-:root[data-tema='claro'] .logo-icon {
-  color: #fffaf0;
-}
-
 .logo-icon::after {
   content: '';
   position: absolute;

@@ -386,8 +386,8 @@ O botão no canto superior direito alterna os dois, para todas as abas. **Navega
 no escuro**, e a partir do seu primeiro clique vale a sua escolha, gravada naquele navegador.
 
 Os dois modos foram calibrados para quem passa o dia na ferramenta: sem preto puro no fundo, sem
-branco puro no texto, contraste na faixa confortável em vez do máximo, cor saturada só onde ela
-significa alguma coisa. As animações são curtas e somem por completo se o sistema estiver
+branco puro em lugar nenhum — o claro é um cinza-ardósia, com o topo grafite —, contraste na faixa
+confortável em vez do máximo, cor saturada só onde ela significa alguma coisa. As animações são curtas e somem por completo se o sistema estiver
 configurado para reduzir movimento.
 
 ## Como rodar

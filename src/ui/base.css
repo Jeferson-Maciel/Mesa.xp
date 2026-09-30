@@ -89,8 +89,12 @@
 /* ── Escuro: grafite azulado ──────────────────────────────────────────────────────────────
    O grafite ganhou um fundo levemente azul — o tom de terminal financeiro —, na mesma altura de
    antes: a mesa achava o quase preto escuro demais. Contraste medido por WCAG (ver CLAUDE.md):
-   corpo ~8,4:1 no cartão, título ~12,5:1, secundário acima de 5:1. Ao mexer, meça de novo. */
-:root[data-tema='escuro'] {
+   corpo ~8,4:1 no cartão, título ~12,5:1, secundário acima de 5:1. Ao mexer, meça de novo.
+
+   O mesmo grafite veste o topo no modo claro (o segundo seletor): a moldura da tela fica escura nos
+   dois modos, como a marca da XP, e o modo claro perde a faixa branca que fica sempre à vista. */
+:root[data-tema='escuro'],
+:root[data-tema='claro'] .casca-topo {
   --fundo: #1b2130;
   --fundo-sutil: #252c3d;
   --superficie: #222939;
@@ -150,63 +154,71 @@
   --brilho-ambiente: 10%;
 }
 
-/* ── Claro: porcelana fria, em quatro níveis ─────────────────────────────────────────────
-   A página afunda, o cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco
-   puro fica para o que flutua. Texto grafite, nunca preto: corpo ~8,2:1, título ~12,9:1. */
+/* ── Claro: ardósia, em cinco níveis de cinza ─────────────────────────────────────────────
+   Até 30/09/2026 o claro era uma porcelana quase branca (cartão a 97% de luminância, janela a
+   100%), e a mesa reclamou: branco o dia inteiro dói a vista. Agora nada passa de 90%: a página é
+   um cinza-ardósia (~73%), o cartão sobe sobre ela num cinza claro (~84%), o campo afunda de novo
+   (~78%) e só o que flutua — janela, aviso — chega perto do branco (~90%), sem nunca chegar.
+
+   Com o fundo mais escuro, o texto e as cores escureceram junto, para manter a mesma faixa de
+   leitura: corpo ~8:1 no cartão, título ~13:1, secundário acima de 4.5:1 até no cinza mais fundo,
+   e toda cor (pedras, verde, vermelho, âmbar, classes de ativo) acima de 4.5:1 inclusive sobre o
+   próprio fundo tingido. Medido por WCAG; ao mexer, meça de novo. */
 :root[data-tema='claro'] {
-  --fundo-sutil: #e3e8f0;
-  --fundo: #eef1f6;
-  --superficie-afundada: #f4f6fa;
-  --superficie: #fbfcfe;
-  --superficie-alta: #ffffff;
+  --fundo-sutil: #cfd5de; /* cabeçalho de tabela, trilho dos segmentados, fichas */
+  --fundo: #d9dee5; /* a página */
+  --superficie-afundada: #e1e5eb; /* campos, blocos de saída, itens de lista */
+  --superficie: #e9ecf0; /* cartões */
+  --superficie-alta: #f3f4f6; /* só o que flutua: janelas, avisos, gaveta */
 
-  --borda: #dbe1ea;
-  --borda-forte: #c3cbd8;
-  --realce: rgba(255, 255, 255, 0.9);
+  --borda: #c6ccd6;
+  --borda-forte: #aab3c0;
+  --realce: rgba(255, 255, 255, 0.55);
 
-  --texto-forte: #243044;
-  --texto: #434e62;
-  --texto-fraco: #586377;
+  --texto-forte: #1b2433;
+  --texto: #3a465a;
+  --texto-fraco: #4d586b;
 
-  --safira: #2458b5;
-  --agua: #0a6b82;
-  --ametista: #5a43b6;
-  --turmalina: #a3336f;
-  --prata: #4f5f7c;
+  --safira: #1f4fa3;
+  --agua: #075c70;
+  --ametista: #523ca8;
+  --turmalina: #8e2b60;
+  --prata: #465571;
   --texto-no-acento: #ffffff;
 
-  --marca: #8a5f0e;
-  --marca-fundo: rgba(196, 138, 30, 0.12);
-  --marca-borda: rgba(138, 95, 14, 0.34);
+  --marca: #74500b;
+  --marca-fundo: rgba(176, 124, 26, 0.14);
+  --marca-borda: rgba(116, 80, 11, 0.36);
 
-  --positivo: #18764e;
-  --positivo-fundo: rgba(24, 118, 78, 0.09);
-  --positivo-borda: rgba(24, 118, 78, 0.28);
+  --positivo: #13653f;
+  --positivo-fundo: rgba(19, 101, 63, 0.11);
+  --positivo-borda: rgba(19, 101, 63, 0.32);
 
-  --negativo: #b0372f;
-  --negativo-fundo: rgba(176, 55, 47, 0.08);
-  --negativo-borda: rgba(176, 55, 47, 0.26);
+  --negativo: #9c2f28;
+  --negativo-fundo: rgba(156, 47, 40, 0.1);
+  --negativo-borda: rgba(156, 47, 40, 0.3);
 
-  --atencao: #8a5a08;
-  --atencao-fundo: rgba(196, 138, 30, 0.12);
-  --atencao-borda: rgba(138, 90, 8, 0.3);
+  --atencao: #744b06;
+  --atencao-fundo: rgba(186, 128, 22, 0.15);
+  --atencao-borda: rgba(116, 75, 6, 0.34);
 
-  --info: #255fa3;
+  --info: #1f5391;
 
-  --classe-acao: #2f6296;
-  --classe-fii: #1c7365;
-  --classe-bdr: #6a4c99;
-  --classe-etf: #2a6a87;
-  --classe-fiagro: #4b7024;
-  --classe-fundo: #8a5729;
-  --classe-outros: #5c6068;
-  --classe-cetipado: #7a5195;
+  --classe-acao: #285889;
+  --classe-fii: #135c51;
+  --classe-bdr: #5e438a;
+  --classe-etf: #245e79;
+  --classe-fiagro: #41631f;
+  --classe-fundo: #7a4c23;
+  --classe-outros: #52565e;
+  --classe-cetipado: #6b4784;
 
-  --veu: rgba(28, 36, 52, 0.34);
-  --sombra: 0 1px 2px rgba(28, 36, 52, 0.06), 0 1px 3px rgba(28, 36, 52, 0.04), 0 1px 0 var(--realce) inset;
-  --sombra-media: 0 8px 20px -8px rgba(28, 36, 52, 0.18);
-  --sombra-alta: 0 22px 50px -14px rgba(28, 36, 52, 0.26), 0 2px 6px rgba(28, 36, 52, 0.06);
-  --brilho-ambiente: 9%;
+  /* Cartão e página ficaram mais próximos: a sombra ajuda a separar, sem pesar. */
+  --veu: rgba(24, 32, 46, 0.4);
+  --sombra: 0 1px 2px rgba(24, 32, 46, 0.1), 0 2px 6px rgba(24, 32, 46, 0.06), 0 1px 0 var(--realce) inset;
+  --sombra-media: 0 10px 24px -10px rgba(24, 32, 46, 0.24);
+  --sombra-alta: 0 24px 54px -14px rgba(24, 32, 46, 0.34), 0 2px 8px rgba(24, 32, 46, 0.1);
+  --brilho-ambiente: 13%;
 }
 
 /* ── A pedra de cada ferramenta ───────────────────────────────────────────────────────────
@@ -214,30 +226,39 @@
    (uma variável é resolvida onde é declarada, e herdada já pronta). O body leva a da aba aberta,
    para o topo, os avisos e o brilho do fundo; cada seção leva a sua. */
 body,
-.modulo {
+.modulo,
+.casca-topo {
   --acento: var(--marca);
   --acento-fundo: color-mix(in srgb, var(--acento) 13%, transparent);
   --acento-borda: color-mix(in srgb, var(--acento) 38%, transparent);
   --acento-sombra: color-mix(in srgb, var(--acento) 42%, transparent);
   --foco: 0 0 0 3px color-mix(in srgb, var(--acento) 26%, transparent);
+  /* Cabeçalho de tabela tingido de leve com a cor da aba: a cor aparece no dado, sem enfeitar. */
+  --cabecalho: color-mix(in srgb, var(--acento) 9%, var(--fundo-sutil));
 }
 
+/* O topo (`.casca-topo`) declara a pedra de novo: no modo claro ele usa as do grafite, e a aba
+   ativa precisa da versão clara da pedra, não da escura da página. */
 body[data-aba='ordens'],
+body[data-aba='ordens'] .casca-topo,
 #modulo-ordens {
   --acento: var(--safira);
 }
 
 body[data-aba='rendafixa'],
+body[data-aba='rendafixa'] .casca-topo,
 #modulo-rendafixa {
   --acento: var(--agua);
 }
 
 body[data-aba='calendario'],
+body[data-aba='calendario'] .casca-topo,
 #modulo-calendario {
   --acento: var(--ametista);
 }
 
 body[data-aba='operacional'],
+body[data-aba='operacional'] .casca-topo,
 #modulo-operacional {
   --acento: var(--turmalina);
 }
@@ -245,6 +266,7 @@ body[data-aba='operacional'],
 /* Nas Anotações a cor que fala é a do lembrete (amarelo, vermelho) e a das etiquetas: a aba fica na
    prata — Argentum, o nome da mesa —, que não compete com elas. */
 body[data-aba='anotacoes'],
+body[data-aba='anotacoes'] .casca-topo,
 #modulo-anotacoes {
   --acento: var(--prata);
 }

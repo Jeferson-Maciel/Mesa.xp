@@ -203,7 +203,7 @@
 
 .cal .cal-matriz thead th {
   padding: 0.66rem 0.85rem;
-  background: var(--fundo-sutil);
+  background: var(--cabecalho);
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
   font-size: 0.66rem;
@@ -273,7 +273,7 @@
 }
 
 .cal .cal-matriz thead th:first-child {
-  background: var(--fundo-sutil);
+  background: var(--cabecalho);
 }
 
 .cal .cal-matriz tbody th {

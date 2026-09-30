@@ -173,17 +173,26 @@ Duas decisões do preview que vale manter:
   cartão convidaria a conferir a ordem contra um total sem sentido. Quando o total em reais não
   cobre a cesta inteira, ele se anuncia como parcial ("de 2 ordens").
 
-O modo claro é uma **porcelana neutra em quatro níveis** (`--fundo-sutil` < `--fundo` <
+O modo claro é **ardósia em cinco níveis de cinza** (`--fundo-sutil` < `--fundo` <
 `--superficie-afundada` < `--superficie` < `--superficie-alta`), cada um com papel fixo: a página
-afunda, o cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco puro fica
-reservado ao que flutua. Cartão branco puro sobre fundo quase branco não cria hierarquia nenhuma —
-a tela vira uma chapa só.
+afunda (~73% de luminância), o cartão sobe sobre ela (~84%), o campo afunda de novo dentro do
+cartão (~78%), e só o que flutua chega perto do branco (~90%) — **nunca branco puro**. Branco o dia
+inteiro dói a vista: a primeira versão do claro tinha cartão a 97% e janela a 100%, e a mesa pediu
+"mais cinza". Com as superfícies mais escuras, texto, pedras, verde, vermelho, âmbar e classes de
+ativo escureceram junto, para cada par continuar acima de 4.5:1 — inclusive sobre o cinza mais fundo
+(`--fundo-sutil`) e sobre o próprio fundo tingido.
 
-**A paleta mudou duas vezes em 30/09/2026, a pedido da mesa.** Primeiro o escuro, quase preto,
+No claro, **o topo continua grafite**: o seletor do escuro também vale para `:root[data-tema='claro']
+.casca-topo`, que ganha os tokens do escuro e, por isso, declara de novo a própria `--acento` (a
+pedra clara, não a escura da página). Os **cabeçalhos de tabela** usam `--cabecalho`, o cinza de
+`--fundo-sutil` tingido 9% com a pedra da aba: azulado no Ordens, lilás no Calendário.
+
+**A paleta mudou três vezes em 30/09/2026, a pedido da mesa.** Primeiro o escuro, quase preto,
 virou um grafite azulado médio, e o claro deixou o neutro morno por uma porcelana levemente fria —
 "cara de CRM financeiro, para usar por horas sem cansar". Depois a mesa achou tudo monocromático e
 pediu mais cor e movimento, sem perder a seriedade: vieram as pedras por aba, as categorias
-coloridas e o sistema de movimento acima. As faixas de contraste continuaram as mesmas (corpo
+coloridas e o sistema de movimento acima. Por fim o claro, ainda quase branco, virou a ardósia
+cinza com topo grafite descrita acima. As faixas de contraste continuaram as mesmas (corpo
 ~8,3:1 no cartão, título ~12,5:1, secundário acima de 5:1), medidas por WCAG. As cores saturadas e
 o texto quase branco que outro agente tinha aplicado continuam de fora (branch
 `antigravity/operacional`).

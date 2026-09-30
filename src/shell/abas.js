@@ -1,27 +1,32 @@
 /**
- * As três abas da Mesa XP: rota por hash, atalhos Alt+1/2/3 e início preguiçoso.
+ * As quatro abas da Mesa XP: rota por hash, atalhos Alt+1/2/3/4 e início preguiçoso.
  *
  * A rota vive no hash (`#ordens`, `#rendafixa`, `#calendario`) porque o mesmo arquivo roda de dois
  * jeitos: no Netlify e aberto do disco (`file://`). Hash funciona igual nos dois, sem servidor, e
  * dá a cada ferramenta um link próprio para favoritar.
  *
- * Renda Fixa e Calendário só iniciam quando a aba abre pela primeira vez. O código já está no
- * arquivo — o build é um arquivo só, sem `import()` dinâmico —, mas o Calendário abre conexão com
- * o banco ao iniciar, e quem só gera ordens não tem por que conectar a nada.
+ * Renda Fixa, Calendário e Operacional só iniciam quando a aba abre pela primeira vez. O código já
+ * está no arquivo — o build é um arquivo só, sem `import()` dinâmico —, mas Calendário e
+ * Operacional abrem conexão com o banco ao iniciar, e quem só gera ordens não tem por que conectar
+ * a nada.
+ *
+ * O hash pode trazer uma rota interna depois da aba (`#operacional/post/<slug>`): a aba é o
+ * primeiro trecho, e o resto é do módulo.
  *
  * As seções escondidas ficam com `hidden`, e é por ele que cada módulo sabe se está à vista: os
  * atalhos de teclado de uma ferramenta só valem com a aba dela aberta.
  */
 
-export const ABAS = ['ordens', 'rendafixa', 'calendario'];
+export const ABAS = ['ordens', 'rendafixa', 'calendario', 'operacional'];
 
 export const ABA_PADRAO = 'ordens';
 
 /** @returns {string} a aba do hash, ou a padrão para hash vazio ou desconhecido. */
 export const abaDoHash = (hash) => {
-  const id = String(hash ?? '')
+  const [id] = String(hash ?? '')
     .replace(/^#\/?/, '')
-    .toLowerCase();
+    .toLowerCase()
+    .split('/');
   return ABAS.includes(id) ? id : ABA_PADRAO;
 };
 
@@ -90,7 +95,8 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
     // digitada logo depois do Alt+2, iria para a aba anterior. O hashchange que vem depois só
     // repete a mesma aba, o que não tem efeito.
     mostrar(id);
-    if (location.hash !== `#${id}`) location.hash = id;
+    // Já na aba (inclusive numa rota interna dela): fica onde está.
+    if (!location.hash || abaDoHash(location.hash) !== id) location.hash = id;
   });
 
   mostrar(abaDoHash(location.hash));

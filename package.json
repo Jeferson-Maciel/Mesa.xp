@@ -14,7 +14,8 @@
     "fundos:update": "node scripts/atualizar-fundos.mjs",
     "golden:rendafixa": "node scripts/gerar-golden-rendafixa.mjs",
     "verificar": "node scripts/verificar-navegador.mjs",
-    "verificar:supabase": "node scripts/verificar-supabase.mjs"
+    "verificar:supabase": "node scripts/verificar-supabase.mjs",
+    "sql:operacional": "node scripts/gerar-sql-operacional.mjs"
   },
   "devDependencies": {
     "playwright": "^1.63.0",

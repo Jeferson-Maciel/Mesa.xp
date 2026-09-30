@@ -3,6 +3,7 @@ import './ui/componentes.css';
 import './shell/casca.css';
 
 import { iniciarCalendario } from './modulos/calendario/index.js';
+import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
 import { iniciarRendaFixa } from './modulos/rendafixa/index.js';
 import { ligarAbas } from './shell/abas.js';
@@ -32,7 +33,8 @@ iniciarOrdens(document.getElementById('modulo-ordens'));
 ligarAbas({
   preguicosos: {
     rendafixa: iniciarRendaFixa,
-    calendario: iniciarCalendario
+    calendario: iniciarCalendario,
+    operacional: iniciarOperacional
   },
   aoFalhar: falhar
 });

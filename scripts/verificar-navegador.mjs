@@ -2,9 +2,12 @@
  * Verificação no navegador: o que os testes do core não veem.
  *
  * Abre o `dist/index.html` via file:// no Chromium (Playwright) e confere:
- *   - as três abas, pelo clique, pelo hash e por Alt+1/2/3, e os atalhos do Ordens presos à aba;
- *   - as três abas nos dois temas, a 1400px e a ~360px, sem rolagem horizontal e sem erro no console;
- *   - que nenhum seletor do CSS do Ordens pega elemento das abas Renda Fixa e Calendário;
+ *   - as quatro abas, pelo clique, pelo hash e por Alt+1/2/3/4, e os atalhos do Ordens presos à aba;
+ *   - as quatro abas nos dois temas, a 1400px e a ~360px, sem rolagem horizontal e sem erro no console;
+ *   - que nenhum seletor do CSS do Ordens pega elemento das outras abas;
+ *   - Operacional em modo local: o texto de um post copiado e colado igual ao do Slab, editar,
+ *     criar e excluir post (título com <img onerror> como texto), criar tópico, busca, link direto
+ *     e o conflito de duas abas salvando o mesmo post;
  *   - Renda Fixa: a planilha carregada na tela, o texto copiado e colado (Ctrl+V) idêntico ao golden,
  *     nos dois mercados — com as exportações reais da XP, se estiverem em fixtures/, e sempre com a
  *     planilha sintética convertida para .xlsx;
@@ -59,6 +62,7 @@ const distLocal = join(temporario, 'dist/index.html');
 const XLSX = createRequire(import.meta.url)('../src/vendor/xlsx.full.min.js');
 const { LINHAS_SINTETICAS } = await import(pathToFileURL(join(raiz, 'src/modulos/rendafixa/fixtures/sintetica.js')).href);
 const { DATA_GOLDEN } = await import(pathToFileURL(join(raiz, 'src/modulos/rendafixa/golden/referencia.js')).href);
+const { POSTS } = await import(pathToFileURL(join(raiz, 'src/modulos/operacional/conteudo.js')).href);
 const planilhaSintetica = join(temporario, 'sintetica.xlsx');
 {
   const livro = XLSX.utils.book_new();
@@ -115,15 +119,20 @@ try {
     ok((await visivel()) === 'modulo-rendafixa' && (await pagina.evaluate(() => location.hash)) === '#rendafixa', 'Alt+2 abre a Renda Fixa e muda o hash');
     await pagina.keyboard.press('Alt+3');
     ok((await visivel()) === 'modulo-calendario', 'Alt+3 abre o Calendário');
+    await pagina.keyboard.press('Alt+4');
+    ok((await visivel()) === 'modulo-operacional', 'Alt+4 abre o Operacional');
     await pagina.click('.aba[data-aba="ordens"]');
     // O clique troca pelo hashchange, que chega logo depois.
     await pagina.waitForFunction(() => !document.getElementById('modulo-ordens').hidden, null, { timeout: 2000 }).catch(() => {});
     ok((await visivel()) === 'modulo-ordens', 'o clique na aba Ordens volta');
-    for (const hash of ['#rendafixa', '#calendario', '#xyz']) {
+    for (const hash of ['#rendafixa', '#calendario', '#operacional', '#xyz']) {
       await pagina.goto(pathToFileURL(distLocal).href + hash);
       const esperado = hash === '#xyz' ? 'modulo-ordens' : `modulo-${hash.slice(1)}`;
       ok((await visivel()) === esperado, `link direto ${hash} abre ${esperado}`);
     }
+    await pagina.goto(pathToFileURL(distLocal).href + '#operacional/post/disparo-rf');
+    await pagina.waitForSelector('.op-titulo');
+    ok((await visivel()) === 'modulo-operacional' && (await pagina.textContent('.op-titulo')) === 'Disparo RF', 'link direto de um post abre o post na aba Operacional');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }
@@ -150,7 +159,7 @@ try {
   }
 
   /* ── Três abas, dois temas, duas larguras ───────────────────────────────────────── */
-  titulo('Três abas × dois temas × 1400px e 360px (build em modo local)');
+  titulo('Quatro abas × dois temas × 1400px e 360px (build em modo local)');
   const ordensCss = readFileSync(join(raiz, 'src/modulos/ordens/ordens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const seletoresDoOrdens = [...new Set(
     ordensCss
@@ -187,11 +196,24 @@ try {
       await pagina.click('[data-visao="historico"]');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Calendário, histórico, sem rolagem lateral`);
 
+      await pagina.keyboard.press('Alt+4');
+      await pagina.waitForSelector('.op-grupo');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, início, sem rolagem lateral`);
+      await pagina.click('.op-linha >> nth=0');
+      await pagina.waitForSelector('.op-texto');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, post aberto, sem rolagem lateral`);
+      await pagina.click('[data-acao="editar"]');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, editor, sem rolagem lateral`);
+      await pagina.click('[data-acao="cancelar"]');
+      const abas = await pagina.$$eval('.aba', (as) => as.map((a) => a.getBoundingClientRect().right));
+      ok(Math.max(...abas) <= (largura <= 720 ? largura - 15 : largura), `${tema} ${largura}px: as quatro abas cabem dentro da margem`);
+
       if (tema === 'escuro' && largura === 1400) {
+        await pagina.keyboard.press('Alt+3');
         await pagina.click('[data-visao="semana"]');
         const vazamentos = await pagina.evaluate((seletores) => {
           const achados = [];
-          for (const raizModulo of ['#modulo-rendafixa', '#modulo-calendario']) {
+          for (const raizModulo of ['#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional']) {
             const alvo = document.querySelector(raizModulo);
             for (const s of seletores) {
               let n = 0;
@@ -205,7 +227,7 @@ try {
           }
           return achados;
         }, seletoresDoOrdens);
-        ok(vazamentos.length === 0, `nenhum dos ${seletoresDoOrdens.length} seletores do CSS do Ordens pega elemento da Renda Fixa ou do Calendário ${vazamentos.length ? JSON.stringify(vazamentos) : ''}`);
+        ok(vazamentos.length === 0, `nenhum dos ${seletoresDoOrdens.length} seletores do CSS do Ordens pega elemento das outras abas ${vazamentos.length ? JSON.stringify(vazamentos) : ''}`);
       }
 
       ok(erros.length === 0, `${tema} ${largura}px: console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
@@ -282,6 +304,128 @@ try {
     ok(Object.keys(dados.entries).length === 0, 'remover o colaborador apaga os registros dele');
     ok(rede.length === 0, `o modo local não faz requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
+  /* ── Operacional em modo local ──────────────────────────────────────────────────── */
+  titulo('Operacional em modo local: copiar, editar, criar, excluir, buscar, conflito');
+  {
+    const { pagina, contexto, erros } = await abrir({ hash: '#operacional' });
+    const rede = [];
+    pagina.on('request', (r) => /^https?:/.test(r.url()) && rede.push(r.url()));
+    await pagina.waitForSelector('.op-grupo');
+    ok((await pagina.textContent('[data-op="conexao"]')).includes('modo local'), 'o build com as variáveis vazias está em modo local');
+    ok((await pagina.$$eval('.op-grupo', (g) => g.length)) === 5, 'o início agrupa os posts nos cinco tópicos, como o Slab');
+    const contagem = (nome) => pagina.$eval(`.op-arvore .op-no:has-text("${nome}") .op-contagem`, (e) => e.textContent);
+    ok((await contagem('Padrões de Email')) === '14' && (await contagem('Padrões de Fixing')) === '12', 'a árvore conta os posts de cada tópico');
+
+    // Copiar e colar: o texto que vai para o e-mail é o do Slab.
+    const compra = POSTS.find((p) => p.slug === 'confirmacao-de-ordem-compra');
+    await pagina.click(`.op-linha:has-text("${compra.titulo}")`);
+    await pagina.waitForSelector('[data-acao="copiar"]');
+    await pagina.click('[data-acao="copiar"]');
+    await pagina.waitForFunction(() => document.querySelector('[data-acao="copiar"]').textContent === 'Copiado');
+    await pagina.keyboard.press('Alt+1');
+    await pagina.fill('#entrada', '');
+    await pagina.focus('#entrada');
+    await pagina.keyboard.press('Control+V');
+    ok((await pagina.inputValue('#entrada')) === compra.conteudo, '"Copiar texto" copia exatamente o texto do Slab (colado com Ctrl+V)');
+    await pagina.fill('#entrada', '');
+    await pagina.keyboard.press('Alt+4');
+
+    // Editar um post pendente e ver que ficou gravado.
+    await pagina.goto(pathToFileURL(distLocal).href + '#operacional/post/rubi');
+    await pagina.waitForSelector('.op-vazio');
+    await pagina.click('[data-acao="editar"]');
+    await pagina.fill('[data-op="editor"] textarea', 'Rubi: texto colado do Slab\nsegunda linha');
+    await pagina.press('[data-op="editor"] textarea', 'Control+Enter');
+    await pagina.waitForSelector('.op-texto');
+    ok((await pagina.textContent('.op-texto')) === 'Rubi: texto colado do Slab\nsegunda linha', 'editar e salvar mostra o texto novo, com a quebra de linha');
+    await pagina.reload();
+    await pagina.waitForSelector('.op-texto');
+    ok((await pagina.textContent('.op-texto')).startsWith('Rubi: texto colado'), 'o texto editado continua lá depois de recarregar');
+
+    // Criar post com título malicioso e excluir.
+    const XSS = '<img src=x onerror=window.__xss=1>';
+    await pagina.goto(pathToFileURL(distLocal).href + '#operacional/topico/disparos');
+    await pagina.waitForSelector('[data-acao="criar-post"]');
+    await pagina.click('[data-acao="criar-post"]');
+    await pagina.fill('[data-op="editor"] input[name="titulo"]', XSS);
+    await pagina.fill('[data-op="editor"] textarea', 'texto de teste');
+    await pagina.click('[data-op="editor"] button[type="submit"]');
+    await pagina.waitForFunction(() => location.hash.startsWith('#operacional/post/'));
+    await pagina.waitForSelector('.op-titulo');
+    ok((await pagina.textContent('.op-titulo')) === XSS, 'post novo: o título com <img onerror> aparece como texto');
+    ok((await pagina.evaluate(() => window.__xss)) === undefined && (await pagina.$$eval('#modulo-operacional img', (i) => i.length)) === 0, 'post novo: o onerror não rodou e nenhum <img> foi criado');
+    ok((await contagem('Disparos')) === '4', 'post novo: a árvore passa a contar 4 em Disparos');
+    await pagina.click('[data-acao="excluir"]');
+    await pagina.waitForFunction(() => location.hash === '#operacional/topico/disparos');
+    await pagina.waitForSelector('.op-lista');
+    ok((await contagem('Disparos')) === '3' && (await pagina.$$eval('.op-linha', (l) => l.length)) === 3, 'excluir tira o post da lista e da contagem');
+
+    // Novo tópico.
+    await pagina.click('[data-op="novo-topico"]');
+    ok(await pagina.$eval('.op-dialogo', (d) => d.matches(':modal')), 'novo tópico abre num <dialog> modal');
+    await pagina.fill('[data-op="form-topico"] input[name="nome"]', 'Câmbio Teste');
+    await pagina.click('[data-op="form-topico"] button[type="submit"]');
+    await pagina.waitForFunction(() => document.querySelector('.op-titulo')?.textContent === 'Câmbio Teste');
+    ok(await pagina.$eval('.op-arvore', (a) => a.textContent.includes('Câmbio Teste')), 'o tópico novo aparece na árvore, debaixo da raiz');
+
+    // Busca.
+    await pagina.fill('[data-op="busca"]', 'tesouro');
+    ok((await pagina.$$eval('.op-linha', (l) => l.length)) === 2 && (await pagina.$$eval('.op-linha mark', (m) => m.length)) === 2, 'a busca por "tesouro" acha os dois posts do Tesouro Direto, com o trecho marcado');
+    await pagina.press('[data-op="busca"]', 'Escape');
+    ok((await pagina.$$eval('.op-linha mark', (m) => m.length)) === 0, 'Esc limpa a busca');
+
+    await pagina.goto(pathToFileURL(distLocal).href + '#operacional/post/nao-existe');
+    await pagina.waitForSelector('.op-folha .empty-state');
+    ok((await pagina.textContent('.op-folha')).includes('Post não encontrado'), 'link de post que não existe avisa, em vez de tela vazia');
+
+    // Conflito: duas abas com o mesmo post; a segunda a salvar é recusada e não perde o texto.
+    const outra = await contexto.newPage();
+    await pagina.goto(pathToFileURL(distLocal).href + '#operacional/post/confirmacao-de-ordem-venda');
+    await outra.goto(pathToFileURL(distLocal).href + '#operacional/post/confirmacao-de-ordem-venda');
+    for (const p of [pagina, outra]) {
+      await p.waitForSelector('[data-acao="editar"]');
+      await p.click('[data-acao="editar"]');
+    }
+    await outra.fill('[data-op="editor"] textarea', 'versão da outra aba');
+    await outra.click('[data-op="editor"] button[type="submit"]');
+    await outra.waitForSelector('.op-texto');
+    await pagina.fill('[data-op="editor"] textarea', 'versão desta aba');
+    await pagina.click('[data-op="editor"] button[type="submit"]');
+    await pagina.waitForSelector('[data-op="aviso-editor"] .alert-danger');
+    ok((await pagina.textContent('[data-op="aviso-editor"]')).includes('Outra pessoa alterou'), 'conflito: quem salvou depois é avisado');
+    ok((await pagina.inputValue('[data-op="editor"] textarea')) === 'versão desta aba', 'conflito: o texto de quem foi recusado continua no editor');
+    await outra.reload();
+    await outra.waitForSelector('.op-texto');
+    ok((await outra.textContent('.op-texto')) === 'versão da outra aba', 'conflito: a versão salva primeiro não foi sobrescrita');
+    await outra.close();
+
+    ok(rede.length === 0, `o modo local não faz requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
+  /* ── Operacional no build normal ────────────────────────────────────────────────── */
+  titulo('Operacional no build normal (banco da mesa)');
+  {
+    const { pagina, contexto, erros } = await abrir({ arquivo: distNormal, hash: '#operacional' });
+    await pagina.waitForFunction(
+      () => document.querySelector('[data-op="conexao"]')?.textContent === 'ao vivo' || document.querySelector('[data-op="erro"] .alert'),
+      null,
+      { timeout: 45_000 }
+    );
+    const erroNaTela = await pagina.$('[data-op="erro"] .alert');
+    if (erroNaTela) {
+      console.log(`   o banco não respondeu: "${(await erroNaTela.innerText()).split('\n')[0]}"`);
+      ok(true, 'sem banco, o erro aparece na tela, com "Tentar de novo"');
+      ok((await pagina.evaluate(() => localStorage.getItem('mesa_operacional'))) === null, 'sem banco, nada é gravado no modo local');
+      ok(!erros.some((e) => !/Failed to fetch|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Failed to load resource|ErroDoRepositorio|WebSocket/i.test(e)), 'sem banco, só erros de rede no console');
+    } else {
+      ok((await pagina.$$eval('.op-grupo', (g) => g.length)) >= 5, 'conectou e mostrou a base do banco');
+      ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    }
     await contexto.close();
   }
 

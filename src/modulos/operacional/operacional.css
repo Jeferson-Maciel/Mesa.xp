@@ -1,0 +1,615 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Operacional — a base de conhecimento da mesa, no desenho do Slab e no visual da Mesa XP.
+
+   Barra lateral com a equipe, a busca e a árvore de tópicos, parada enquanto o conteúdo rola;
+   no meio, uma folha com largura de leitura, como o documento do Slab. Tudo escopado em `.op`
+   e escrito pelo token. Cor com significado: âmbar da marca no tópico aberto e na ação principal,
+   atenção no post com texto pendente, vermelho só ao passar em Excluir.
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+.op {
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  min-height: calc(100vh - 59px);
+}
+
+/* ── Barra lateral ──────────────────────────────────────────────────────────────────── */
+
+.op .op-lateral {
+  position: sticky;
+  top: 59px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  height: calc(100vh - 59px);
+  padding: var(--esp-4) var(--esp-3);
+  overflow-y: auto;
+  background: var(--superficie);
+  border-right: 1px solid var(--borda);
+}
+
+.op .op-equipe {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-1) var(--esp-2) var(--esp-3);
+  border-bottom: 1px solid var(--borda);
+}
+
+.op .op-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: var(--marca-fundo);
+  border: 1px solid var(--marca-borda);
+  border-radius: var(--r-sm);
+  color: var(--marca);
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+}
+
+.op .op-equipe strong {
+  display: block;
+  color: var(--texto-forte);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.op .op-equipe span {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+.op .op-busca {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: 0 var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  cursor: text;
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+}
+
+.op .op-busca:focus-within {
+  border-color: var(--marca-borda);
+  box-shadow: var(--foco);
+}
+
+.op .op-busca svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--texto-fraco);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.op .op-busca input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.52rem 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--texto-forte);
+  font-family: inherit;
+  font-size: 0.86rem;
+}
+
+.op .op-busca input::placeholder {
+  color: var(--texto-fraco);
+}
+
+.op .op-secao {
+  margin: var(--esp-2) var(--esp-2) var(--esp-1);
+  color: var(--texto-fraco);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.op .op-arvore,
+.op .op-arvore ul {
+  list-style: none;
+}
+
+.op .op-arvore ul {
+  margin: 2px 0 2px var(--esp-3);
+  padding-left: var(--esp-2);
+  border-left: 1px solid var(--borda);
+}
+
+.op .op-no {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.op .op-no:hover {
+  background: var(--fundo-sutil);
+  color: var(--texto-forte);
+}
+
+.op .op-no.ativo {
+  background: var(--marca-fundo);
+  color: var(--marca);
+  font-weight: 600;
+}
+
+.op .op-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op .op-contagem {
+  color: var(--texto-fraco);
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+}
+
+.op .op-no.ativo .op-contagem {
+  color: var(--marca);
+}
+
+.op .op-novo-topico {
+  padding: 0.45rem 0.6rem;
+  background: transparent;
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-sm);
+  color: var(--texto-fraco);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva);
+}
+
+.op .op-novo-topico:hover {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+  color: var(--marca);
+}
+
+.op .op-conexao {
+  margin-top: auto;
+  padding: var(--esp-2);
+  text-align: left;
+}
+
+.op .op-conexao.op-vivo {
+  color: var(--positivo);
+}
+
+.op .op-conexao.op-vivo::before {
+  content: '●';
+  margin-right: 0.35rem;
+}
+
+.op .op-conexao.op-aviso {
+  color: var(--atencao);
+}
+
+/* ── A folha ────────────────────────────────────────────────────────────────────────── */
+
+.op .op-principal {
+  min-width: 0;
+  padding: var(--esp-5) var(--esp-5) var(--esp-6);
+}
+
+.op .op-principal .alert {
+  max-width: 900px;
+  margin: 0 auto var(--esp-4);
+}
+
+.op .op-principal .alert > span {
+  flex: 1;
+}
+
+.op .op-folha {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--esp-6) calc(var(--esp-6) + var(--esp-2));
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+}
+
+.op .copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.op a.copy-btn {
+  display: inline-block;
+  margin-top: var(--esp-3);
+  text-decoration: none;
+}
+
+/* A ação principal da página, no mesmo tom do Analisar do Ordens. */
+.op .op-primario {
+  background: var(--marca-fundo);
+  border-color: var(--marca-borda);
+  color: var(--marca);
+}
+
+.op .op-primario:hover {
+  border-color: var(--marca);
+}
+
+.op .op-perigo:hover {
+  background: var(--negativo-fundo);
+  border-color: var(--negativo-borda);
+  color: var(--negativo);
+}
+
+.op .op-trilha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-2);
+  color: var(--texto-fraco);
+  font-size: 0.82rem;
+}
+
+.op .op-trilha a {
+  color: var(--texto-fraco);
+  text-decoration: none;
+}
+
+.op .op-trilha a:hover {
+  color: var(--marca);
+  text-decoration: underline;
+}
+
+.op .op-cabeca {
+  margin-bottom: var(--esp-5);
+}
+
+.op .op-cabeca-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-3);
+}
+
+.op .op-titulo {
+  min-width: 0;
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.op .op-descricao {
+  margin-top: var(--esp-2);
+  color: var(--texto);
+  font-size: 0.95rem;
+}
+
+.op .op-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.op .op-abas-posts {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-3);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-forte);
+  font-size: 0.9rem;
+}
+
+/* ── Listas de posts ────────────────────────────────────────────────────────────────── */
+
+.op .op-grupo {
+  margin-top: var(--esp-5);
+}
+
+.op .op-grupo-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-2);
+  color: var(--texto-fraco);
+  font-family: var(--fonte);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.op .op-grupo-titulo a {
+  color: var(--texto-forte);
+  text-decoration: none;
+}
+
+.op .op-grupo-titulo a:hover {
+  color: var(--marca);
+}
+
+.op .op-lista {
+  overflow: hidden;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.op .op-linha {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: 0.72rem var(--esp-4);
+  border-top: 1px solid var(--borda);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--t-rapido) var(--curva);
+}
+
+.op .op-linha:first-child {
+  border-top: none;
+}
+
+.op .op-linha:hover {
+  background: var(--fundo-sutil);
+}
+
+.op .op-linha:hover strong {
+  color: var(--marca);
+}
+
+.op .op-linha-icone svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--texto-fraco);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.op .op-linha-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.op .op-linha-texto strong {
+  color: var(--texto-forte);
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  transition: color var(--t-rapido) var(--curva);
+}
+
+.op .op-trecho {
+  overflow: hidden;
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op .op-trecho mark {
+  padding: 0 2px;
+  background: var(--marca-fundo);
+  border-radius: 3px;
+  color: var(--texto-forte);
+}
+
+.op .op-rotulo {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.op .op-linha-meta {
+  color: var(--texto-fraco);
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.op .op-pendente {
+  background: var(--atencao-fundo);
+  border-color: var(--atencao-borda);
+  color: var(--atencao);
+  font-family: var(--fonte);
+}
+
+/* ── Post aberto ────────────────────────────────────────────────────────────────────── */
+
+.op .op-meta {
+  margin: var(--esp-2) 0 var(--esp-5);
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+}
+
+/* O texto como vai ser colado: quebras de linha preservadas, largura de leitura. */
+.op .op-texto {
+  max-width: 76ch;
+  color: var(--texto-forte);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.op .op-vazio {
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-md);
+}
+
+/* ── Editor ─────────────────────────────────────────────────────────────────────────── */
+
+.op .op-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+.op .op-campo-titulo {
+  width: 100%;
+  padding: 0.35rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 1.6rem;
+  font-weight: 700;
+  transition: border-color var(--t-rapido) var(--curva);
+}
+
+.op .op-campo-titulo:focus {
+  border-bottom-color: var(--marca);
+  outline: none;
+}
+
+.op .op-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  font-size: 0.85rem;
+}
+
+.op .op-campo > span {
+  color: var(--texto-fraco);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.op .op-campo input,
+.op .op-campo select,
+.op .op-campo textarea {
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+}
+
+.op .op-campo input:focus,
+.op .op-campo select:focus,
+.op .op-campo textarea:focus {
+  border-color: var(--marca-borda);
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.op .op-campo select {
+  max-width: 22rem;
+}
+
+.op .op-campo textarea {
+  min-height: 22rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.op .op-dica {
+  color: var(--texto-fraco);
+  font-size: 0.78rem;
+}
+
+/* ── Novo tópico ────────────────────────────────────────────────────────────────────── */
+
+.op .op-dialogo {
+  width: min(30rem, calc(100vw - 2 * var(--esp-4)));
+  padding: var(--esp-5);
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta);
+  color: var(--texto);
+}
+
+.op .op-dialogo::backdrop {
+  background: var(--veu);
+}
+
+.op .op-dialogo form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+.op .op-dialogo .panel-header-row {
+  margin-bottom: 0;
+}
+
+.op .op-dialogo .op-acoes {
+  justify-content: flex-end;
+}
+
+/* ── Celular e tela estreita ────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .op {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .op .op-lateral {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--borda);
+  }
+
+  .op .op-principal {
+    padding: var(--esp-4);
+  }
+
+  .op .op-folha {
+    padding: var(--esp-5) var(--esp-4);
+  }
+}
+
+@media (max-width: 520px) {
+  .op .op-titulo {
+    font-size: 1.45rem;
+  }
+
+  .op .op-linha {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .op .op-linha-meta {
+    grid-column: 2;
+  }
+}

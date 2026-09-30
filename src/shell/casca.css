@@ -213,6 +213,18 @@
   }
 }
 
+/* Quatro abas em 360px: sem isto a última passa da margem e encosta na borda da tela. */
+@media (max-width: 420px) {
+  .abas {
+    gap: 2px;
+  }
+
+  .aba {
+    padding-inline: 2px;
+    font-size: 0.8rem;
+  }
+}
+
 /* Falha ao iniciar uma ferramenta: aparece no lugar dela, sem derrubar as outras. */
 .falha-modulo {
   max-width: 44rem;

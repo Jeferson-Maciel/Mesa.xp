@@ -2,10 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { ABAS, ABA_PADRAO, abaDoAtalho, abaDoHash } from './abas.js';
 
 describe('abaDoHash', () => {
-  it('reconhece as três rotas', () => {
+  it('reconhece as quatro rotas', () => {
     expect(abaDoHash('#ordens')).toBe('ordens');
     expect(abaDoHash('#rendafixa')).toBe('rendafixa');
     expect(abaDoHash('#calendario')).toBe('calendario');
+    expect(abaDoHash('#operacional')).toBe('operacional');
+  });
+
+  // O link de um post da base leva à aba Operacional, não cai no Ordens.
+  it('reconhece a aba pelo primeiro trecho, com a rota interna depois', () => {
+    expect(abaDoHash('#operacional/post/confirmacao-de-ordem-venda')).toBe('operacional');
+    expect(abaDoHash('#operacional/topico/disparos')).toBe('operacional');
+    expect(abaDoHash('#/operacional/post/x')).toBe('operacional');
   });
 
   it('abre no Ordens sem hash: é a ferramenta de todo pedido', () => {
@@ -29,11 +37,12 @@ describe('abaDoHash', () => {
 describe('abaDoAtalho', () => {
   const tecla = (code, extra = {}) => ({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, code, ...extra });
 
-  it('Alt+1, Alt+2 e Alt+3 levam às abas na ordem da barra', () => {
+  it('Alt+1 a Alt+4 levam às abas na ordem da barra', () => {
     expect(abaDoAtalho(tecla('Digit1'))).toBe(ABAS[0]);
     expect(abaDoAtalho(tecla('Digit2'))).toBe(ABAS[1]);
     expect(abaDoAtalho(tecla('Digit3'))).toBe(ABAS[2]);
-    expect(ABAS).toEqual(['ordens', 'rendafixa', 'calendario']);
+    expect(abaDoAtalho(tecla('Digit4'))).toBe(ABAS[3]);
+    expect(ABAS).toEqual(['ordens', 'rendafixa', 'calendario', 'operacional']);
   });
 
   it('aceita o teclado numérico', () => {
@@ -52,7 +61,7 @@ describe('abaDoAtalho', () => {
   });
 
   it('ignora números sem aba e outras teclas', () => {
-    expect(abaDoAtalho(tecla('Digit4'))).toBeNull();
+    expect(abaDoAtalho(tecla('Digit5'))).toBeNull();
     expect(abaDoAtalho(tecla('KeyH'))).toBeNull();
     expect(abaDoAtalho(tecla(undefined))).toBeNull();
   });

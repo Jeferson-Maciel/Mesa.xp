@@ -1,18 +1,20 @@
 # Mesa XP
 
-As ferramentas da mesa num link só: **Ordens**, **Renda Fixa** e **Calendário**, em abas, com o
-mesmo visual e o mesmo tema claro/escuro.
+As ferramentas da mesa num link só: **Ordens**, **Renda Fixa**, **Calendário** e **Operacional**,
+em abas, com o mesmo visual e o mesmo tema claro/escuro.
 
 | Aba | Para quê | Atalho |
 | --- | --- | --- |
 | **Ordens** | Transformar a solicitação do cliente, colada do grupo, nas ordens de renda variável nos 4 formatos do back office | Alt + 1 |
 | **Renda Fixa** | Ler a planilha de renda fixa da XP e montar a mensagem de WhatsApp com as maiores taxas por prazo | Alt + 2 |
 | **Calendário** | Marcar quem vai estar presencial em cada dia, com observações e horários indisponíveis | Alt + 3 |
+| **Operacional** | Consultar e copiar os modelos e procedimentos da mesa — a base que estava no Slab — e mantê-los em dia | Alt + 4 |
 
-Cada aba tem link próprio: `…/#ordens`, `…/#rendafixa`, `…/#calendario`.
+Cada aba tem link próprio: `…/#ordens`, `…/#rendafixa`, `…/#calendario`, `…/#operacional` — e cada
+post do Operacional também (`…/#operacional/post/confirmacao-de-ordem-venda`).
 
 Junta três projetos que existiam separados — `Ordens.XP`, `RendaFixaDisparo` e `Calendario.Mesa` —
-sem mudar o que cada um faz.
+sem mudar o que cada um faz, e traz para dentro a base de conhecimento que a mesa mantinha no Slab.
 
 ## Ordens
 
@@ -293,7 +295,8 @@ navegador.
 
 ### Configurando o banco
 
-O Calendário usa o projeto Supabase da mesa por padrão. Para apontar para outro, defina no build
+Calendário e Operacional usam o projeto Supabase da mesa por padrão. Para apontar para outro, defina
+no build
 (no Netlify, em *Site configuration → Environment variables*; localmente, num arquivo `.env`):
 
 ```bash
@@ -306,8 +309,9 @@ As duas **vazias** ligam o **modo local**: os dados ficam só no navegador de ca
 na tela.
 
 Para criar um projeto novo: no Supabase, abra o **SQL Editor**, cole o conteúdo de
-[`supabase/schema.sql`](supabase/schema.sql) e execute; depois copie a *Project URL* e a chave
-*anon public* (em **Project Settings → API**) para as variáveis acima.
+[`supabase/schema.sql`](supabase/schema.sql) (Calendário) e execute, depois o de
+[`supabase/operacional.sql`](supabase/operacional.sql) (Operacional); então copie a *Project URL* e a
+chave *anon public* (em **Project Settings → API**) para as variáveis acima.
 
 Projetos do plano gratuito do Supabase são **pausados** depois de alguns dias sem uso, e o endereço
 deixa de responder. Se o Calendário mostrar “Sem conexão com o banco de presença” com a internet
@@ -315,17 +319,43 @@ funcionando, confira no painel do Supabase se o projeto está pausado e retome-o
 
 ### Segurança — pendência
 
-**O Calendário ainda não tem login**, e as políticas do banco liberam leitura e escrita de tudo para
-quem tem a chave anon — que vai no próprio site e está neste repositório público. Qualquer pessoa
-com o link pode ver, alterar e apagar os registros, que têm nomes e motivos de ausência (às vezes de
-saúde). Trate o link como interno e evite detalhe de saúde no motivo.
+**Calendário e Operacional ainda não têm login**, e as políticas do banco liberam leitura e escrita
+para quem tem a chave anon — que vai no próprio site e está neste repositório público. Qualquer
+pessoa com o link pode ver e alterar os registros do Calendário (nomes e motivos de ausência, às
+vezes de saúde) e os procedimentos do Operacional; no Calendário, também apagar. Trate o link como
+interno e evite detalhe de saúde no motivo. No Operacional nada é apagado de verdade: cada versão de
+cada post fica guardada no banco.
 
 A correção está planejada para a fase 2: login pelo Supabase Auth, políticas fechadas para a equipe
 e repositório privado. Detalhes em [`CLAUDE.md`](CLAUDE.md#pendência-de-segurança--fase-2).
 
+## Operacional
+
+A base de conhecimento da mesa, que estava no Slab: os modelos de e-mail de confirmação, os textos
+de disparo, o passo a passo dos sistemas, os padrões de fixing e as regras de execução. A mesa toda
+vê e edita a mesma base, e o que um colega salva aparece na tela dos outros na hora.
+
+- **Tópicos** na barra lateral: *Mesa de Operações Argentum* e, dentro dela, Padrões de Email,
+  Disparos, Passo a Passo, Padrões de Fixing e Execução de Ordens — com a contagem de posts.
+- **Buscar** acha pelo título e pelo texto, sem ligar para acento.
+- **Abrir um post** mostra o texto como está. **Copiar texto** leva exatamente esse texto para colar
+  no e-mail ou no WhatsApp.
+- **Editar**, **Criar post** e **+ Novo tópico** mantêm a base em dia. Ctrl + Enter salva.
+- **Excluir** esconde o post da mesa, mas ele continua guardado no banco, com todas as versões.
+- Se duas pessoas editam o mesmo post, quem salvar depois é avisado e não apaga o que o outro fez:
+  o próprio texto continua na tela para copiar.
+
+Os textos vieram do Slab como estavam. **15 posts vieram só com o título** (os 12 de Padrões de
+Fixing, Confirmação resgate fundos, Confirmação aplicação Fundos e Ações e Fundos Listados): aparecem
+com a marca “texto pendente” — é só abrir, clicar em Editar e colar o texto do Slab.
+
+Como o Calendário, o Operacional **precisa de internet** e do banco da mesa. Para criar as tabelas e
+a base inicial: SQL Editor do Supabase → colar [`supabase/operacional.sql`](supabase/operacional.sql)
+→ executar. Pode rodar de novo sem duplicar nada nem desfazer edições.
+
 ## Modo claro e escuro
 
-O botão no canto superior direito alterna os dois, para as três abas. **Navegador novo abre sempre
+O botão no canto superior direito alterna os dois, para todas as abas. **Navegador novo abre sempre
 no escuro**, e a partir do seu primeiro clique vale a sua escolha, gravada naquele navegador.
 
 Os dois modos foram calibrados para quem passa o dia na ferramenta: sem preto puro no fundo, sem
@@ -340,7 +370,7 @@ npm install
 npm run dev      # servidor local de desenvolvimento
 npm test         # testes
 npm run build    # gera dist/index.html, um arquivo só
-npm run verificar  # abre o dist/index.html no Chromium e confere as três abas (Playwright)
+npm run verificar  # abre o dist/index.html no Chromium e confere as quatro abas (Playwright)
 ```
 
 Requer Node 22+.
@@ -349,8 +379,8 @@ Requer Node 22+.
 
 `npm run build` gera **um único arquivo**, `dist/index.html`, com o JS, o CSS e o ícone dentro dele.
 Abre com dois cliques, sem servidor e sem Node, e pode ser copiado para outra pasta, um pendrive ou
-a rede. **Ordens e Renda Fixa funcionam sem internet** nesse arquivo; o Calendário precisa de
-conexão com o banco.
+a rede. **Ordens e Renda Fixa funcionam sem internet** nesse arquivo; Calendário e Operacional
+precisam de conexão com o banco.
 
 O `index.html` da raiz do projeto **não** funciona aberto com dois cliques: é a fonte que o Vite lê.
 
@@ -364,25 +394,28 @@ redirecionamento de todas as rotas para o `index.html`. Qualquer host de estáti
 - **Ordens e Renda Fixa** rodam inteiros no navegador: nenhum dado de cliente nem planilha sai da
   máquina. Não há backend, telemetria nem chamada de rede nessas abas; os históricos ficam no
   `localStorage` do navegador.
-- **Calendário** grava no Supabase — veja a pendência de segurança acima.
+- **Calendário** e **Operacional** gravam no Supabase — veja a pendência de segurança acima.
 
 ## Estrutura
 
 ```
-index.html                 a casca: topo, abas e as três seções
+index.html                 a casca: topo, abas e as quatro seções
 src/main.js                liga tema, abas e o início de cada ferramenta
 src/shell/                 rotas e atalhos das abas
 src/ui/                    tema, avisos, escape de HTML, tokens e componentes compartilhados
 src/modulos/ordens/        parsing, validação e formatação (core/), preview e saídas (ui/), histórico
 src/modulos/rendafixa/     motor, leitura da planilha, histórico, tela; fixtures/ e golden/ dos testes
 src/modulos/calendario/    repositório e adaptadores (Supabase e local), datas, tela
+src/modulos/operacional/   base de conhecimento: a cópia do Slab, repositório e adaptadores, tela
+src/dados/                 a conexão única com o Supabase e a configuração
 src/vendor/                SheetJS 0.20.1 (licença Apache 2.0)
 supabase/schema.sql        tabelas, políticas e Realtime do Calendário
+supabase/operacional.sql   tabelas, histórico, políticas, Realtime e a base inicial do Operacional
 docs/                      formatos de saída do Ordens; roadmap e sugestões
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 586 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 650 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 
@@ -394,5 +427,5 @@ Defeitos conhecidos, sugestões e próximos passos: [`docs/ROADMAP.md`](docs/ROA
 - HTML, CSS e JavaScript puro em módulos ES, empacotados pelo [Vite](https://vite.dev) num arquivo
   só; testes com [Vitest](https://vitest.dev).
 - [SheetJS](https://sheetjs.com) 0.20.1, vendorizado em `src/vendor/` (licença Apache 2.0).
-- [@supabase/supabase-js](https://github.com/supabase/supabase-js) para o Calendário (Postgres +
-  Realtime).
+- [@supabase/supabase-js](https://github.com/supabase/supabase-js) para o Calendário e o Operacional
+  (Postgres + Realtime).

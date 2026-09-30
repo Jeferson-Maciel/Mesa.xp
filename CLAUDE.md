@@ -1,17 +1,19 @@
 # Mesa XP
 
-Três ferramentas da mesa num link só, para os colegas de back office de um escritório credenciado
-à XP usarem o dia inteiro:
+As ferramentas da mesa num link só, para os colegas de back office de um escritório credenciado à
+XP usarem o dia inteiro:
 
 - **Ordens** — o Assistente de Ordens: transforma a solicitação colada do grupo nos 4 formatos do
   back office (e-mail, e-mail em tabela, Lote Simples e Lote TWAP).
 - **Renda Fixa** — o RendaFixa Pro: lê a planilha de renda fixa exportada pela XP e monta o texto
   de WhatsApp com a maior taxa por prazo e categoria.
 - **Calendário** — o calendário semanal de presença da equipe, gravado no Supabase.
+- **Operacional** — a base de conhecimento da mesa (a cópia do Slab): modelos de e-mail, disparos,
+  passo a passo e regras, compartilhada e editável, no Supabase.
 
 Nasceu da fusão de três repositórios — `Ordens.XP` (a base), `RendaFixaDisparo` e
-`Calendario.Mesa` — sem funcionalidade nova. Sugestões vão para [`docs/ROADMAP.md`](docs/ROADMAP.md),
-não para o código.
+`Calendario.Mesa` — sem funcionalidade nova; o Operacional veio depois, a pedido da mesa. Sugestões
+vão para [`docs/ROADMAP.md`](docs/ROADMAP.md), não para o código.
 
 É uma ferramenta de expediente, aberta o dia todo: alinhada, objetiva e sem enfeite. Isso vale para
 a tela e para o código.
@@ -19,26 +21,30 @@ a tela e para o código.
 ## A casca
 
 ```
-index.html            a casca: topo com as abas e as três seções (a marcação do Ordens é estática)
+index.html            a casca: topo com as abas e as quatro seções (a marcação do Ordens é estática)
 src/main.js           liga tema, abas e o início de cada ferramenta
-src/shell/abas.js     rota por hash e atalhos Alt+1/2/3
-src/ui/               o que as três dividem: tema, avisos de tela, escape de HTML, tokens e componentes
+src/shell/abas.js     rota por hash e atalhos Alt+1/2/3/4
+src/ui/               o que as abas dividem: tema, avisos de tela, escape de HTML, tokens e componentes
+src/dados/            a conexão única com o Supabase, a configuração e os erros dos repositórios
 src/modulos/ordens/       Assistente de Ordens
 src/modulos/rendafixa/    RendaFixa Pro
 src/modulos/calendario/   Calendário de presença
+src/modulos/operacional/  base de conhecimento (a cópia do Slab)
 src/vendor/           SheetJS 0.20.1 vendorizado, com a licença
 supabase/schema.sql   o banco do Calendário
+supabase/operacional.sql  o banco do Operacional (gerado: npm run sql:operacional)
 docs/                 formatos de saída do Ordens e o roadmap
 scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda Fixa), verificar no navegador
 ```
 
-- **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`; hash vazio ou desconhecido abre o
-  Ordens. Hash e não caminho porque o mesmo arquivo roda no Netlify e aberto do disco (`file://`).
-- **Alt+1/2/3** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
+- **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`, `#operacional`; hash vazio ou
+  desconhecido abre o Ordens. A aba é o primeiro trecho do hash, e o resto é do módulo:
+  `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no Netlify e aberto do disco (`file://`).
+- **Alt+1/2/3/4** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
   aba anterior. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
-- **Início preguiçoso**: o Ordens inicia com a página, como sempre; Renda Fixa e Calendário só na
-  primeira vez que a aba abre. O código já está no arquivo (não há `import()` dinâmico) — o que
-  espera é a inicialização, e é nela que o Calendário conecta ao banco.
+- **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras três só na primeira
+  vez que a aba abre. O código já está no arquivo (não há `import()` dinâmico) — o que espera é a
+  inicialização, e é nela que Calendário e Operacional conectam ao banco.
 - **Cada módulo sabe se está à vista pelo `hidden` da própria seção.** Os atalhos de teclado e o
   arrastar-e-soltar de um módulo só valem com a aba dele aberta: Ctrl+Enter na aba Renda Fixa não
   analisa o Ordens, e "m" na aba Ordens não troca o mercado do Renda Fixa. Ao trocar de aba, um
@@ -59,22 +65,23 @@ drive — a tela aparece e nada funciona. Por isso:
 
 - o plugin `arquivoUnico` do `vite.config.js` embute tudo e **falha o build** se sobrar arquivo;
 - `vite.config.test.js` confere que a marcação não aponta para arquivo nenhum, que não sobrou
-  `import()` dinâmico e que a casca e as três ferramentas estão embutidas;
+  `import()` dinâmico e que a casca e as quatro ferramentas estão embutidas;
 - proibido: recurso externo (Google Fonts, CDN), `import()` dinâmico, `fetch` de arquivo local e
   service worker.
 
-**Ordens e Renda Fixa funcionam offline**, abertos do disco. **O Calendário exige rede**: sem
-conexão ele mostra o erro na tela, e as outras abas seguem funcionando.
+**Ordens e Renda Fixa funcionam offline**, abertos do disco. **Calendário e Operacional exigem
+rede**: sem conexão mostram o erro na tela, e as outras abas seguem funcionando.
 
-**Dependências de runtime:** uma só, `@supabase/supabase-js`, empacotada no build e usada só pelo
-Calendário. O SheetJS não é dependência npm (ver Renda Fixa). Vite e Vitest são ferramentas de
+**Dependências de runtime:** uma só, `@supabase/supabase-js`, empacotada no build e usada por
+Calendário e Operacional, por uma conexão única (`src/dados/banco.js`): o primeiro que abre cria o
+cliente, o segundo reaproveita — um cliente por módulo abriria duas conexões do Realtime. O SheetJS não é dependência npm (ver Renda Fixa). Vite e Vitest são ferramentas de
 desenvolvimento. O Netlify roda Node 22 (`netlify.toml`): supabase-js e Vitest 5 exigem Node 22+.
 
 `dist/index.html` fica em torno de 1,3 MB, quase todo do SheetJS.
 
 ## Sistema visual
 
-A base visual é a do Ordens, e o visual final é um só: as três abas usam os mesmos tokens e
+A base visual é a do Ordens, e o visual final é um só: as abas usam os mesmos tokens e
 componentes.
 
 - `src/ui/base.css` — tokens de cor dos dois temas, reset, avisos de tela, movimento reduzido.
@@ -146,14 +153,14 @@ especificidade — o Ordens foi conferido pixel a pixel contra o original. As cl
 continuam globais (`.panel`, `.history-item`…), então os módulos novos não reutilizam classe
 específica do Ordens: usam as de `src/ui/componentes.css` ou as próprias.
 
-**Todo seletor do Renda Fixa começa por `.rf` e todo seletor do Calendário por `.cal`.**
-`src/ui/escopo-css.test.js` lê os dois arquivos e recusa seletor fora da raiz, e recusa seletor de
+**Todo seletor do Renda Fixa começa por `.rf`, do Calendário por `.cal` e do Operacional por `.op`.**
+`src/ui/escopo-css.test.js` lê os três arquivos e recusa seletor fora da raiz, e recusa seletor de
 elemento solto no CSS do Ordens.
 
 O reset global zera `margin` de tudo, e é a margem automática que centraliza o `<dialog>` aberto com
 `showModal()`: `base.css` devolve `margin: auto` ao `dialog`.
 
-Ao mudar o CSS de um módulo, confira as três abas: um seletor que escapa só aparece na aba vizinha.
+Ao mudar o CSS de um módulo, confira todas as abas: um seletor que escapa só aparece na aba vizinha.
 
 ---
 
@@ -463,7 +470,7 @@ está com a página aberta. Código em `src/modulos/calendario/`.
 Tudo que a tela lê e grava passa pelo repositório (`repositorio.js`, com o contrato documentado).
 Dois adaptadores equivalentes cumprem o mesmo contrato:
 
-- `adaptadores/supabase.js` — o banco da mesa. Recebe o cliente pronto (`cliente.js`).
+- `adaptadores/supabase.js` — o banco da mesa. Recebe o cliente pronto (`src/dados/banco.js`).
 - `adaptadores/local.js` — `localStorage`, chave **`presenca_app_data`**, no formato do app
   original. Ligado quando `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` estão **as duas vazias**.
 
@@ -499,8 +506,8 @@ continuam com os nomes do original, porque os dois apps dividem o mesmo banco en
 
 ### Conexão
 
-`config.js` resolve URL e chave de `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, lidas no build;
-sem elas vale o projeto atual (`ekughbuuvjoojgfgbqbz`). `cliente.js` cria o cliente do
+`src/dados/config.js` resolve URL e chave de `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, lidas no
+build; sem elas vale o projeto atual (`ekughbuuvjoojgfgbqbz`). `src/dados/banco.js` cria o cliente do
 `@supabase/supabase-js` sem sessão de login (o app não tem login, e o hash da URL é a rota das
 abas) e com 15 s por requisição. O Realtime escuta as três tabelas e recarrega a visão com 300 ms
 de espera (um salvamento gera vários eventos); o status aparece no topo: "ao vivo", "sem
@@ -520,14 +527,17 @@ celular a matriz rola dentro do quadro, com a coluna dos nomes parada.
 ### Pendência de segurança — fase 2
 
 **A RLS atual do Supabase libera leitura e escrita de tudo para a chave anon**, e a chave anon está
-no código de um repositório público (e no build). Os dados têm nomes de colegas e motivos de
-ausência, que podem ser de saúde. Qualquer pessoa com o link — ou com o repositório — lê, altera e
-apaga tudo.
+no código de um repositório público (e no build). Os dados do Calendário têm nomes de colegas e
+motivos de ausência, que podem ser de saúde; os do Operacional, os procedimentos internos da mesa.
+Qualquer pessoa com o link — ou com o repositório — lê e altera tudo; no Calendário, também apaga.
+(O Operacional já nasceu sem DELETE para a anon e com o histórico fora do alcance dela, mas segue
+aberto para leitura e edição.)
 
 Não foi corrigido nesta versão, de propósito: a fusão não muda comportamento. A correção, na fase 2:
 
-1. Supabase Auth (login dos colegas da mesa);
-2. políticas RLS fechadas — só usuário autenticado, e só da equipe, lê e escreve;
+1. Supabase Auth (login dos colegas da mesa), que também dá autor a cada post e a cada versão;
+2. políticas RLS fechadas — só usuário autenticado, e só da equipe, lê e escreve — nas tabelas do
+   Calendário e do Operacional;
 3. repositório privado;
 4. rever o que é gravado no motivo (evitar dado de saúde em texto livre).
 
@@ -535,14 +545,92 @@ Até lá, trate o link como interno.
 
 ---
 
+## Operacional
+
+A base de conhecimento da mesa — o Slab dentro da Mesa XP: modelos de e-mail de confirmação, textos
+de disparo, passo a passo dos sistemas, padrões de fixing e regras de execução. Código em
+`src/modulos/operacional/`. Entrou em 30/09/2026, a pedido da mesa, depois de uma primeira tentativa
+de outro agente (guardada na branch `antigravity/operacional`, não revisada).
+
+### O conteúdo
+
+`conteudo.js` é a cópia do Slab da equipe ("Gregori's Team"): a raiz **Mesa de Operações
+Argentum** e cinco tópicos (Padrões de Email, Disparos, Passo a Passo, Padrões de Fixing, Execução
+de Ordens), com os 34 posts na ordem do Slab. É a **semente**: o banco nasce dela
+(`supabase/operacional.sql`) e o modo local também. Depois de semeado, o banco é a fonte — o que a
+mesa edita pela tela não volta para o arquivo.
+
+- **O texto é o do Slab, como foi colado**, erros de digitação incluídos ("cncelar"): é o que vai
+  para o e-mail do cliente. Só foram normalizados espaço no fim da linha e linha feita só de espaço
+  invisível (NBSP). `conteudo.test.js` prende a estrutura, a ordem e os posts sem texto.
+- **15 posts vieram só com o título** (Confirmação resgate fundos, Confirmação aplicação Fundos, os
+  12 de Padrões de Fixing e Ações e Fundos Listados). Ficam vazios e marcados "texto pendente";
+  **não se inventa texto para eles** — a mesa cola o do Slab pela tela.
+- O texto é mostrado como está, sem interpretar: os asteriscos do WhatsApp aparecem como
+  asteriscos, porque é assim que o texto vai ser copiado. "Copiar texto" copia o conteúdo exato.
+
+### Repositório e o banco
+
+Mesmo padrão do Calendário: `repositorio.js` documenta o contrato, e dois adaptadores equivalentes
+o cumprem — `adaptadores/supabase.js` (tabelas `operacional_topicos` e `operacional_posts`) e
+`adaptadores/local.js` (`localStorage`, chave `mesa_operacional`). `repositorio.test.js` roda a
+mesma bateria contra os dois, com um Supabase falso que imita o SQL.
+
+Como o app não tem login e qualquer um com o link edita, duas regras protegem o conteúdo:
+
+- **Excluir é esconder.** O post ganha `excluido_em` e some da tela, mas continua no banco. A chave
+  anon **não tem política de DELETE** em tabela nenhuma do Operacional.
+- **Ninguém salva por cima de quem salvou antes.** Cada post tem `versao`; o UPDATE só casa com a
+  versão que foi aberta e sobe um número. Se outra pessoa salvou no meio, sai `ErroDeConflito`, nada
+  é sobrescrito e o texto de quem foi recusado continua no editor.
+
+No banco, um gatilho `security definer` guarda **cada versão de cada post** em
+`operacional_revisoes`, uma tabela sem política nenhuma: a chave anon não lê nem apaga o histórico,
+e um texto estragado ou excluído se recupera pelo painel do Supabase. Outro gatilho carimba
+`atualizado_em`.
+
+`supabase/operacional.sql` é **gerado** (`npm run sql:operacional`) por `sql.js` a partir da
+semente — não edite à mão; `sql.test.js` recusa o arquivo se ele divergir. Ele cria tabelas,
+gatilhos, RLS, Realtime e a semente, e pode rodar de novo: nada duplica e nenhuma edição da mesa é
+desfeita. Foi validado num Postgres de verdade (PGlite): roda duas vezes, semeia 6 tópicos e 34
+posts, o gatilho guarda o histórico, a trava de versão recusa a segunda gravação e o banco recusa
+título vazio, slug repetido e apagar tópico com posts.
+
+Para ligar no banco da mesa: SQL Editor do Supabase → colar `supabase/operacional.sql` → executar.
+
+### Tela
+
+No desenho do Slab, no visual da Mesa XP:
+
+- **Barra lateral**: a equipe, a busca (título e texto, sem ligar para acento) e a árvore de
+  tópicos com a contagem de posts; "+ Novo tópico" abre um `<dialog>` e cria debaixo da raiz.
+- **Raiz = início da aba** (`#operacional`): título, descrição e os posts agrupados por tópico, com a
+  trilha "Mesa de Operações Argentum › tópico", como o Slab mostra.
+- **Tópico** (`#operacional/topico/<slug>`) e **post** (`#operacional/post/<slug>`): cada um tem link
+  próprio para mandar a um colega. O slug não muda quando o título muda.
+- **Post aberto**: trilha, título grande, "Copiar texto", "Editar", "Excluir" (com confirmação).
+- **Editor**: título, tópico e texto; Ctrl+Enter salva, Esc cancela; sair com alteração pede
+  confirmação. Uma atualização ao vivo **não redesenha o editor** (o que está sendo digitado não
+  some); se o post mudou no banco, o editor avisa.
+
+Fora desta versão, e registrados no roadmap: anexos (foto, áudio, vídeo), rascunhos, favoritos,
+"mais populares", restaurar versão pela tela e excluir tópico.
+
+A base exige rede, como o Calendário: sem conexão o erro aparece na tela, e nada cai calado no
+modo local.
+
+---
+
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 586 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 650 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; a UI não é. Os 449 testes do Ordens original continuam aqui.
 - Renda Fixa: goldens contra o motor original, histórico, render (escape), SheetJS vendorizado.
 - Calendário: contrato do repositório nos dois adaptadores, datas, configuração, render (escape).
+- Operacional: a semente contra o Slab, o contrato do repositório nos dois adaptadores (inclusive o
+  conflito de versão), render (escape, busca) e o SQL gerado em dia com a semente.
 - Casca: rotas e atalhos das abas, CSS escopado, build de arquivo único.
 
 Trabalhe **test-first**: escreva o caso de negócio como teste em `*.test.js` ao lado do módulo,
@@ -554,7 +642,7 @@ Quando o operador trouxer um pedido real do grupo, **transforme-o em teste antes
 código**. Os casos de `parseSolicitacoes.test.js` que citam contas reais vieram assim, e são os que
 mais valem: eles descrevem como as ordens chegam de verdade, não como imaginamos que cheguem.
 
-O mesmo vale para Renda Fixa e Calendário: uma planilha da XP que o motor lê errado vira fixture e
+O mesmo vale para Renda Fixa, Calendário e Operacional: uma planilha da XP que o motor lê errado vira fixture e
 golden antes da correção; um jeito de a mesa usar o Calendário que quebra vira caso da bateria do
 repositório.
 
@@ -564,10 +652,11 @@ Não declare pronto sem:
 
 1. `npm test` e `npm run build` passando.
 2. `npm run verificar` (`scripts/verificar-navegador.mjs`; na primeira vez,
-   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as três abas,
-   os dois temas, a largura de ~360px sem rolagem horizontal, o console, o CSS que vaza entre abas,
-   o texto do Renda Fixa colado e comparado com o golden, e o Calendário em modo local (nome com
-   `<img onerror>` como texto). Não grava no banco.
+   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as quatro
+   abas, os dois temas, a largura de ~360px sem rolagem horizontal, o console, o CSS que vaza entre
+   abas, o texto do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
+   `<img onerror>` como texto) e o Operacional em modo local (copiar e colar igual ao Slab, editar,
+   criar, excluir, buscar e o conflito de duas abas). Não grava no banco.
 3. Mudança no Calendário que toca o banco: `npm run verificar:supabase`
    (`scripts/verificar-supabase.mjs`) — leitura, gravação, exclusão em cascata, o Realtime entre
    duas abas e as quedas de rede, num colaborador de teste apagado no fim. **Grava no banco da

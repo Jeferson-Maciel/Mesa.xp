@@ -72,6 +72,34 @@ para cá em vez de entrar no código.
 
 ---
 
+## Operacional — o que ficou de fora (30/09/2026)
+
+A aba entrou com o que a mesa usa no dia a dia do Slab: tópicos, posts, busca, copiar, criar, editar
+e excluir, compartilhado e ao vivo. O resto ficou para depois, de propósito:
+
+1. **Colar o texto dos 15 posts pendentes.** Vieram do Slab só com o título: os 12 de Padrões de
+   Fixing, Confirmação resgate fundos, Confirmação aplicação Fundos e Ações e Fundos Listados. Dá
+   para colar pela própria tela (Editar); não se inventa texto para eles.
+2. **Ligar no banco da mesa.** Rodar `supabase/operacional.sql` no SQL Editor (depois de retomar o
+   projeto pausado) e estender `npm run verificar:supabase` ao Operacional — leitura, criação, a
+   trava de versão entre duas abas e a exclusão que só esconde — num post de teste. O SQL já foi
+   validado num Postgres (PGlite), mas o Realtime e a API do Supabase só foram exercitados contra o
+   fake.
+3. **Anexos (foto, áudio, vídeo).** A primeira tentativa (branch `antigravity/operacional`) os
+   gravava no navegador em base64, o que estoura o armazenamento com poucos arquivos e não chega aos
+   colegas. O caminho certo é o Storage do Supabase, num bucket privado com URL assinada — e isso
+   depende de login (fase 2): sem ele, a chave anon, pública, poderia subir qualquer arquivo. Até
+   lá, links vão no próprio texto do post.
+4. **Restaurar uma versão pela tela.** O banco guarda todas (`operacional_revisoes`), mas hoje a
+   recuperação é pelo painel do Supabase. Uma lista de versões com "restaurar" no post aberto seria
+   o próximo passo — com login, mostrando também quem editou.
+5. **Recursos do Slab que não vieram:** rascunhos, favoritos, "mais populares", Content Map, grupos,
+   "Join topic", o banner do tópico e excluir ou renomear tópico. Valem entrar se a mesa sentir
+   falta no uso.
+6. **Autor e data por edição.** Sem login não há quem; o post mostra só quando foi atualizado.
+
+---
+
 ## Ordens — levantamento anterior à fusão
 
 O que segue é o roadmap do Assistente de Ordens, de 22/09 a 28/09/2026, mantido como estava. Os

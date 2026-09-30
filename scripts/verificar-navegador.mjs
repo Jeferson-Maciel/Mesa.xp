@@ -465,44 +465,57 @@ try {
       )
     );
 
+    const status = () => pagina.textContent('[data-an="status"] .an-status-texto');
     await pagina.goto(pathToFileURL(distLocal).href + '#anotacoes');
-    await pagina.waitForSelector('.an-boas-vindas');
+    await pagina.waitForSelector('[data-an="editor"]');
     await pagina.keyboard.press('n');
     await pagina.waitForSelector('[data-campo="titulo"]');
-    ok(await pagina.evaluate(() => document.activeElement?.dataset.campo === 'titulo'), 'N cria a anotação com o cursor no título');
+    ok(await pagina.evaluate(() => document.activeElement?.dataset.campo === 'titulo'), 'N abre uma anotação nova com o cursor no título');
     await pagina.keyboard.type('Estorno do dia 25 <img src=x onerror=window.__xss=1>');
-    await pagina.fill('[data-campo="texto"]', 'Ver https://hub.xpi.com.br/relatorios?conta=1234567 e javascript:alert(1)');
+    await pagina.fill('[data-campo="texto"]', 'Ver https://hub.xpi.com.br/relatorios?conta=1234567 e javascript:alert(1)\n[ ] pedir o estorno');
     await pagina.fill('[data-campo="etiqueta"]', 'estorno');
     await pagina.press('[data-campo="etiqueta"]', 'Enter');
     await pagina.click('[data-atalho="2-dias"]');
+    await pagina.setInputFiles('[data-an="arquivo"]', print);
+    await pagina.waitForSelector('.an-anexo-novo img[src^="blob:"]');
+    ok((await status()) === 'Alterações não salvas' && (await pagina.$$('.an-cartao')).length === 0, 'antes de Salvar, o selo avisa e nada vai para a lista');
+
+    // Ctrl+S salva e continua na anotação.
+    await pagina.keyboard.press('Control+s');
+    await pagina.waitForFunction(() => document.querySelector('[data-an="editor"]')?.dataset.gravacao === 'salvo');
     ok(
-      (await pagina.textContent('.an-lembrete .an-selo')) === 'Lembrar sex 02/10' &&
-        (await pagina.$eval('.an-cartao[aria-current="true"]', (c) => c.classList.contains('an-pendente'))),
-      'lembrete para daqui 2 dias: a anotação fica amarela'
+      (await status()).startsWith('Salvo às') &&
+        (await pagina.textContent('.an-lembrete .an-selo')) === 'Lembrar sex 02/10' &&
+        (await pagina.$eval('.an-cartao:has([aria-current="true"])', (c) => c.classList.contains('an-pendente'))),
+      'Ctrl+S salva: "Salvo às", e a anotação fica amarela na lista, com o lembrete'
     );
     ok((await pagina.$$eval('.an-link-externo', (l) => l.map((a) => a.href))).join() === 'https://hub.xpi.com.br/relatorios?conta=1234567', 'o link http vira botão; o javascript: não');
     ok((await pagina.evaluate(() => window.__xss)) === undefined && (await pagina.$$eval('.an-lista img', (l) => l.length)) === 0, 'título com <img onerror> fica texto na lista');
-    await pagina.setInputFiles('[data-an="arquivo"]', print);
-    await pagina.waitForSelector('.an-miniatura img[src^="blob:"]');
-    ok(true, 'o print anexado aparece em miniatura');
+    ok((await pagina.$$eval('.an-miniatura:not(.an-anexo-novo) img[src^="blob:"]', (l) => l.length)) === 1, 'o print foi gravado junto com a anotação');
 
-    // Lembrete para hoje às 10:30, e a pessoa vai para o Ordens.
+    // Lembrete para hoje às 10:30; o botão Salvar grava e abre uma anotação nova.
     await pagina.fill('[data-campo="data"]', '2026-09-30');
     await pagina.dispatchEvent('[data-campo="data"]', 'change');
     await pagina.fill('[data-campo="hora"]', '10:30');
     await pagina.dispatchEvent('[data-campo="hora"]', 'change');
-    ok((await pagina.textContent('.aba-contador')) === '1' && !(await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'lembrete para hoje: contador âmbar na aba');
+    await pagina.click('[data-acao="salvar"]');
+    const abriuNova = await pagina
+      .waitForFunction(() => location.hash === '#anotacoes/nova' && document.querySelector('[data-an="editor"]')?.classList.contains('an-editor-nova'), null, { timeout: 5000 })
+      .then(() => true, () => false);
+    ok(abriuNova && (await pagina.inputValue('[data-campo="titulo"]')) === '', 'Salvar grava e abre uma anotação nova, em branco');
+    const contadorHoje = await pagina.waitForFunction(() => document.querySelector('.aba-contador')?.textContent === '1', null, { timeout: 5000 }).then(() => true, () => false);
+    ok(contadorHoje && !(await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'lembrete para hoje: contador âmbar na aba');
     await pagina.keyboard.press('Alt+1');
     await contexto.clock.fastForward('26:00');
     await pagina.waitForSelector('.an-alerta', { timeout: 5000 }).catch(() => null);
     ok(Boolean(await pagina.$('.an-alerta')), 'no Ordens, quando a hora chega, o alerta do lembrete aparece');
     ok((await pagina.title()).startsWith('(1) ') && (await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'o título da página e o contador da aba ficam em alerta');
     await pagina.click('.an-alerta [data-alerta="abrir"]');
-    await pagina.waitForSelector('.an-editor');
-    ok(await pagina.$eval('.an-cartao[aria-current="true"]', (c) => c.classList.contains('an-vencida')), 'Abrir leva à anotação, vermelha');
+    await pagina.waitForSelector('.an-editor:not(.an-editor-nova)');
+    ok(await pagina.$eval('.an-cartao:has([aria-current="true"])', (c) => c.classList.contains('an-vencida')), 'Abrir leva à anotação, vermelha');
 
     await pagina.reload();
-    await pagina.waitForSelector('.an-editor');
+    await pagina.waitForSelector('.an-editor:not(.an-editor-nova)');
     ok((await pagina.inputValue('[data-campo="titulo"]')).startsWith('Estorno do dia 25') && (await pagina.$$eval('.an-miniatura', (l) => l.length)) === 1, 'depois de recarregar, a anotação e o print continuam lá');
     ok(!(await pagina.$('.an-alerta')), 'o alerta já visto não volta ao recarregar');
 

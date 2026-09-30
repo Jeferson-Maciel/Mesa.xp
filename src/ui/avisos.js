@@ -1,26 +1,28 @@
 /**
- * Avisos de tela, divididos pelas três ferramentas.
+ * Avisos de tela, divididos pelas ferramentas.
  *
- * Um aviso só confirma o que aconteceu ("copiado", "salvo") ou conta um problema; nunca pede
- * decisão. O que precisa de decisão vira bloqueio (Ordens) ou fica visível na própria tela
- * (Calendário sem conexão), porque um aviso some sozinho em poucos segundos.
+ * Um aviso confirma o que aconteceu ("copiado", "salvo") ou conta um problema; nunca pede decisão.
+ * O que precisa de decisão vira bloqueio (Ordens) ou fica visível na própria tela (Calendário sem
+ * conexão), porque um aviso some sozinho em poucos segundos. A exceção é o **Desfazer** (`acao`):
+ * depois de excluir ou resolver, o aviso oferece voltar atrás, como o Gmail e o Keep — é o que
+ * deixa a ação ser de um clique, sem janela de "tem certeza?".
  *
- * Erro fica mais tempo e sai com a cor de erro: quem estava olhando para outro canto da tela
- * ainda tem tempo de ler.
+ * Erro e aviso com ação ficam mais tempo: quem estava olhando para outro canto da tela ainda tem
+ * tempo de ler e de clicar.
  */
 
-const DURACAO = { info: 3200, erro: 6000 };
+const DURACAO = { info: 3200, erro: 6000, acao: 7000 };
 
 /**
  * @param {string} mensagem
- * @param {{ tipo?: 'info' | 'erro' }} [opcoes]
+ * @param {{ tipo?: 'info' | 'erro', acao?: { rotulo: string, fazer: () => void } }} [opcoes]
  */
-export const aviso = (mensagem, { tipo = 'info' } = {}) => {
+export const aviso = (mensagem, { tipo = 'info', acao = null } = {}) => {
   const lista = document.getElementById('toasts');
   if (!lista) return;
 
   const erro = tipo === 'erro';
-  const duracao = erro ? DURACAO.erro : DURACAO.info;
+  const duracao = acao ? DURACAO.acao : erro ? DURACAO.erro : DURACAO.info;
   const toast = document.createElement('div');
   toast.className = erro ? 'toast erro' : 'toast';
   toast.setAttribute('role', erro ? 'alert' : 'status');
@@ -32,18 +34,32 @@ export const aviso = (mensagem, { tipo = 'info' } = {}) => {
   const texto = document.createElement('span');
   texto.textContent = mensagem;
   toast.append(icone, texto);
-  lista.appendChild(toast);
 
-  // Sai deslizando; a remoção espera a animação, ou 400 ms se ela não vier (movimento reduzido).
-  setTimeout(() => {
+  let feito = false;
+  const tirar = () => {
+    if (feito) return;
+    feito = true;
+    toast.remove();
+  };
+  const sair = () => {
     toast.classList.add('saindo');
-    let feito = false;
-    const tirar = () => {
-      if (feito) return;
-      feito = true;
-      toast.remove();
-    };
     toast.addEventListener('animationend', tirar, { once: true });
-    setTimeout(tirar, 400);
-  }, duracao);
+    setTimeout(tirar, 400); // movimento reduzido: sem animação, sai assim mesmo
+  };
+
+  if (acao) {
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'toast-acao';
+    botao.textContent = acao.rotulo;
+    botao.addEventListener('click', () => {
+      acao.fazer();
+      sair();
+    });
+    toast.classList.add('com-acao');
+    toast.append(botao);
+  }
+
+  lista.appendChild(toast);
+  setTimeout(sair, duracao);
 };

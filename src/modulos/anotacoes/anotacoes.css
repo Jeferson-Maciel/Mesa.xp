@@ -286,23 +286,23 @@
   overflow-y: auto;
 }
 
-/* O cartão: um filete na cor do estado à esquerda; vencida ganha o fundo tingido de vermelho. */
+/* O cartão: a bolinha de resolver à esquerda (como no Todoist), o conteúdo ao lado, e um filete na
+   cor do estado; vencida ganha o fundo tingido de vermelho. */
 .an .an-cartao {
   --estado: transparent;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.7rem 0.8rem 0.7rem 0.95rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--esp-2);
+  padding: 0.7rem 0.8rem 0.7rem 0.75rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
   box-shadow: inset 3px 0 0 var(--estado);
-  color: inherit;
-  text-decoration: none;
   animation: entrar var(--t-lento) var(--curva-saida) both;
   transition: border-color var(--t-rapido) var(--curva), background-color var(--t-rapido) var(--curva),
-    transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
+    transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva), opacity var(--t-lento) var(--curva);
 }
 
 .an .an-cartao:hover {
@@ -310,7 +310,7 @@
   transform: translateX(2px);
 }
 
-.an .an-cartao[aria-current='true'] {
+.an .an-cartao:has([aria-current='true']) {
   background: var(--superficie-alta);
   border-color: var(--acento-borda);
   box-shadow: inset 3px 0 0 var(--estado), 0 8px 20px -14px var(--acento-sombra), 0 0 0 1px var(--acento-borda);
@@ -325,8 +325,192 @@
   background: linear-gradient(90deg, var(--atencao-fundo), transparent 70%), var(--superficie-afundada);
 }
 
-.an .an-cartao.an-resolvida {
+.an .an-cartao.an-resolvida,
+.an .an-cartao.an-excluida {
   opacity: 0.72;
+}
+
+.an .an-cartao.an-resolvida .an-cartao-topo strong {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--texto-fraco) 60%, transparent);
+}
+
+.an .an-cartao-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  outline-offset: 4px;
+}
+
+/* A anotação que acabou de ser salva acende na lista por um instante: "está aqui". */
+.an .an-cartao.an-recem-salva {
+  animation: entrar var(--t-lento) var(--curva-saida) both, an-acender 1.6s var(--curva) both;
+}
+
+@keyframes an-acender {
+  0% {
+    box-shadow: inset 3px 0 0 var(--estado), 0 0 0 0 color-mix(in srgb, var(--positivo) 55%, transparent);
+    border-color: var(--positivo-borda);
+  }
+  35% {
+    box-shadow: inset 3px 0 0 var(--estado), 0 0 0 5px color-mix(in srgb, var(--positivo) 22%, transparent);
+    border-color: var(--positivo);
+  }
+  100% {
+    box-shadow: inset 3px 0 0 var(--estado), 0 0 0 0 transparent;
+  }
+}
+
+/* A bolinha: vazia na cor do estado; ao passar o mouse, o visto aparece; resolvida, cheia de verde. */
+.an .an-bolinha {
+  --anel: var(--borda-forte);
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid var(--anel);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color var(--t-rapido) var(--curva), background-color var(--t-medio) var(--curva), transform var(--t-rapido) var(--curva);
+}
+
+.an .an-vencida .an-bolinha {
+  --anel: var(--negativo);
+}
+
+.an .an-pendente .an-bolinha,
+.an .an-hoje .an-bolinha {
+  --anel: var(--atencao);
+}
+
+.an .an-bolinha::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--positivo);
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--t-rapido) var(--curva), transform var(--t-medio) var(--curva-mola);
+}
+
+.an .an-bolinha:hover {
+  --anel: var(--positivo);
+  background: var(--positivo-fundo);
+}
+
+.an .an-bolinha:hover::after {
+  opacity: 0.8;
+  transform: none;
+}
+
+.an .an-bolinha:active {
+  transform: scale(0.88);
+}
+
+.an .an-bolinha[aria-pressed='true'] {
+  --anel: var(--positivo);
+  background: var(--positivo);
+}
+
+.an .an-bolinha[aria-pressed='true']::after {
+  background: var(--texto-no-acento);
+  opacity: 1;
+  transform: none;
+}
+
+/* Resolvendo pela bolinha: ela enche de verde, o título é riscado e o cartão sai de cena. */
+.an .an-cartao.an-resolvendo .an-bolinha {
+  --anel: var(--positivo);
+  background: var(--positivo);
+  animation: estalar var(--t-lento) var(--curva-mola);
+}
+
+.an .an-cartao.an-resolvendo .an-bolinha::after {
+  background: var(--texto-no-acento);
+  opacity: 1;
+  transform: none;
+}
+
+.an .an-cartao.an-resolvendo .an-cartao-topo strong {
+  background: linear-gradient(currentColor, currentColor) left 55% / 100% 1.5px no-repeat;
+  animation: an-riscar 320ms var(--curva-saida) both;
+}
+
+.an .an-cartao.an-resolvendo {
+  opacity: 0.5;
+  transform: translateX(10px);
+  transition-delay: 160ms;
+}
+
+@keyframes an-riscar {
+  from {
+    background-size: 0 1.5px;
+  }
+  to {
+    background-size: 100% 1.5px;
+  }
+}
+
+.an .an-cartao.an-reabrindo {
+  opacity: 0.6;
+}
+
+.an .an-restaurar {
+  align-self: center;
+  padding: 0.2rem 0.55rem;
+  background: var(--superficie);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-pilula);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.an .an-restaurar:hover {
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--texto-forte);
+}
+
+/* O termo da busca, marcado no título, no trecho e nas etiquetas. */
+.an .an-cartao mark {
+  padding: 0 2px;
+  background: color-mix(in srgb, var(--atencao) 26%, transparent);
+  border-radius: 3px;
+  color: var(--texto-forte);
+}
+
+/* Checklist: quantas tarefas de quantas. Completa, verde. */
+.an .an-progresso {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--texto-fraco);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.an .an-progresso::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+}
+
+.an .an-progresso.completo {
+  color: var(--positivo);
 }
 
 .an .an-cartao-topo {
@@ -557,10 +741,18 @@
 }
 
 .an .an-editor-barra {
+  position: sticky;
+  top: calc(59px + var(--esp-2));
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--esp-2) var(--esp-3);
+  margin: calc(-1 * var(--esp-2)) calc(-1 * var(--esp-3)) 0;
+  padding: var(--esp-2) var(--esp-3);
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-radius: var(--r-md);
 }
 
 .an .an-voltar {
@@ -580,9 +772,130 @@
   content: '‹ ';
 }
 
-.an .an-salvo {
-  color: var(--texto-fraco);
+/* O selo de gravação: cinza quando nova, âmbar com alteração não salva, girando ao salvar, verde
+   com a hora quando salvo, vermelho se deu erro. */
+.an .an-status {
+  --cor: var(--texto-fraco);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 26px;
+  padding: 0.12rem 0.65rem 0.12rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--cor) 30%, transparent);
+  border-radius: var(--r-pilula);
+  background: color-mix(in srgb, var(--cor) 10%, transparent);
+  color: var(--cor);
   font-size: 0.76rem;
+  font-weight: 700;
+  transition: color var(--t-medio) var(--curva), background-color var(--t-medio) var(--curva), border-color var(--t-medio) var(--curva);
+}
+
+.an .an-status::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.an .an-status .an-link {
+  margin-left: 0.2rem;
+  color: inherit;
+  font-size: 0.74rem;
+}
+
+.an [data-gravacao='sujo'] .an-status {
+  --cor: var(--atencao);
+}
+
+.an [data-gravacao='salvo'] .an-status {
+  --cor: var(--positivo);
+}
+
+.an [data-gravacao='salvo'] .an-status::before {
+  width: 11px;
+  height: 11px;
+  border-radius: 0;
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+  animation: estalar var(--t-lento) var(--curva-mola);
+}
+
+.an [data-gravacao='salvando'] .an-status {
+  --cor: var(--acento);
+}
+
+.an [data-gravacao='salvando'] .an-status::before,
+.an .an-salvar[data-estado='salvando']::before {
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  background: none;
+  animation: an-girar 700ms linear infinite;
+}
+
+@keyframes an-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.an [data-gravacao='erro'] .an-status {
+  --cor: var(--negativo);
+}
+
+.an [data-gravacao='lixeira'] .an-status {
+  --cor: var(--texto-fraco);
+}
+
+/* Salvar: com alteração, ganha um anel na cor da aba e dá um toque quando a anotação muda. */
+.an .an-salvar {
+  min-width: 6.5rem;
+}
+
+.an .an-salvar[data-estado='salvando']::before {
+  content: '';
+  flex: none;
+}
+
+.an [data-gravacao='sujo'] .an-salvar {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 0 0 3px var(--acento-fundo), 0 6px 16px -8px var(--acento-sombra);
+}
+
+.an .an-salvar.an-cutucar {
+  animation: an-cutucar 520ms var(--curva-mola);
+}
+
+@keyframes an-cutucar {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: scale(1.06);
+  }
+  60% {
+    transform: scale(0.98);
+  }
+}
+
+/* Salvo com o botão: a folha sai para a esquerda e a anotação nova entra (em-cena). */
+.an .an-editor.an-saindo {
+  animation: an-folha-sai 380ms var(--curva) both;
+}
+
+@keyframes an-folha-sai {
+  to {
+    opacity: 0;
+    transform: translateX(-28px) scale(0.985);
+  }
+}
+
+.an .an-editor.an-na-lixeira .an-titulo,
+.an .an-editor.an-na-lixeira .an-texto {
+  opacity: 0.7;
 }
 
 .an .an-editor-acoes {
@@ -1101,6 +1414,339 @@
   .an .an-titulo {
     font-size: 1.3rem;
   }
+}
+
+/* ── Entrada rápida ─────────────────────────────────────────────────────────────────────
+   Escreve e aperta Enter: vira anotação. A data e as #etiquetas lidas aparecem em selos antes. */
+
+.an .an-rapida input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: var(--superficie-afundada);
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-md);
+  color: var(--texto-forte);
+  font-family: inherit;
+  font-size: 0.86rem;
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva), background-color var(--t-rapido) var(--curva);
+}
+
+.an .an-rapida input:focus {
+  border-style: solid;
+  border-color: var(--acento-borda);
+  background: var(--superficie);
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.an .an-rapida input::placeholder {
+  color: var(--texto-fraco);
+}
+
+.an .an-rapida-lido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.an .an-rapida-lido:empty {
+  display: none;
+}
+
+.an .an-rapida-lido > * {
+  animation: estalar var(--t-lento) var(--curva-mola);
+}
+
+.an .an-data-lida button {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-right: -0.2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.an .an-data-lida button:hover {
+  background: color-mix(in srgb, var(--atencao) 25%, transparent);
+}
+
+.an .an-visao-linha .segmentado {
+  display: flex;
+}
+
+.an .an-visao-linha .seg {
+  flex: 1;
+}
+
+/* ── Planejado: grupos por prazo, cada um com o seu tom ─────────────────────────────── */
+
+.an .an-grupo {
+  --tom: var(--texto-fraco);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.an .an-grupo + .an-grupo {
+  margin-top: var(--esp-2);
+}
+
+.an .an-grupo-vencidas {
+  --tom: var(--negativo);
+}
+
+.an .an-grupo-hoje {
+  --tom: var(--atencao);
+}
+
+.an .an-grupo-amanha,
+.an .an-grupo-semana {
+  --tom: var(--safira);
+}
+
+.an .an-grupo-resolvidas {
+  --tom: var(--positivo);
+}
+
+.an .an-grupo-titulo {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: 0.3rem 0.2rem;
+  background: color-mix(in srgb, var(--superficie) 88%, var(--fundo));
+  color: var(--tom);
+  font-family: var(--fonte);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.an .an-grupo-titulo::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tom);
+}
+
+.an .an-grupo-contagem {
+  padding: 0 0.4rem;
+  border-radius: var(--r-pilula);
+  background: color-mix(in srgb, var(--tom) 14%, transparent);
+  letter-spacing: 0;
+}
+
+/* ── Modelos, na anotação nova ──────────────────────────────────────────────────────── */
+
+.an .an-modelos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.an .an-modelos-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: var(--esp-2);
+}
+
+.an .an-modelo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.6rem 0.75rem;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  color: var(--texto);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+  transition: border-color var(--t-rapido) var(--curva), transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
+}
+
+.an .an-modelo:nth-child(2) {
+  animation-delay: 50ms;
+}
+.an .an-modelo:nth-child(3) {
+  animation-delay: 100ms;
+}
+.an .an-modelo:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.an .an-modelo:hover {
+  border-color: var(--acento-borda);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -16px var(--acento-sombra);
+}
+
+.an .an-modelo strong {
+  color: var(--texto-forte);
+  font-size: 0.84rem;
+}
+
+.an .an-modelo span {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+/* ── Checklist ──────────────────────────────────────────────────────────────────────── */
+
+.an .an-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.an .an-checklist-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.an .an-checklist-conta {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.an .an-checklist.completo .an-checklist-conta {
+  color: var(--positivo);
+}
+
+.an .an-checklist-barra {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--fundo-sutil);
+}
+
+.an .an-checklist-barra i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--positivo) 60%, transparent), var(--positivo));
+  transform: scaleX(var(--feito, 0));
+  transform-origin: left;
+  transition: transform var(--t-cena) var(--curva-saida);
+}
+
+.an .an-checklist ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.an .an-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--esp-2);
+  padding: 0.25rem 0.3rem;
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva);
+}
+
+.an .an-checklist label:hover {
+  background: color-mix(in srgb, var(--positivo) 7%, transparent);
+}
+
+.an .an-checklist input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--positivo);
+}
+
+.an .an-checklist input:checked {
+  animation: estalar var(--t-lento) var(--curva-mola);
+}
+
+.an .an-checklist .feito span {
+  color: var(--texto-fraco);
+  background: linear-gradient(currentColor, currentColor) left 55% / 100% 1.5px no-repeat;
+  animation: an-riscar 320ms var(--curva-saida) both;
+}
+
+.an .an-ferramenta-checklist::before {
+  -webkit-mask-image: var(--i-check);
+  mask-image: var(--i-check);
+}
+
+.an .an-ferramenta-anexar::before {
+  -webkit-mask-image: var(--i-clipe);
+  mask-image: var(--i-clipe);
+}
+
+/* Anexo que entra ao salvar: selo "novo". */
+.an .an-anexo-novo {
+  border-style: dashed;
+  border-color: var(--acento-borda);
+}
+
+.an .an-anexo-novo::after {
+  content: 'novo';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 0 0.35rem;
+  border-radius: var(--r-pilula);
+  background: var(--acento);
+  color: var(--texto-no-acento);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.an .an-recuperar > span:first-of-type {
+  flex: 1;
+}
+
+.an .an-recuperar-acoes {
+  display: flex;
+  gap: var(--esp-2);
+}
+
+.an .an-rodape kbd {
+  min-width: 1.3rem;
+  font-size: 0.66rem;
+}
+
+.an .an-copiar::before {
+  content: '';
+  flex: none;
+  width: 13px;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-copiar) center / contain no-repeat;
+  mask: var(--i-copiar) center / contain no-repeat;
+}
+
+.an .an-copiar.copiado::before {
+  -webkit-mask-image: var(--i-check);
+  mask-image: var(--i-check);
 }
 
 /* ══ Alertas de lembrete ════════════════════════════════════════════════════════════════

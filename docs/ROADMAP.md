@@ -111,10 +111,15 @@ amarelo/vermelho com alerta na tela. Ficou para depois:
 2. **Alerta com o navegador fechado.** Exigiria service worker e push, que o arquivo único
    (`file://`) não permite; só na versão do Netlify, e com login.
 3. **Lembrete que se repete** (todo dia 5, toda segunda), como o Todoist.
-4. **Lista de tarefas dentro da anotação** (`[ ]` que vira caixinha), como o Keep.
+4. ~~**Lista de tarefas dentro da anotação**~~ Feito em 30/09/2026, junto com o salvar explícito,
+   a entrada rápida, os modelos, o Planejado e a lixeira (ver CLAUDE.md, Anotações).
 5. **Anotar a partir das outras abas**: um "anotar" no cartão do Ordens que já leva a conta e o
    ativo; um "lembrar" no dia do Calendário.
 6. **Compartilhar uma anotação com um colega** (depende do login).
+7. **Modelos da própria mesa**: hoje os quatro modelos estão no código (`modelos.js`); a mesa
+   poderia criar os seus pela tela, como os posts do Operacional.
+8. **Arrastar para reordenar** e **cores de anotação** (Keep): ficaram de fora porque a ordem já
+   segue o prazo e a cor já diz o estado do lembrete — uma segunda cor competiria com ela.
 
 ---
 

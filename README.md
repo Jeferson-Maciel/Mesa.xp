@@ -362,11 +362,25 @@ nada nem desfazer edições. No banco da mesa isso já foi feito.
 O bloco de notas de cada um, para o que não pode ser esquecido: "estorno do dia 25", "ajudar a Ana
 com o relatório", o print da tela do cliente, o link do HUB.
 
-- **Nova anotação** (ou a tecla N): escreva o título e o texto. Salva sozinho.
+- **Anotar rápido**: escreva na caixa do alto da lista e aperte Enter — "ligar pro cliente amanhã
+  10h #retorno" já vira anotação com lembrete para amanhã às 10h e a etiqueta retorno. A data que
+  ele entendeu aparece antes, num selo; o × tira.
+- **Nova anotação** (botão Nova, ou a tecla N): escreva o título e o texto e clique em **Salvar**.
+  O selo no alto diz sempre em que pé está: *Alterações não salvas* (em amarelo) até você salvar, e
+  *Salvo às 14:32* (em verde) depois. **Salvar** grava e já abre uma anotação nova, em branco;
+  **Ctrl+S** salva e continua na mesma; **Ctrl+Enter** salva e começa outra. Se tentar sair sem
+  salvar, ele pergunta; se o navegador fechar no meio, na volta ele oferece **Recuperar**.
+- **Modelos**: na anotação nova, comece de Estorno, Pendência de cliente, Ajudar um colega ou
+  Retornar ligação — os campos e as tarefas já vêm prontos.
+- **Tarefas**: linhas que começam com `[ ]` viram caixinhas de marcar (o botão Tarefa começa uma).
+  O cartão mostra quantas faltam.
 - **Prints**: copie a tela e cole com **Ctrl+V** dentro da anotação — ou arraste o arquivo. Clique
   na miniatura para ver grande, copiar de novo (para colar no e-mail ou no WhatsApp) ou baixar.
 - **Links** colados no texto viram botões embaixo dele.
 - **Etiquetas** (#estorno, #ajudar…) filtram a lista com um clique.
+- **Planejado**: a lista agrupada por prazo — vencidas, hoje, amanhã, próximos 7 dias, depois.
+- **Resolver**: a bolinha à esquerda de cada anotação. **Excluir** leva para a **Lixeira**, que
+  guarda por 30 dias; os dois têm **Desfazer** no aviso.
 - **Lembrete**: escolha o dia (e a hora, se quiser) ou um atalho — daqui 1 hora, amanhã às 9h, em 2
   dias. A anotação fica **amarela** até o dia chegar e **vermelha** quando chega o dia ou a hora. Na
   hora, um alerta aparece na tela — em qualquer aba da Mesa XP —, a aba Anotações ganha um contador
@@ -445,7 +459,7 @@ docs/                      formatos de saída do Ordens; roadmap e sugestões
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 726 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 758 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

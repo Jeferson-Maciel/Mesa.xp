@@ -766,31 +766,63 @@ do navegador, BroadcastChannel.
 
 ### A tela
 
-Lista à esquerda (busca, filtros por estado com contagem, etiquetas), anotação aberta à direita;
-no celular, uma de cada vez. `#anotacoes/nota/<id>` abre a anotação. N cria, / busca.
+Lista à esquerda (entrada rápida, busca, visões Lista e Planejado, filtros por estado com contagem,
+etiquetas), anotação aberta à direita — e, sem nenhuma aberta, uma **anotação nova pronta para
+escrever**. No celular, uma de cada vez. Rotas: `#anotacoes` (a que estava aberta),
+`#anotacoes/nova`, `#anotacoes/nota/<id>`. N abre uma nova, / busca.
 
-- **Salva sozinho** (450 ms depois da última tecla, e ao sair do campo, da aba ou da página). Toda
-  gravação passa por uma fila: um print que entra enquanto o texto é salvo não pode ser apagado pela
-  gravação do texto, que leu a anotação antes dele.
-- **Ctrl+V com uma imagem** anexa o print (nome "print AAAA-MM-DD HHhMM.png"); arrastar arquivos
-  também; o arquivo fica como Blob no IndexedDB, até 15 MB cada. No visor, "Copiar imagem" põe o
-  print de volta na área de transferência (convertido para PNG, o único tipo que ela aceita).
+**Salvar é explícito** (pedido da mesa em 30/09: "não dá para saber quando salvou"; e o que o NN/g
+mostra que as pessoas esperam — nada mudou até Salvar):
+
+- o editor trabalha num **rascunho** (`estado.aberta`); nada vai para o IndexedDB até Salvar;
+- o **selo de gravação** diz sempre em que pé está: Nova anotação · Alterações não salvas
+  (âmbar, com Descartar) · Salvando… · Salvo às 14:32 (verde) · Não salvou;
+- **Salvar** grava e abre uma anotação nova (a folha salva sai de cena, a nova entra, e a salva
+  acende na lista); **Ctrl+S** salva e continua; **Ctrl+Enter** salva e começa outra;
+- sair de uma anotação com alteração pergunta antes; fechar a página também (`beforeunload`);
+- enquanto não é salvo, o rascunho fica no `localStorage` (`mesa_anotacoes_rascunho`): se a página
+  fechar no meio, a anotação oferece **Recuperar** na volta (texto, etiquetas e lembrete — os
+  anexos novos, não);
+- ao salvar, vale o que a pessoa mudou desde que abriu; o que ela não mexeu vem do que está gravado
+  agora (`mesclarAoSalvar`) — o alerta pode ter adiado o lembrete enquanto ela editava o texto;
+- anexos colados ou arrastados entram no rascunho (selo "novo") e vão para o banco ao salvar.
+
+O resto, tirado das ferramentas que a mesa já conhece:
+
+- **Entrada rápida** (Todoist): "ligar pro cliente amanhã 10h #retorno" + Enter vira anotação com
+  lembrete e etiqueta; a data lida aparece num selo antes, com × para ignorar (`dataNatural.js`, e
+  as regras de cautela dele: "do dia 25" não é lembrete, "segunda via" não é segunda-feira).
+- **Modelos** (Evernote, Notion): Estorno, Pendência de cliente, Ajudar um colega, Retornar ligação
+  — título, campos e checklist prontos (`modelos.js`); só o de retorno sugere prazo.
+- **Checklist** (Keep, Apple Notes): linhas `[ ]`/`[x]` no texto viram caixinhas com barra de
+  progresso; o cartão mostra "1/3". Fica como texto: vai no backup e no "Copiar texto".
+- **Planejado** (Microsoft To Do): a lista agrupada em Vencidas, Hoje, Amanhã, Próximos 7 dias,
+  Mais adiante e Sem lembrete.
+- **Bolinha de resolver** no cartão (Todoist) e **Desfazer** no aviso depois de resolver ou excluir
+  (Gmail, Keep).
+- **Lixeira de 30 dias** (Apple Notes): excluir é mandar para a lixeira (`excluidaEm`); de lá,
+  Restaurar ou Apagar de vez; passados 30 dias, apaga sozinha ao abrir a aba.
+- **Busca com o termo marcado** no cartão, sem ligar para acento; **Copiar texto** no editor.
+- **Ctrl+V com uma imagem** anexa o print (nome "print AAAA-MM-DD HHhMM.png", como o Sticky Notes);
+  o arquivo fica como Blob no IndexedDB, até 15 MB cada. No visor, "Copiar imagem" põe o print de
+  volta na área de transferência (convertido para PNG, o único tipo que ela aceita).
 - **Links** http(s) do texto viram botões que abrem em outra aba; `javascript:` e afins, nunca.
-- Anotação nova abandonada sem nada escrito some sozinha.
+- Toda escrita passa por uma **fila**: duas gravações da mesma anotação nunca se cruzam.
 - Tudo que é texto passa por `esc`: anotação é texto livre, às vezes colado de um e-mail.
 
 ### Mapa
 
-`lembretes.js` e `notas.js` (funções puras: estado, rótulo, atalhos, etiquetas, links, ordem,
-filtros, busca) · `repositorio.js` (contrato e validação) · `adaptadores/indexeddb.js` e
-`adaptadores/memoria.js` · `backup.js` · `eventos.js` · `banco.js` (um repositório para a página) ·
-`vigia.js` · `render.js` (HTML puro) · `index.js` (estado, eventos) · `anotacoes.css`.
+`lembretes.js`, `notas.js`, `dataNatural.js` e `modelos.js` (funções puras: estado, rótulo,
+atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, modelos) ·
+`repositorio.js` (contrato e validação) · `adaptadores/indexeddb.js` e `adaptadores/memoria.js` ·
+`backup.js` · `eventos.js` · `banco.js` (um repositório para a página) · `vigia.js` · `render.js`
+(HTML puro) · `index.js` (rascunho, estado, eventos) · `anotacoes.css`.
 
 ---
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 726 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 758 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; a UI não é. Os 449 testes do Ordens original continuam aqui.

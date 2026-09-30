@@ -10,7 +10,8 @@
  * - `pendente` — o dia ainda não chegou: **amarelo**;
  * - `hoje` — é hoje, mas a hora marcada ainda não chegou: amarelo forte;
  * - `vencida` — chegou o dia (sem hora) ou a hora: **vermelho**, e o alerta na tela;
- * - `resolvida` — marcada como resolvida: sai do caminho, com ou sem lembrete.
+ * - `resolvida` — marcada como resolvida: sai do caminho, com ou sem lembrete;
+ * - `excluida` — na lixeira (30 dias): não vence, não alerta.
  */
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
@@ -31,8 +32,9 @@ const mesmoDia = (a, b) => chaveDoDia(a) === chaveDoDia(b);
 
 const somarDias = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
 
-/** @returns {'livre' | 'pendente' | 'hoje' | 'vencida' | 'resolvida'} */
+/** @returns {'livre' | 'pendente' | 'hoje' | 'vencida' | 'resolvida' | 'excluida'} */
 export const estadoDaNota = (nota, agora = new Date()) => {
+  if (nota.excluidaEm) return 'excluida';
   if (nota.concluida) return 'resolvida';
   if (!nota.lembrete) return 'livre';
   const momento = momentoDoLembrete(nota.lembrete);
@@ -49,6 +51,7 @@ const diasEntre = (antes, depois) =>
 /** O texto do selo da anotação: "Lembrar amanhã às 09:00", "Venceu ontem", "Resolvida em 29/09". */
 export const rotuloDoLembrete = (nota, agora = new Date()) => {
   const estado = estadoDaNota(nota, agora);
+  if (estado === 'excluida') return `Na lixeira desde ${ddmm(new Date(nota.excluidaEm))}`;
   if (estado === 'resolvida') return nota.concluidaEm ? `Resolvida em ${ddmm(new Date(nota.concluidaEm))}` : 'Resolvida';
   if (estado === 'livre') return '';
 
@@ -103,7 +106,7 @@ export const aplicarAtalho = (id, agora = new Date()) => {
 export const proximoMomento = (notas, agora = new Date()) => {
   let proximo = null;
   for (const n of notas) {
-    if (n.concluida || !n.lembrete) continue;
+    if (n.concluida || n.excluidaEm || !n.lembrete) continue;
     const m = momentoDoLembrete(n.lembrete);
     if (m > agora && (!proximo || m < proximo)) proximo = m;
   }

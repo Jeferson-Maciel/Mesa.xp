@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { novaNota } from './notas.js';
-import { htmlAlerta, htmlAnexos, htmlCartao, htmlEditor, htmlEtiquetasFiltro, htmlFiltros, htmlLinks, htmlLista } from './render.js';
+import { htmlAlerta, htmlAnexos, htmlCartao, htmlChecklist, htmlDataLida, htmlEditor, htmlEtiquetasFiltro, htmlFiltros, htmlLinks, htmlLista, realcar, textoDoStatus } from './render.js';
 
 const AGORA = new Date(2026, 8, 30, 10, 5);
 const XSS = '<img src=x onerror=alert(1)>';
@@ -107,5 +107,56 @@ describe('alerta de lembrete', () => {
     expect(html).not.toContain('<img');
     expect(html).toContain('Venceu hoje às 09:00');
     for (const acao of ['abrir', 'adiar-1h', 'adiar-amanha', 'resolver', 'dispensar']) expect(html).toContain(`data-alerta="${acao}"`);
+  });
+});
+
+describe('recursos novos da tela', () => {
+  it('a busca marca o termo sem ligar para acento, e escapa o resto', () => {
+    expect(realcar('Relatório <b>da Ana</b>', 'relatorio')).toBe('<mark>Relatório</mark> &lt;b&gt;da Ana&lt;/b&gt;');
+    expect(realcar(XSS, '')).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    expect(htmlCartao(nota({ titulo: 'Relatório da Ana' }), AGORA, false, { termo: 'relatorio' })).toContain('<mark>Relatório</mark>');
+  });
+
+  it('o cartão tem a bolinha de resolver; na lixeira, Restaurar', () => {
+    expect(htmlCartao(nota(), AGORA, false)).toContain('data-resolver="n1"');
+    const naLixeira = htmlCartao(nota({ excluidaEm: AGORA.getTime() }), AGORA, false);
+    expect(naLixeira).toContain('data-restaurar="n1"');
+    expect(naLixeira).not.toContain('data-resolver');
+  });
+
+  it('o cartão mostra o progresso da checklist', () => {
+    expect(htmlCartao(nota({ texto: '[x] a\n[ ] b' }), AGORA, false)).toContain('>1/2<');
+  });
+
+  it('na visão Planejado, a lista sai em grupos por prazo', () => {
+    const html = htmlLista({ notas: [nota({ lembrete: { data: '2026-10-01', hora: null } })], agora: AGORA, selecionada: null, filtro: 'todas', termo: '', visao: 'agenda' });
+    expect(html).toContain('an-grupo-amanha');
+    expect(html).toContain('Amanhã');
+  });
+
+  it('a checklist conta e escapa', () => {
+    const html = htmlChecklist(`[x] ${XSS}\n[ ] segunda`);
+    expect(html).toContain('1 de 2');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('data-item="0" checked');
+    expect(htmlChecklist('sem tarefas')).toBe('');
+  });
+
+  it('anotação nova: modelos e Salvar, sem Excluir; na lixeira: Restaurar e campos travados', () => {
+    const nova = htmlEditor({ nota: nota(), agora: AGORA, sugestoes: [], nova: true });
+    expect(nova).toContain('data-modelo="estorno"');
+    expect(nova).toContain('data-acao="salvar"');
+    expect(nova).not.toContain('data-acao="excluir"');
+    const lixo = htmlEditor({ nota: nota({ excluidaEm: AGORA.getTime() }), agora: AGORA, sugestoes: [] });
+    expect(lixo).toContain('data-acao="restaurar"');
+    expect(lixo).not.toContain('data-acao="salvar"');
+    expect(lixo).toMatch(/data-campo="titulo"[^>]*disabled/);
+  });
+
+  it('o selo de gravação diz em que pé está', () => {
+    expect(textoDoStatus('sujo')).toBe('Alterações não salvas');
+    expect(textoDoStatus('salvo', new Date(2026, 8, 30, 14, 32).getTime())).toBe('Salvo às 14:32');
+    expect(htmlDataLida({ data: '2026-10-01', hora: '10:00' }, AGORA)).toContain('Lembrar amanhã às 10:00');
+    expect(htmlDataLida(null, AGORA)).toBe('');
   });
 });

@@ -31,7 +31,8 @@ describe('anotação nova', () => {
       fixada: false,
       anexos: [],
       criadaEm: 1000,
-      atualizadaEm: 1000
+      atualizadaEm: 1000,
+      excluidaEm: null
     });
     expect(estaVazia(n)).toBe(true);
     expect(estaVazia({ ...n, anexos: [{ id: 'a' }] })).toBe(false);
@@ -49,6 +50,7 @@ describe('título e trecho', () => {
   it('o trecho é o texto numa linha só, sem repetir a linha que virou título', () => {
     expect(trechoDe(nota({ texto: 'Ligar para o assessor\nconta 1234567\n\nprint no anexo' }))).toBe('conta 1234567 print no anexo');
     expect(trechoDe(nota({ titulo: 'Estorno', texto: 'conta 1234567\nvalor R$ 50,00' }))).toBe('conta 1234567 valor R$ 50,00');
+    expect(trechoDe(nota({ titulo: 'Estorno', texto: '[x] pedir\n- [ ] anexar o print' }))).toBe('☑ pedir - ☐ anexar o print');
   });
 });
 
@@ -130,6 +132,6 @@ describe('ordem, filtros e busca', () => {
   });
 
   it('conta cada filtro', () => {
-    expect(contagens(todas, AGORA)).toEqual({ todas: 5, lembretes: 2, vencidas: 1, resolvidas: 1 });
+    expect(contagens(todas, AGORA)).toEqual({ todas: 5, lembretes: 2, vencidas: 1, resolvidas: 1, lixeira: 0 });
   });
 });

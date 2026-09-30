@@ -518,6 +518,33 @@ dialog:not([open])::backdrop {
   animation: toast-sai var(--t-lento) var(--curva) both;
 }
 
+/* Aviso com "Desfazer": o único aviso em que se clica. */
+.toast.com-acao {
+  pointer-events: auto;
+}
+
+.toast-acao {
+  margin-left: var(--esp-2);
+  padding: 0.2rem 0.65rem;
+  background: var(--acento-fundo);
+  border: 1px solid var(--acento-borda);
+  border-radius: var(--r-pilula);
+  color: var(--texto-forte);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
+}
+
+.toast-acao:hover {
+  background: color-mix(in srgb, var(--acento) 26%, transparent);
+}
+
+.toast-acao:active {
+  transform: scale(0.95);
+}
+
 @keyframes toast-entra {
   from {
     opacity: 0;

@@ -20,10 +20,30 @@ export const aviso = (mensagem, { tipo = 'info' } = {}) => {
   if (!lista) return;
 
   const erro = tipo === 'erro';
+  const duracao = erro ? DURACAO.erro : DURACAO.info;
   const toast = document.createElement('div');
   toast.className = erro ? 'toast erro' : 'toast';
   toast.setAttribute('role', erro ? 'alert' : 'status');
-  toast.textContent = mensagem;
+  // A linha que encolhe no pé do aviso mostra quanto tempo ele ainda fica (base.css).
+  toast.style.setProperty('--duracao', `${duracao}ms`);
+  const icone = document.createElement('span');
+  icone.className = 'toast-icone';
+  icone.setAttribute('aria-hidden', 'true');
+  const texto = document.createElement('span');
+  texto.textContent = mensagem;
+  toast.append(icone, texto);
   lista.appendChild(toast);
-  setTimeout(() => toast.remove(), erro ? DURACAO.erro : DURACAO.info);
+
+  // Sai deslizando; a remoção espera a animação, ou 400 ms se ela não vier (movimento reduzido).
+  setTimeout(() => {
+    toast.classList.add('saindo');
+    let feito = false;
+    const tirar = () => {
+      if (feito) return;
+      feito = true;
+      toast.remove();
+    };
+    toast.addEventListener('animationend', tirar, { once: true });
+    setTimeout(tirar, 400);
+  }, duracao);
 };

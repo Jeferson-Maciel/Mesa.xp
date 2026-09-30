@@ -55,7 +55,8 @@ para cá em vez de entrar no código.
 
 ### Casca e visual
 
-- O ícone da aba do navegador é o logo padrão do Vite, herdado do Ordens. Trocar por um da Mesa XP.
+- ~~O ícone da aba do navegador é o logo padrão do Vite.~~ Trocado em 30/09/2026 pelo selo XP em
+  ouro, o mesmo do topo.
 - Atalhos visíveis: as abas mostram Alt+1/2/3 no `title` e o Renda Fixa tem a lista no "?", mas os
   do Ordens (Ctrl+Enter, Alt+H) continuam só no `title` dos botões. Uma lista única, por aba, ajudaria
   (F20 abaixo).

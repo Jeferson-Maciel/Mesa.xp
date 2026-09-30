@@ -1,30 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
-   Mesa XP — sistema visual (herdado do Assistente de Ordens)
+   Mesa XP — sistema visual: joias sobre grafite
 
-   Esta é uma ferramenta de expediente: fica aberta o dia todo e é lida por horas seguidas.
-   Todas as decisões abaixo saem daí.
+   Uma ferramenta de expediente, aberta o dia todo e lida por horas seguidas, com cara de CRM
+   financeiro. Todas as decisões abaixo saem daí.
 
-   • Nenhum extremo. O modo claro não usa branco puro no fundo nem preto puro no texto; o
-     escuro não usa preto puro. Os extremos são o que cansa a vista ao longo do dia, porque
-     forçam a pupila a se readaptar a cada troca de foco entre a tela e o resto da sala.
-   • Cor com parcimônia. O âmbar da marca aparece em poucos lugares; verde, vermelho e âmbar
-     carregam significado (compra, venda, atenção) e por isso não decoram nada.
-   • Saturação baixa no escuro. Cor saturada sobre fundo escuro vibra na retina — os mesmos
-     tons aparecem aqui suavizados, não os do modo claro reaproveitados.
-   • Movimento curto e com motivo. Nada que chame atenção duas vezes para a mesma coisa.
+   • Nenhum extremo. O claro não usa branco puro no fundo nem preto puro no texto; o escuro não
+     usa preto puro. Os extremos cansam a vista ao longo do dia.
+   • Uma cor por ferramenta. Cada aba tem a sua pedra — safira no Ordens, água-marinha no Renda
+     Fixa, ametista no Calendário, turmalina no Operacional — e ela aparece na aba ativa, na ação
+     principal, no foco e no brilho do fundo. O ouro é a marca (XP). Assim a tela deixa de ser
+     monocromática sem que a cor vire enfeite: ela diz em que ferramenta você está.
+   • Cor que informa não decora. Verde é compra e alta, vermelho é venda e queda, âmbar é atenção.
+     Nenhuma pedra usa esses matizes, para não competir com eles.
+   • Saturação contida no escuro. Os tons do escuro são clareados e suavizados, não os do claro
+     reaproveitados: cor saturada sobre fundo escuro vibra na retina.
+   • Movimento com motivo. Orienta (de onde veio, para onde foi), confirma (copiado, salvo) e dá
+     vida ao que é ao vivo. Curto, sem laço chamando atenção — a única exceção é o ponto "ao vivo",
+     lento e pequeno. `prefers-reduced-motion` desliga tudo.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
-/* Este arquivo guarda o que as três ferramentas dividem: tokens, base, avisos e movimento
-   reduzido. Os componentes compartilhados estão em componentes.css; o resto é de cada módulo. */
+/* ── Tokens que não dependem do tema ──────────────────────────────────────────────────── */
 
-/* ── Tokens ─────────────────────────────────────────────────────────────────────────────
-   O tema é um atributo do <html>, aplicado por um script inline antes da primeira pintura. */
+/* A cor do brilho do fundo é registrada como <color> para poder transitar: sem isso, trocar de
+   aba trocaria o degradê de uma vez. */
+@property --acento-ambiente {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
 
 :root {
-  /* Escalas que não dependem do tema */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
+  --r-sm: 7px;
+  --r-md: 11px;
+  --r-lg: 16px;
+  --r-pilula: 999px;
 
   --esp-1: 0.25rem;
   --esp-2: 0.5rem;
@@ -39,56 +48,85 @@
     Roboto, sans-serif;
   --fonte-mono: 'Cascadia Mono', ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
-  /* Movimento: curto o bastante para não fazer esperar, longo o bastante para orientar. */
+  /* Movimento. Três durações de interface e uma de cena (entrada de aba, revelação de tema). */
   --t-rapido: 120ms;
-  --t-medio: 180ms;
-  --t-lento: 260ms;
-  --curva: cubic-bezier(0.2, 0, 0, 1);
+  --t-medio: 200ms;
+  --t-lento: 320ms;
+  --t-cena: 560ms;
+  --curva: cubic-bezier(0.2, 0, 0, 1); /* padrão: começa decidida, assenta suave */
+  --curva-saida: cubic-bezier(0.16, 1, 0.3, 1); /* chegada: desacelera longa, sem tranco */
+  --curva-mola: cubic-bezier(0.34, 1.56, 0.64, 1); /* um leve passar do ponto, para o que "estala" */
+  --cascata: 45ms; /* atraso entre itens de uma entrada em sequência */
+
+  /* Ícones: SVG de traço em máscara, pintados com a cor do texto (currentColor ou o token).
+     Vão em pseudo-elementos, fora do texto do botão — o texto dos botões é conferido. */
+  --i-copiar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2.5'/%3E%3Cpath d='M5 15V6a3 3 0 0 1 3-3h9'/%3E%3C/svg%3E");
+  --i-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --i-alerta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 4.2 2.6 17.6A2 2 0 0 0 4.3 20.6h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z'/%3E%3Cpath d='M12 9.5v4.2M12 17h.01'/%3E%3C/svg%3E");
+  --i-erro: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5h.01'/%3E%3C/svg%3E");
+  --i-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5.5M12 7.5h.01'/%3E%3C/svg%3E");
+  --i-predio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M2.5 21h19M8 8h3M8 12h3M8 16h3'/%3E%3C/svg%3E");
+  --i-relogio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+  --i-nota: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 4h14v10.5L13.5 20H5z'/%3E%3Cpath d='M13.5 20v-5.5H19M8.5 9h7M8.5 12.5h4'/%3E%3C/svg%3E");
+  --i-seta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E");
+  --i-planilha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M8.5 12.5h7M8.5 16h7M12 11v7'/%3E%3C/svg%3E");
+  --i-enviar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4M7 9l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3'/%3E%3C/svg%3E");
+  --i-lixo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'/%3E%3C/svg%3E");
+  --i-lapis: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z'/%3E%3Cpath d='M13.5 6.5l4 4'/%3E%3C/svg%3E");
+  --i-mais: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+  --i-caixa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 13.5 6 5h12l3 8.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z'/%3E%3Cpath d='M3 13.5h5l1.5 2.2h5L16 13.5h5'/%3E%3C/svg%3E");
+  --i-brilho: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z'/%3E%3Cpath d='M19 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z'/%3E%3C/svg%3E");
+  --i-pessoas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.5'/%3E%3Cpath d='M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3a6.5 6.5 0 0 1 3.5 5.7'/%3E%3C/svg%3E");
+  --i-documento: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5M9 13h6M9 17h4'/%3E%3C/svg%3E");
 }
 
-/* Modo escuro — grafite azulado, com cara de CRM financeiro.
-
-   Até 29/09/2026 o escuro era quase preto (#16181d), e a mesa o achava escuro demais. As
-   superfícies subiram de nível para um grafite médio, e o texto subiu junto para manter a mesma
-   faixa de contraste: corpo por volta de 8:1 no cartão, título por volta de 11,5:1 — legível com
-   folga, sem chegar ao branco, que deixa halo na vista. Medido com o contraste WCAG; ao mexer,
-   meça de novo. */
+/* ── Escuro: grafite azulado ──────────────────────────────────────────────────────────────
+   O grafite ganhou um fundo levemente azul — o tom de terminal financeiro —, na mesma altura de
+   antes: a mesa achava o quase preto escuro demais. Contraste medido por WCAG (ver CLAUDE.md):
+   corpo ~8,4:1 no cartão, título ~12,5:1, secundário acima de 5:1. Ao mexer, meça de novo. */
 :root[data-tema='escuro'] {
-  --fundo: #1f242d;
-  --fundo-sutil: #272d38;
-  --superficie: #282e39;
-  --superficie-alta: #303745;
-  --superficie-afundada: #1b2028;
+  --fundo: #1b2130;
+  --fundo-sutil: #252c3d;
+  --superficie: #222939;
+  --superficie-alta: #2b3345;
+  --superficie-afundada: #191f2d;
 
-  --borda: #3a4251;
-  --borda-forte: #4b5567;
+  --borda: #323b4f;
+  --borda-forte: #434d65;
+  /* O fio de luz no alto de cartões e botões: dá volume sem sombra pesada. */
+  --realce: rgba(255, 255, 255, 0.045);
 
-  --texto-forte: #e8ecf2;
-  --texto: #c3cad6;
-  /* Não desce mais que isto: rótulos e contadores usam corpo pequeno, e abaixo de 4.5:1
-     viram esforço de leitura em vez de informação secundária. */
-  --texto-fraco: #98a3b3;
+  --texto-forte: #eaeef6;
+  --texto: #bcc5d4;
+  --texto-fraco: #97a2b6;
 
-  --marca: #dcaa52;
-  --marca-fundo: rgba(220, 170, 82, 0.13);
-  --marca-borda: rgba(220, 170, 82, 0.36);
+  /* As pedras. Cada uma acima de 6:1 sobre o cartão, e o texto escuro sobre elas acima de 7:1. */
+  --safira: #7eaaf6;
+  --agua: #5cc6da;
+  --ametista: #ad9cf4;
+  --turmalina: #ef8fc4;
+  --texto-no-acento: #101624;
 
-  --positivo: #62bf92;
-  --positivo-fundo: rgba(98, 191, 146, 0.13);
-  --positivo-borda: rgba(98, 191, 146, 0.34);
+  --marca: #e3b664; /* ouro XP */
+  --marca-fundo: rgba(227, 182, 100, 0.13);
+  --marca-borda: rgba(227, 182, 100, 0.36);
 
-  --negativo: #e8897f;
-  --negativo-fundo: rgba(232, 137, 127, 0.13);
-  --negativo-borda: rgba(232, 137, 127, 0.32);
+  --positivo: #5ccb97;
+  --positivo-fundo: rgba(92, 203, 151, 0.13);
+  --positivo-borda: rgba(92, 203, 151, 0.34);
 
-  --atencao: #dfae5a;
-  --atencao-fundo: rgba(223, 174, 90, 0.13);
-  --atencao-borda: rgba(223, 174, 90, 0.32);
+  --negativo: #f08a80;
+  --negativo-fundo: rgba(240, 138, 128, 0.12);
+  --negativo-borda: rgba(240, 138, 128, 0.34);
 
-  --info: #7ab0de;
+  --atencao: #eeb259;
+  --atencao-fundo: rgba(238, 178, 89, 0.12);
+  --atencao-borda: rgba(238, 178, 89, 0.34);
 
-  /* Classes de ativo — os mesmos matizes do modo claro, clareados e dessaturados para não
-     vibrarem sobre fundo escuro. Todos acima de 5:1 sobre o cartão. */
+  --info: #78b1f0;
+
+  /* Classes de ativo do Ordens — clareadas e dessaturadas para o fundo escuro, todas acima de
+     5:1 sobre o cartão. */
   --classe-acao: #7cb0e0;
   --classe-fii: #5fc0ae;
   --classe-bdr: #b096e0;
@@ -98,59 +136,55 @@
   --classe-outros: #9aa3b0;
   --classe-cetipado: #bb9ad8;
 
-  --veu: rgba(12, 15, 20, 0.55);
-
-  /* Com a superfície mais clara, a sombra volta a separar um pouco; a borda continua fazendo o
-     grosso do trabalho. */
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --sombra-alta: 0 10px 28px rgba(0, 0, 0, 0.38);
-  --foco: 0 0 0 3px rgba(220, 170, 82, 0.3);
+  --veu: rgba(10, 13, 22, 0.58);
+  --sombra: 0 1px 2px rgba(3, 6, 14, 0.3), 0 1px 0 var(--realce) inset;
+  --sombra-media: 0 6px 18px -6px rgba(3, 6, 14, 0.45);
+  --sombra-alta: 0 18px 48px -12px rgba(3, 6, 14, 0.6), 0 2px 6px rgba(3, 6, 14, 0.3);
+  --brilho-ambiente: 10%;
 }
 
-/* Modo claro — porcelana neutra, em quatro níveis, não branco sobre branco.
-
-   O tom é um cinza levemente frio e pouco saturado, o de um CRM financeiro: mais sóbrio que o
-   neutro morno de antes, sem o azul de tela de escritório. O texto é grafite, nunca preto.
-
-   Os níveis vão do mais escuro ao mais claro e cada um tem um papel fixo: a página afunda, o
-   cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco puro fica reservado
-   ao que flutua por cima de tudo. É a hierarquia que faltava quando o cartão era branco puro
-   sobre um fundo quase branco — sem diferença entre os níveis, a tela vira uma chapa só. */
+/* ── Claro: porcelana fria, em quatro níveis ─────────────────────────────────────────────
+   A página afunda, o cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco
+   puro fica para o que flutua. Texto grafite, nunca preto: corpo ~8,2:1, título ~12,9:1. */
 :root[data-tema='claro'] {
-  --fundo-sutil: #e2e6ec; /* cabeçalho de tabela, trilho dos segmentados, fichas */
-  --fundo: #eceff3; /* a página */
-  --superficie-afundada: #f3f5f8; /* campos, blocos de saída, itens de lista */
-  --superficie: #fbfcfd; /* cartões e cabeçalho — quase branco, nunca branco puro */
-  --superficie-alta: #ffffff; /* só o que flutua: gaveta, avisos e janelas */
+  --fundo-sutil: #e3e8f0;
+  --fundo: #eef1f6;
+  --superficie-afundada: #f4f6fa;
+  --superficie: #fbfcfe;
+  --superficie-alta: #ffffff;
 
-  --borda: #dce1e8;
-  --borda-forte: #c4cbd5;
+  --borda: #dbe1ea;
+  --borda-forte: #c3cbd8;
+  --realce: rgba(255, 255, 255, 0.9);
 
-  /* Grafite, não preto: em cartão claro o preto puro produz contraste duro demais para quem
-     passa o dia lendo a tela. Corpo por volta de 8:1, título por volta de 13:1. */
-  --texto-forte: #262f3e;
-  --texto: #465062;
-  --texto-fraco: #5b6576;
+  --texto-forte: #243044;
+  --texto: #434e62;
+  --texto-fraco: #586377;
 
-  --marca: #8f6310;
-  --marca-fundo: rgba(196, 138, 30, 0.13);
-  --marca-borda: rgba(143, 99, 16, 0.34);
+  --safira: #2458b5;
+  --agua: #0a6b82;
+  --ametista: #5a43b6;
+  --turmalina: #a3336f;
+  --texto-no-acento: #ffffff;
 
-  --positivo: #1c7650;
-  --positivo-fundo: rgba(28, 118, 80, 0.1);
-  --positivo-borda: rgba(28, 118, 80, 0.28);
+  --marca: #8a5f0e;
+  --marca-fundo: rgba(196, 138, 30, 0.12);
+  --marca-borda: rgba(138, 95, 14, 0.34);
 
-  --negativo: #b03a31;
-  --negativo-fundo: rgba(176, 58, 49, 0.09);
-  --negativo-borda: rgba(176, 58, 49, 0.26);
+  --positivo: #18764e;
+  --positivo-fundo: rgba(24, 118, 78, 0.09);
+  --positivo-borda: rgba(24, 118, 78, 0.28);
 
-  --atencao: #865b0b;
-  --atencao-fundo: rgba(196, 138, 30, 0.13);
-  --atencao-borda: rgba(134, 91, 11, 0.3);
+  --negativo: #b0372f;
+  --negativo-fundo: rgba(176, 55, 47, 0.08);
+  --negativo-borda: rgba(176, 55, 47, 0.26);
 
-  --info: #2a6799;
+  --atencao: #8a5a08;
+  --atencao-fundo: rgba(196, 138, 30, 0.12);
+  --atencao-borda: rgba(138, 90, 8, 0.3);
 
-  /* Classes de ativo — ver a nota em "Cores de classe de ativo". */
+  --info: #255fa3;
+
   --classe-acao: #2f6296;
   --classe-fii: #1c7365;
   --classe-bdr: #6a4c99;
@@ -160,10 +194,44 @@
   --classe-outros: #5c6068;
   --classe-cetipado: #7a5195;
 
-  --veu: rgba(30, 38, 52, 0.32);
-  --sombra: 0 1px 2px rgba(30, 38, 52, 0.07), 0 1px 3px rgba(30, 38, 52, 0.04);
-  --sombra-alta: 0 12px 32px rgba(30, 38, 52, 0.14);
-  --foco: 0 0 0 3px rgba(143, 99, 16, 0.24);
+  --veu: rgba(28, 36, 52, 0.34);
+  --sombra: 0 1px 2px rgba(28, 36, 52, 0.06), 0 1px 3px rgba(28, 36, 52, 0.04), 0 1px 0 var(--realce) inset;
+  --sombra-media: 0 8px 20px -8px rgba(28, 36, 52, 0.18);
+  --sombra-alta: 0 22px 50px -14px rgba(28, 36, 52, 0.26), 0 2px 6px rgba(28, 36, 52, 0.06);
+  --brilho-ambiente: 9%;
+}
+
+/* ── A pedra de cada ferramenta ───────────────────────────────────────────────────────────
+   `--acento` é a cor da ferramenta; os derivados são calculados no mesmo elemento que a define
+   (uma variável é resolvida onde é declarada, e herdada já pronta). O body leva a da aba aberta,
+   para o topo, os avisos e o brilho do fundo; cada seção leva a sua. */
+body,
+.modulo {
+  --acento: var(--marca);
+  --acento-fundo: color-mix(in srgb, var(--acento) 13%, transparent);
+  --acento-borda: color-mix(in srgb, var(--acento) 38%, transparent);
+  --acento-sombra: color-mix(in srgb, var(--acento) 42%, transparent);
+  --foco: 0 0 0 3px color-mix(in srgb, var(--acento) 26%, transparent);
+}
+
+body[data-aba='ordens'],
+#modulo-ordens {
+  --acento: var(--safira);
+}
+
+body[data-aba='rendafixa'],
+#modulo-rendafixa {
+  --acento: var(--agua);
+}
+
+body[data-aba='calendario'],
+#modulo-calendario {
+  --acento: var(--ametista);
+}
+
+body[data-aba='operacional'],
+#modulo-operacional {
+  --acento: var(--turmalina);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────────────── */
@@ -177,20 +245,36 @@
 }
 
 html {
-  /* A troca de tema atravessa a página inteira; sem isto ela pisca. */
   transition: background-color var(--t-lento) var(--curva);
 }
 
 body {
+  --acento-ambiente: var(--acento);
   min-height: 100vh;
   background: var(--fundo);
   color: var(--texto);
   font-family: var(--fonte);
   font-size: 15px;
   line-height: 1.55;
+  /* Números alinhados em coluna em todo lugar: taxas, quantidades, contagens. */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  transition: background-color var(--t-lento) var(--curva), color var(--t-lento) var(--curva);
+  transition: background-color var(--t-lento) var(--curva), color var(--t-lento) var(--curva),
+    --acento-ambiente 700ms var(--curva);
+}
+
+/* O brilho do fundo: dois focos de luz parados no alto da página, um na cor da aba aberta e um no
+   ouro da marca. Muito baixos — dão profundidade e dizem a ferramenta, sem virar degradê chamativo. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 560px at 8% -12%, color-mix(in srgb, var(--acento-ambiente) var(--brilho-ambiente), transparent), transparent 70%),
+    radial-gradient(900px 520px at 104% -6%, color-mix(in srgb, var(--marca) calc(var(--brilho-ambiente) * 0.55), transparent), transparent 70%);
 }
 
 h1,
@@ -199,16 +283,16 @@ h3 {
   font-family: var(--fonte-titulo);
   color: var(--texto-forte);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
 ::selection {
-  background: var(--marca-fundo);
+  background: color-mix(in srgb, var(--acento) 28%, transparent);
   color: var(--texto-forte);
 }
 
 :focus-visible {
-  outline: 2px solid var(--marca);
+  outline: 2px solid var(--acento);
   outline-offset: 2px;
 }
 
@@ -237,17 +321,80 @@ h3 {
   display: none !important;
 }
 
-/* O reset acima zera a margem de tudo, e é a margem automática que centraliza o <dialog>
-   aberto com showModal(). Sem esta regra a janela gruda no canto superior esquerdo. */
-dialog {
-  margin: auto;
-}
-
 button {
   font-family: inherit;
 }
 
-/* ── Avisos de tela ─────────────────────────────────────────────────────────────────── */
+/* ── Janelas (<dialog>) ─────────────────────────────────────────────────────────────────
+   O reset zera a margem de tudo, e é a margem automática que centraliza o <dialog> aberto com
+   showModal(): sem `margin: auto` a janela gruda no canto superior esquerdo.
+
+   A janela cresce a partir de onde foi chamada — `--origem-x/y`, gravados por src/ui/janela.js
+   no clique — e o véu desfoca o que ficou atrás. Na saída, o caminho inverso. */
+dialog {
+  margin: auto;
+  transform-origin: var(--origem-x, 50%) var(--origem-y, 50%);
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-medio) var(--curva), transform var(--t-lento) var(--curva-saida),
+    overlay var(--t-lento) allow-discrete, display var(--t-lento) allow-discrete;
+}
+
+dialog:not([open]) {
+  opacity: 0;
+  transform: scale(0.94);
+  transition-duration: var(--t-rapido), var(--t-medio);
+}
+
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    transform: scale(0.9) translateY(6px);
+  }
+}
+
+dialog::backdrop {
+  background: var(--veu);
+  backdrop-filter: blur(3px);
+  transition: opacity var(--t-lento) var(--curva), overlay var(--t-lento) allow-discrete,
+    display var(--t-lento) allow-discrete;
+}
+
+dialog:not([open])::backdrop {
+  opacity: 0;
+}
+
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* ── Troca de tema: revelação circular ──────────────────────────────────────────────────
+   O tema novo abre em círculo a partir do botão (View Transitions; src/ui/tema.js grava o centro).
+   Navegador sem suporte troca na hora, como antes. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: revelar-tema 620ms var(--curva-saida);
+}
+
+@keyframes revelar-tema {
+  from {
+    clip-path: circle(0 at var(--vt-x, 100%) var(--vt-y, 0));
+  }
+  to {
+    clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 100%) var(--vt-y, 0));
+  }
+}
+
+/* ── Avisos de tela ─────────────────────────────────────────────────────────────────────
+   Entram de lado com uma leve mola, mostram quanto tempo ainda ficam (a linha que encolhe) e saem
+   deslizando, em vez de sumir. */
 
 #toasts {
   position: fixed;
@@ -256,30 +403,115 @@ button {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: var(--esp-2);
   pointer-events: none;
 }
 
 .toast {
-  padding: 0.65rem 1rem;
-  background: var(--superficie-alta);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  padding: 0.7rem 1rem 0.75rem 0.8rem;
+  background: color-mix(in srgb, var(--superficie-alta) 92%, transparent);
+  backdrop-filter: blur(10px) saturate(1.2);
   border: 1px solid var(--borda-forte);
-  border-left: 3px solid var(--marca);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   box-shadow: var(--sombra-alta);
   color: var(--texto-forte);
   font-size: 0.84rem;
+  font-weight: 500;
   /* No celular o aviso não passa da borda esquerda da tela. */
-  max-width: min(24rem, calc(100vw - 2 * var(--esp-5)));
-  animation: toast-entra var(--t-lento) var(--curva) both;
+  max-width: min(26rem, calc(100vw - 2 * var(--esp-5)));
+  animation: toast-entra var(--t-cena) var(--curva-mola) both;
 }
 
-/* Erro leva a cor de erro e fica mais tempo (ver src/ui/avisos.js). */
-.toast.erro {
-  border-left-color: var(--negativo);
+.toast::before {
+  content: '';
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--positivo-fundo);
+  box-shadow: inset 0 0 0 1px var(--positivo-borda);
+}
+
+/* O ícone dentro do círculo: um <span> posto por src/ui/avisos.js, pintado pela máscara. */
+.toast > .toast-icone {
+  position: absolute;
+  left: calc(0.8rem + 4px);
+  width: 14px;
+  height: 14px;
+  background: var(--positivo);
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+}
+
+.toast::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--acento);
+  transform-origin: left;
+  animation: toast-tempo var(--duracao, 3200ms) linear both;
+  opacity: 0.75;
+}
+
+.toast.erro::before {
+  background-color: var(--negativo-fundo);
+  box-shadow: inset 0 0 0 1px var(--negativo-borda);
+}
+
+.toast.erro > .toast-icone {
+  background: var(--negativo);
+  -webkit-mask-image: var(--i-erro);
+  mask-image: var(--i-erro);
+}
+
+.toast.erro::after {
+  background: var(--negativo);
+}
+
+.toast.saindo {
+  animation: toast-sai var(--t-lento) var(--curva) both;
 }
 
 @keyframes toast-entra {
+  from {
+    opacity: 0;
+    transform: translateX(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-sai {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes toast-tempo {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* ── Movimentos compartilhados ────────────────────────────────────────────────────────── */
+
+/* Chegada padrão: sobe um pouco e aparece. */
+@keyframes entrar {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -290,16 +522,99 @@ button {
   }
 }
 
+/* Chegada de cena (painéis de uma aba que abre): sobe mais e assenta. */
+@keyframes entrar-cena {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* O que "estala" no lugar: selos, fichas, marcas. */
+@keyframes estalar {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Barra que cresce da esquerda. */
+@keyframes crescer {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Traço que se desenha (SVG com pathLength="1"). */
+@keyframes desenhar {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Faixa de luz que atravessa uma vez: saída pronta, botão principal. */
+@keyframes varrer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* O ponto "ao vivo": um anel que se abre devagar. Pequeno, lento e o único laço da interface. */
+@keyframes pulso-vivo {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--positivo) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+/* Esqueleto de carregamento. */
+@keyframes cintilar {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
 /* ── Movimento reduzido ─────────────────────────────────────────────────────────────────
-   Quem pediu menos movimento no sistema recebe a interface sem nenhum: as animações existem
-   para orientar, e para essas pessoas elas atrapalham em vez de orientar. */
+   Quem pediu menos movimento no sistema recebe a interface sem nenhum. */
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
-  *::after {
+  *::after,
+  ::backdrop {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

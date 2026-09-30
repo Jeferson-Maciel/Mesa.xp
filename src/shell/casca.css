@@ -1,8 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    Casca da Mesa XP — o topo com as abas.
 
-   É o cabeçalho do Assistente de Ordens, que virou o topo das três ferramentas. A altura
-   continua 59px: o painel de entrada do Ordens gruda logo abaixo dele (`#painel-entrada`).
+   A altura continua 59px: o painel de entrada do Ordens gruda logo abaixo dele
+   (`#painel-entrada`), e a barra lateral do Operacional também.
+
+   A aba ativa é marcada por uma pílula que desliza de uma aba para a outra e troca de cor no
+   caminho — cada ferramenta tem a sua pedra (ver base.css). A posição vem de src/shell/abas.js,
+   em `--ind-x` e `--ind-w`.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Cabeçalho ──────────────────────────────────────────────────────────────────────── */
@@ -15,12 +19,25 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--esp-4);
-  padding: var(--esp-3) var(--esp-6);
-  background: var(--superficie);
+  height: 59px;
+  padding: 0 var(--esp-6);
+  background: color-mix(in srgb, var(--superficie) 86%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
   border-bottom: 1px solid var(--borda);
-  /* Com o escuro mais claro, página e topo ficaram próximos: a sombra sutil separa os dois. */
-  box-shadow: var(--sombra);
   transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva);
+}
+
+/* Um fio de luz na base do topo, na cor da aba aberta, mais forte sob o logo. */
+.casca-topo::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acento-ambiente) 70%, transparent) 22%,
+    color-mix(in srgb, var(--acento-ambiente) 20%, transparent) 60%, transparent);
 }
 
 .logo {
@@ -37,32 +54,55 @@
 
 .logo strong {
   font-family: var(--fonte-titulo);
-  font-size: 1.02rem;
-  font-weight: 600;
+  font-size: 1.04rem;
+  font-weight: 700;
   color: var(--texto-forte);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
+/* O selo XP: ouro, com um brilho que passa quando o mouse chega. */
 .logo-icon {
+  position: relative;
   display: grid;
   place-items: center;
+  overflow: hidden;
   width: 34px;
   height: 34px;
   border-radius: var(--r-md);
-  background: var(--marca-fundo);
-  border: 1px solid var(--marca-borda);
-  color: var(--marca);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--marca) 92%, white), color-mix(in srgb, var(--marca) 78%, black));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 16px -6px color-mix(in srgb, var(--marca) 60%, transparent);
+  color: #1b1405;
   font-family: var(--fonte-titulo);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   letter-spacing: 0.02em;
 }
 
+:root[data-tema='claro'] .logo-icon {
+  color: #fffaf0;
+}
+
+.logo-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-100%);
+}
+
+.logo:hover .logo-icon::after {
+  animation: varrer 900ms var(--curva) both;
+}
+
 .sub-badge {
-  font-family: var(--fonte-mono);
-  font-size: 0.68rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--r-pilula);
+  background: var(--fundo-sutil);
   color: var(--texto-fraco);
-  letter-spacing: 0.02em;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .header-actions {
@@ -75,40 +115,28 @@
   display: inline-flex;
   align-items: center;
   gap: var(--esp-2);
-  padding: 0.44rem 0.8rem;
+  height: 34px;
+  padding: 0 0.8rem;
   background: transparent;
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
   color: var(--texto);
   font-family: inherit;
   font-size: 0.84rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .header-btn:hover {
-  background: var(--fundo-sutil);
-  border-color: var(--borda-forte);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
   color: var(--texto-forte);
 }
 
 .header-btn:active {
-  transform: translateY(1px);
-}
-
-.counter-badge {
-  min-width: 1.35rem;
-  padding: 0 0.32rem;
-  border-radius: 999px;
-  background: var(--fundo-sutil);
-  border: 1px solid var(--borda);
-  color: var(--texto-fraco);
-  font-family: var(--fonte-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-align: center;
+  transform: scale(0.96);
 }
 
 /* ── Botão de tema ──────────────────────────────────────────────────────────────────── */
@@ -116,7 +144,6 @@
 .header-btn.icone {
   position: relative;
   width: 34px;
-  height: 34px;
   padding: 0;
   display: grid;
   place-items: center;
@@ -132,15 +159,15 @@
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: opacity var(--t-medio) var(--curva), transform var(--t-lento) var(--curva);
+  transition: opacity var(--t-medio) var(--curva), transform var(--t-cena) var(--curva-mola);
 }
 
 /* Cada ícone mostra o destino, não o estado atual: no escuro aparece o sol, porque clicar leva
-   ao claro. Eles giram um para dentro e outro para fora, em vez de trocar bruscamente. */
+   ao claro. Um gira para dentro enquanto o outro sai. */
 :root[data-tema='escuro'] .icone-lua,
 :root[data-tema='claro'] .icone-sol {
   opacity: 0;
-  transform: rotate(-70deg) scale(0.5);
+  transform: rotate(-90deg) scale(0.4);
 }
 
 :root[data-tema='escuro'] .icone-sol,
@@ -149,44 +176,117 @@
   transform: rotate(0) scale(1);
 }
 
-/* ── Abas ───────────────────────────────────────────────────────────────────────────────
-   Três ferramentas, um link. A aba ativa usa o mesmo realce do formato marcado no Ordens:
-   fundo e borda da marca, sem sublinhado nem animação de deslize. */
+/* ── Abas ───────────────────────────────────────────────────────────────────────────── */
 
 .abas {
+  position: relative;
   display: flex;
   flex: 1 1 auto;
-  gap: var(--esp-1);
+  gap: 2px;
   margin-left: var(--esp-4);
+  padding: 3px;
+}
+
+/* A pílula da aba ativa. Fica atrás dos links e desliza entre eles. Antes da primeira medida ela
+   não aparece, e sem a classe `.pronto` não transita — senão entraria voando do canto. */
+.abas-indicador {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: var(--ind-w, 0);
+  transform: translateX(var(--ind-x, 0));
+  border-radius: var(--r-sm);
+  background: var(--acento-fundo);
+  box-shadow: inset 0 0 0 1px var(--acento-borda), 0 4px 14px -6px var(--acento-sombra);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.abas.pronto .abas-indicador {
+  opacity: 1;
+  transition: transform var(--t-cena) var(--curva-saida), width var(--t-cena) var(--curva-saida),
+    background-color var(--t-cena) var(--curva), box-shadow var(--t-cena) var(--curva);
+}
+
+/* Um traço de luz embaixo da pílula, na cor da ferramenta. */
+.abas-indicador::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: -4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acento);
+  box-shadow: 0 0 10px var(--acento);
 }
 
 .aba {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 34px de altura, a mesma do ícone do logo: mais que isso cresce o topo, e o painel de
-     entrada do Ordens, que gruda a 59px, passa a correr por baixo dele. */
-  padding: 0.3rem 0.8rem;
-  border: 1px solid transparent;
+  gap: 0.45rem;
+  /* 34px de altura com o trilho: mais que isso cresce o topo, e o painel de entrada do Ordens,
+     que gruda a 59px, passa a correr por baixo dele. */
+  padding: 0.28rem 0.8rem;
   border-radius: var(--r-sm);
-  color: var(--texto);
+  color: var(--texto-fraco);
   font-size: 0.87rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: color var(--t-medio) var(--curva), background-color var(--t-rapido) var(--curva);
+}
+
+.aba svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--t-lento) var(--curva-mola);
 }
 
 .aba:hover {
-  background: var(--fundo-sutil);
   color: var(--texto-forte);
 }
 
+.aba:hover:not([aria-current='page']) {
+  background: color-mix(in srgb, var(--texto-fraco) 8%, transparent);
+}
+
+.aba:hover svg {
+  transform: translateY(-1px);
+}
+
 .aba[aria-current='page'] {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  color: var(--texto-forte);
+}
+
+/* O ícone da aba ativa leva a pedra dela, e dá um pulinho ao ser escolhido. */
+.aba[aria-current='page'] svg {
+  stroke: var(--acento);
+  animation: aba-escolhida var(--t-cena) var(--curva-mola);
+}
+
+@keyframes aba-escolhida {
+  0% {
+    transform: scale(0.7) rotate(-12deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Sem o indicador medido (primeira pintura, ou JS que falhou), a aba ativa ainda se destaca. */
+.abas:not(.pronto) .aba[aria-current='page'] {
+  background: var(--acento-fundo);
+  box-shadow: inset 0 0 0 1px var(--acento-borda);
 }
 
 /* No celular as abas descem para uma segunda linha, dividindo a largura entre si. */
@@ -194,6 +294,7 @@
   .casca-topo {
     flex-wrap: wrap;
     row-gap: var(--esp-2);
+    height: auto;
     padding: var(--esp-3) var(--esp-4);
   }
 
@@ -213,16 +314,30 @@
   }
 }
 
-/* Quatro abas em 360px: sem isto a última passa da margem e encosta na borda da tela. */
+/* Quatro abas em 360px: sem ícone, e com a letra um pouco menor. */
 @media (max-width: 420px) {
   .abas {
     gap: 2px;
+    padding: 2px;
   }
 
   .aba {
     padding-inline: 2px;
     font-size: 0.8rem;
   }
+
+  .aba svg {
+    display: none;
+  }
+}
+
+/* ── Entrada de aba ─────────────────────────────────────────────────────────────────────
+   Ao abrir, os blocos da ferramenta sobem em sequência. A animação recomeça sozinha: a seção sai
+   de `display: none` a cada troca. Anima os blocos de dentro, e não a seção, porque a seção do
+   Ordens contém a gaveta do histórico (`position: fixed`), que um transform na seção deslocaria. */
+
+.modulo {
+  --cena: entrar-cena var(--t-cena) var(--curva-saida) both;
 }
 
 /* Falha ao iniciar uma ferramenta: aparece no lugar dela, sem derrubar as outras. */

@@ -17,6 +17,8 @@ import {
   linkDoTopico,
   rotaDe
 } from './render.js';
+import { criarCena } from '../../ui/cena.js';
+import { abrirJanela } from '../../ui/janela.js';
 import './operacional.css';
 
 /**
@@ -127,8 +129,13 @@ export const iniciarOperacional = (secao) => {
     return raiz()?.id ?? null;
   };
 
+  // A folha entra em cena quando se abre outra página (post, tópico, editor, a busca), e não a cada
+  // atualização ao vivo nem a cada letra digitada na busca (src/ui/cena.js).
+  const encenar = criarCena(principal);
+
   function render() {
     if (!estado.carregou) return;
+    encenar(estado.editor ? `editor:${estado.editor.post?.id ?? 'novo'}` : estado.termo.trim() ? 'busca' : location.hash);
     el('arvore').innerHTML = htmlLateral({ topicos: estado.topicos, posts: estado.posts, ativo: topicoAtivo() });
 
     // O editor aberto não é redesenhado: uma atualização ao vivo apagaria o que está sendo digitado.
@@ -283,7 +290,11 @@ export const iniciarOperacional = (secao) => {
     const ok = await copiarTexto(post.conteudo);
     if (!ok) return aviso('Não foi possível copiar. Selecione o texto e copie com Ctrl+C.', { tipo: 'erro' });
     botao.textContent = 'Copiado';
-    setTimeout(() => (botao.textContent = 'Copiar texto'), 1800);
+    botao.classList.add('copiado');
+    setTimeout(() => {
+      botao.textContent = 'Copiar texto';
+      botao.classList.remove('copiado');
+    }, 1800);
     aviso('Texto copiado.');
   }
 
@@ -408,7 +419,7 @@ export const iniciarOperacional = (secao) => {
 
   el('novo-topico').addEventListener('click', () => {
     el('erro-dialogo').innerHTML = '';
-    dialogo.showModal();
+    abrirJanela(dialogo, el('novo-topico'));
     el('form-topico').nome.focus();
   });
   el('form-topico').addEventListener('submit', (e) => {
@@ -439,7 +450,8 @@ export const iniciarOperacional = (secao) => {
     }
   );
 
-  principal.innerHTML = '<div class="empty-state pequeno"><p>Carregando a base da mesa…</p></div>';
+  // Esqueleto até a base chegar: o título e as linhas de posts, no lugar em que vão aparecer.
+  principal.innerHTML = '<div class="esqueleto op-esqueleto" aria-label="Carregando a base da mesa…"><i></i><i></i><i></i><i></i><i></i></div>';
   atualizarConexao();
   carregar();
 };
@@ -474,7 +486,7 @@ const MARCACAO = `
       <div data-op="erro-dialogo"></div>
       <div class="op-acoes">
         <button type="button" class="copy-btn" data-op="cancelar-dialogo">Cancelar</button>
-        <button type="submit" class="copy-btn op-primario">Criar tópico</button>
+        <button type="submit" class="copy-btn btn-primario">Criar tópico</button>
       </div>
     </form>
   </dialog>

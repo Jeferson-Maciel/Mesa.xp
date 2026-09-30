@@ -54,6 +54,17 @@ export const abaDoAtalho = ({ altKey, ctrlKey, metaKey, shiftKey, code }) => {
 export const ligarAbas = ({ preguicosos, aoFalhar }) => {
   const iniciados = new Set();
   const secaoDe = (id) => document.getElementById(`modulo-${id}`);
+  const trilho = document.querySelector('.abas');
+
+  // A pílula da aba ativa desliza até ela (casca.css). Mede de novo quando o trilho muda de
+  // tamanho: a fonte que termina de carregar, a janela que estreita e quebra as abas em linha nova.
+  const moverIndicador = () => {
+    const ativa = trilho?.querySelector('.aba[aria-current="page"]');
+    if (!ativa) return;
+    trilho.style.setProperty('--ind-x', `${ativa.offsetLeft}px`);
+    trilho.style.setProperty('--ind-w', `${ativa.offsetWidth}px`);
+  };
+  if (trilho && typeof ResizeObserver === 'function') new ResizeObserver(moverIndicador).observe(trilho);
 
   const iniciar = (id) => {
     if (iniciados.has(id) || !preguicosos[id]) return;
@@ -81,6 +92,10 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
       else link.removeAttribute('aria-current');
     }
 
+    // A cor da ferramenta aberta, para o topo, os avisos e o brilho do fundo (base.css).
+    document.body.dataset.aba = id;
+    moverIndicador();
+
     // Ações de um módulo que moram no topo (o Histórico do Ordens) só aparecem com ele.
     for (const el of document.querySelectorAll('[data-so-na-aba]')) el.hidden = el.dataset.soNaAba !== id;
   };
@@ -100,4 +115,6 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
   });
 
   mostrar(abaDoHash(location.hash));
+  // Só depois da primeira medida a pílula passa a deslizar; antes disso ela entraria voando.
+  requestAnimationFrame(() => trilho?.classList.add('pronto'));
 };

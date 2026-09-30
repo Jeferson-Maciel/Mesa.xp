@@ -81,15 +81,20 @@ desenvolvimento. O Netlify roda Node 22 (`netlify.toml`): supabase-js e Vitest 5
 
 ## Sistema visual
 
-A base visual é a do Ordens, e o visual final é um só: as abas usam os mesmos tokens e
-componentes.
+O visual é um só — "joias sobre grafite" —: as abas usam os mesmos tokens e componentes, e cada
+uma tem a sua cor.
 
-- `src/ui/base.css` — tokens de cor dos dois temas, reset, avisos de tela, movimento reduzido.
-- `src/ui/componentes.css` — painel, segmentado, selo (`.badge`), botão de copiar, alerta, estado
-  vazio, botão de fechar. Um componente só entra aqui quando dois módulos o usam.
-- `src/shell/casca.css` — o topo. Tem **59px** de altura: o painel de entrada do Ordens gruda logo
-  abaixo dele, e as abas ficam em 34px para não crescê-lo.
+- `src/ui/base.css` — tokens dos dois temas, a cor de cada aba, os ícones (SVG em máscara), as
+  janelas (`<dialog>`), a revelação do tema, os avisos de tela, as animações comuns e o movimento
+  reduzido.
+- `src/ui/componentes.css` — painel, segmentado, selos, botões (`.copy-btn` secundário e
+  `.btn-primario`), alerta, estado vazio, status ao vivo e esqueleto de carregamento. Um componente
+  só entra aqui quando dois módulos o usam.
+- `src/shell/casca.css` — o topo. Tem **59px** de altura: o painel de entrada do Ordens e a barra
+  lateral do Operacional grudam logo abaixo dele, e as abas ficam em 34px para não crescê-lo.
 - `src/modulos/*/…css` — o que é de cada módulo.
+- `src/ui/janela.js` (a janela que cresce de onde foi chamada) e `src/ui/cena.js` (a entrada que só
+  roda quando a vista muda) — o JS do movimento.
 
 `src/ui/base.css` é construído sobre tokens (`--fundo`, `--superficie`, `--texto`, `--marca`, …)
 redefinidos por `:root[data-tema='claro']` e `:root[data-tema='escuro']`. **Escreva sempre pelo
@@ -105,16 +110,53 @@ A ferramenta fica aberta o dia inteiro, e isso governa a paleta:
   4.5:1. Ao mexer nas cores, meça de novo — é fácil derrubar o secundário abaixo do mínimo.
 - **Saturação baixa no escuro.** Cor saturada sobre fundo escuro vibra na retina. Os tons do modo
   escuro são suavizados, não os do claro reaproveitados.
-- **Cor carrega significado.** Verde é compra, vermelho é venda, âmbar é atenção, e o âmbar da
-  marca aparece em poucos lugares. Cor que decora tira força da cor que informa.
-- Nas abas da fusão, o mesmo código: verde é taxa que subiu e dia presencial; vermelho, taxa que
-  caiu e erro; âmbar, horário indisponível, bloqueado e aviso de conexão. O âmbar da marca fica na
-  ação principal de cada aba e na aba ativa. A cor de cada colaborador é dado do banco e vai só no
-  pontinho ao lado do nome.
+- **Uma cor por aba — a pedra dela.** Safira no Ordens, água-marinha no Renda Fixa, ametista no
+  Calendário, turmalina no Operacional; o ouro é a marca (o selo XP). A pedra fica em `--acento`
+  (com `--acento-fundo`, `--acento-borda`, `--acento-sombra` e `--foco` derivados no mesmo
+  elemento) e aparece na aba ativa, na ação principal (`.btn-primario`), no foco, no traço dos
+  títulos de painel e no brilho do fundo. É ela que tira a tela do monocromático sem virar enfeite:
+  diz em que ferramenta se está. Escreva pela `--acento`, não pela pedra: o componente pega a cor
+  da aba em que está.
+- **Cor que informa não decora.** Verde é compra, alta e presencial; vermelho é venda, queda,
+  erro e bloqueio; âmbar é atenção (horário indisponível, aviso de conexão, texto pendente).
+  Nenhuma pedra usa esses três matizes, para não competir com eles.
+- **Paletas categóricas.** Onde a cor separa categorias, ela reaproveita as pedras: no Renda Fixa,
+  pré em safira, pós em água-marinha, IPCA+ em ametista e isentos em ouro (`--cor`); no
+  Operacional, cada tópico um tom pela posição dele (`--tom`); no Ordens, as classes de ativo
+  (`--classe-*`). A cor de cada colaborador é dado do banco e vai só no avatar com as iniciais.
+- **Todo par de cor é medido.** Texto colorido sobre fundo tingido (o "Compra" escolhido, os
+  selos, o "hoje") passa de 4.5:1 nos dois temas; os tingimentos são baixos (10–16%) por isso.
 
-Movimento é curto (120–260 ms) e sempre com motivo: orientar de onde algo veio, confirmar um
-clique. Nada pisca nem chama atenção duas vezes para a mesma coisa, e
-`prefers-reduced-motion: reduce` desliga tudo.
+### Movimento
+
+Movimento tem motivo: orientar (de onde veio, para onde foi), confirmar (copiado, salvo) e dar
+vida ao que é ao vivo. Curto — 120 a 320 ms na interface, até ~900 ms numa entrada de cena —, nas
+curvas de `base.css` (`--curva`, `--curva-saida`, `--curva-mola`). `prefers-reduced-motion:
+reduce` desliga tudo, inclusive a revelação do tema.
+
+- **Troca de aba:** a pílula da aba ativa desliza até a nova e troca de cor (`abas.js` mede e grava
+  `--ind-x/--ind-w`); o brilho do fundo cruza para a cor nova (`--acento-ambiente`, registrada com
+  `@property` para poder transitar); os painéis da aba sobem em sequência (`--cena`).
+- **Troca de tema:** o tema novo se abre em círculo a partir do botão (View Transitions, em
+  `tema.js`). Sem suporte, troca na hora.
+- **Janelas** crescem de onde foram chamadas — a célula do dia, o botão — e o véu desfoca o fundo
+  (`src/ui/janela.js`; entrada e saída por `@starting-style`).
+- **Avisos** entram com uma leve mola, mostram quanto tempo ainda ficam e saem deslizando.
+- **Confirmação no próprio botão:** copiado, o botão fica verde com o visto (`.copiado`).
+- **Dados que chegam:** a curva do Renda Fixa se desenha, as barras do funil e dos presenciais
+  crescem, os selos estalam, as linhas entram uma a uma.
+- **O único laço** é o ponto "ao vivo", lento e pequeno.
+
+**Entrada só quando a vista muda.** Calendário e Operacional redesenham a tela a cada atualização
+ao vivo, e o Ordens a cada clique no cartão. Se a entrada rodasse a cada redesenho, a tela piscaria
+o dia inteiro. Por isso as animações de entrada ficam presas a uma classe posta só quando a vista
+muda: `em-cena` (`src/ui/cena.js`, chave = semana, mês, post, página) no Calendário e no
+Operacional, e `entrando` (`encenar` no `index.js` do Ordens) numa análise nova. Animação nova de
+entrada vai atrás dessas classes, nunca solta no elemento que é redesenhado.
+
+**Ícones** são SVG de traço em máscara (`--i-*` em `base.css`), pintados por `currentColor` ou pelo
+token, e vão em pseudo-elementos. Nos botões isso não é detalhe: o texto deles é conferido
+(`"Copiar mensagem"`, `"Copiada"`, `"Copiado"`), e um `<svg>` dentro mudaria o `textContent`.
 
 Duas decisões do preview que vale manter:
 
@@ -132,12 +174,14 @@ afunda, o cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o 
 reservado ao que flutua. Cartão branco puro sobre fundo quase branco não cria hierarquia nenhuma —
 a tela vira uma chapa só.
 
-**A paleta mudou em 30/09/2026, a pedido da mesa:** o escuro, quase preto, era escuro demais. Ele
+**A paleta mudou duas vezes em 30/09/2026, a pedido da mesa.** Primeiro o escuro, quase preto,
 virou um grafite azulado médio, e o claro deixou o neutro morno por uma porcelana levemente fria —
-"cara de CRM financeiro, para usar por horas sem cansar". As faixas de contraste continuaram as
-mesmas (corpo ~8:1 no cartão, título entre 11 e 13:1, secundário acima de 5:1), medidas por WCAG. As
-cores saturadas, os degradês e o texto quase branco que outro agente tinha aplicado ficaram de
-fora: estão na branch `antigravity/operacional`, se um dia fizerem falta.
+"cara de CRM financeiro, para usar por horas sem cansar". Depois a mesa achou tudo monocromático e
+pediu mais cor e movimento, sem perder a seriedade: vieram as pedras por aba, as categorias
+coloridas e o sistema de movimento acima. As faixas de contraste continuaram as mesmas (corpo
+~8,3:1 no cartão, título ~12,5:1, secundário acima de 5:1), medidas por WCAG. As cores saturadas e
+o texto quase branco que outro agente tinha aplicado continuam de fora (branch
+`antigravity/operacional`).
 
 O tema vive em `document.documentElement.dataset.tema`, aplicado por um script inline no `<head>`
 antes da primeira pintura — sem isso a tela pisca no tema errado a cada carregamento. O padrão é

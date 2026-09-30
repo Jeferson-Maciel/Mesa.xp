@@ -6,6 +6,8 @@ import { conexaoDoBanco } from '../../dados/banco.js';
 import { DIAS, MESES, diaDaChave, intervaloDaSemana, intervaloDoMes, rotuloDaSemana, segundaDaSemana, somarDias } from './datas.js';
 import { CORES, htmlHistorico, htmlHorarios, htmlSemana, indexar } from './render.js';
 import { ehErroDeRede } from './repositorio.js';
+import { criarCena } from '../../ui/cena.js';
+import { abrirJanela } from '../../ui/janela.js';
 import './calendario.css';
 
 /**
@@ -118,6 +120,14 @@ export const iniciarCalendario = (secao) => {
 
   /* ── Render ───────────────────────────────────────────────────────────────────────── */
 
+  // Enquanto a primeira carga não chega, linhas de esqueleto no lugar da matriz; se ela falhou,
+  // nada — o erro já está na tela.
+  // A entrada da matriz só roda quando a vista muda — outra semana, outro mês, a primeira carga —,
+  // não a cada atualização ao vivo (src/ui/cena.js).
+  const encenar = criarCena(secao.querySelector('.cal'));
+
+  const carregando = () => (estado.falhou ? '' : '<div class="esqueleto" aria-hidden="true"><i></i><i></i><i></i><i></i></div>');
+
   function render() {
     el('visao-semana').hidden = estado.visao !== 'semana';
     el('visao-historico').hidden = estado.visao !== 'historico';
@@ -131,15 +141,17 @@ export const iniciarCalendario = (secao) => {
       el('rotulo-semana').textContent = rotuloDaSemana(estado.segunda);
       el('semana').innerHTML = estado.carregou
         ? htmlSemana({ colaboradores: estado.colaboradores, registros: estado.registros, segunda: estado.segunda, hoje: new Date() })
-        : '';
+        : carregando();
     } else {
       el('rotulo-mes').textContent = `${MESES[estado.mes]} ${estado.ano}`;
       renderFiltro();
       const colaboradores = estado.filtro ? estado.colaboradores.filter((c) => c.id === estado.filtro) : estado.colaboradores;
       el('historico').innerHTML = estado.carregou
         ? htmlHistorico({ colaboradores, registros: estado.registros, ano: estado.ano, mes: estado.mes })
-        : '';
+        : carregando();
     }
+    const periodo = estado.visao === 'semana' ? estado.segunda.toDateString() : `${estado.ano}-${estado.mes}|${estado.filtro}`;
+    encenar(`${estado.carregou}|${estado.visao}|${periodo}`);
   }
 
   function renderFiltro() {
@@ -195,7 +207,7 @@ export const iniciarCalendario = (secao) => {
 
   const dialogo = el('dialogo');
 
-  function abrirDia(data, colaboradorId) {
+  function abrirDia(data, colaboradorId, origem = null) {
     const colaborador = estado.colaboradores.find((c) => c.id === colaboradorId);
     if (!colaborador) return;
     const registro = estado.registros.get(`${data}|${colaboradorId}`);
@@ -208,7 +220,7 @@ export const iniciarCalendario = (secao) => {
     el('motivo').value = '';
     el('erro-dialogo').innerHTML = '';
     renderHorarios();
-    dialogo.showModal();
+    abrirJanela(dialogo, origem);
   }
 
   function renderHorarios() {
@@ -315,7 +327,7 @@ export const iniciarCalendario = (secao) => {
     const remover = e.target.closest('[data-remover]');
     if (remover) return removerColaborador(remover.dataset.remover);
     const celula = e.target.closest('.cal-dia');
-    if (celula) abrirDia(celula.dataset.dia, celula.dataset.colaborador);
+    if (celula) abrirDia(celula.dataset.dia, celula.dataset.colaborador, celula);
   });
 
   el('historico').addEventListener('click', (e) => {
@@ -442,7 +454,7 @@ const MARCACAO = `
 
       <div class="cal-dialogo-acoes">
         <button type="button" class="copy-btn" data-cal="cancelar">Cancelar</button>
-        <button type="submit" class="copy-btn cal-primario" data-cal="salvar">Salvar</button>
+        <button type="submit" class="copy-btn btn-primario" data-cal="salvar">Salvar</button>
       </div>
     </form>
   </dialog>

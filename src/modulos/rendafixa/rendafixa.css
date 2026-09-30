@@ -1,13 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
-   Renda Fixa — o que é só desta aba.
+   Renda Fixa — o que é só desta aba. A pedra dela é a água-marinha (`--acento`, base.css).
 
    Tudo escopado em `.rf`: o CSS do Ordens tem seletores de elemento e classes genéricas, e o
-   daqui não pode vazar para lá nem receber de lá. Painel, segmentado, selo (`.badge`), botão
-   de copiar e estado vazio vêm de src/ui/componentes.css.
+   daqui não pode vazar para lá nem receber de lá.
 
-   Cor só com significado: variação para cima em verde, para baixo em vermelho, e o âmbar da
-   marca só na ação principal (Copiar mensagem) e na última etapa do funil — o que vai para o
-   cliente. Escreva sempre pelo token.
+   Cada categoria de título tem um matiz próprio (`--cor`), para achar o IPCA+ na grade sem ler:
+   pré-fixado em safira, pós em água-marinha, IPCA+ em ametista, isentos em ouro. Variação para
+   cima continua verde, para baixo vermelha — nenhuma categoria usa esses dois.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 .rf {
@@ -34,6 +33,29 @@
   margin-top: var(--esp-5);
 }
 
+/* Entrada da aba: a lateral desce em sequência, o resultado chega junto, o histórico por último. */
+.rf .rf-lateral > .panel,
+.rf .rf-resultado,
+.rf .rf-historico {
+  animation: var(--cena);
+}
+
+.rf .rf-lateral > .panel:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.rf .rf-lateral > .panel:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.rf .rf-resultado {
+  animation-delay: 40ms;
+}
+
+.rf .rf-historico {
+  animation-delay: 180ms;
+}
+
 @media (max-width: 1180px) {
   .rf {
     padding: 0 var(--esp-4);
@@ -58,34 +80,25 @@
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
   cursor: pointer;
+  transition: color var(--t-rapido) var(--curva);
 }
 
 .rf .rf-link:hover {
-  color: var(--texto-forte);
+  color: var(--acento);
 }
 
-.rf .copy-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.rf .copy-btn:disabled:hover {
-  background: var(--superficie);
-  border-color: var(--borda-forte);
-  color: var(--texto);
-}
-
-/* A ação principal da aba, no mesmo tom do Analisar do Ordens. */
-.rf .rf-primario:not(:disabled) {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
-}
-
-.rf .rf-primario:not(:disabled):hover {
-  border-color: var(--marca);
+/* O botão principal da aba leva o ícone de cópia; copiado, o visto (componentes.css). */
+.rf .btn-primario:not(.copiado)::before {
+  content: '';
+  width: 13px;
+  flex: none;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-copiar) center / contain no-repeat;
+  mask: var(--i-copiar) center / contain no-repeat;
 }
 
 /* ── Planilha ───────────────────────────────────────────────────────────────────────── */
@@ -96,14 +109,29 @@
   align-items: center;
   gap: var(--esp-1);
   width: 100%;
-  padding: var(--esp-6) var(--esp-4);
-  background: var(--superficie-afundada);
-  border: 1px dashed var(--borda-forte);
+  padding: var(--esp-5) var(--esp-4);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--acento-fundo), transparent 70%),
+    var(--superficie-afundada);
+  border: 1.5px dashed var(--borda-forte);
   border-radius: var(--r-md);
   color: var(--texto);
   font-family: inherit;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-medio) var(--curva), border-color var(--t-medio) var(--curva),
+    box-shadow var(--t-medio) var(--curva), transform var(--t-rapido) var(--curva);
+}
+
+/* O ícone da planilha, que sobe um pouco ao passar o mouse e salta quando ela é arrastada. */
+.rf .rf-soltar::before {
+  content: '';
+  width: 30px;
+  height: 30px;
+  margin-bottom: var(--esp-2);
+  background: var(--acento);
+  -webkit-mask: var(--i-planilha) center / contain no-repeat;
+  mask: var(--i-planilha) center / contain no-repeat;
+  transition: transform var(--t-lento) var(--curva-mola);
 }
 
 .rf .rf-soltar strong {
@@ -119,25 +147,64 @@
 
 .rf .rf-soltar:hover,
 .rf.arrastando .rf-soltar {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
+  border-color: var(--acento);
+  box-shadow: 0 0 0 4px var(--acento-fundo);
+}
+
+.rf .rf-soltar:hover::before {
+  transform: translateY(-3px);
+}
+
+.rf .rf-soltar:active {
+  transform: scale(0.99);
+}
+
+.rf.arrastando .rf-soltar::before {
+  animation: rf-saltar 700ms var(--curva-mola) infinite alternate;
+}
+
+@keyframes rf-saltar {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-6px) scale(1.08);
+  }
 }
 
 /* Arrastando com uma planilha já carregada: o cartão do arquivo avisa que vai ser trocado. */
 .rf.arrastando .rf-arquivo {
-  border-color: var(--marca-borda);
-  background: var(--marca-fundo);
+  border-color: var(--acento);
+  background: var(--acento-fundo);
+  box-shadow: 0 0 0 4px var(--acento-fundo);
 }
 
 .rf .rf-arquivo {
   display: flex;
   align-items: center;
-  gap: var(--esp-2);
+  gap: var(--esp-3);
   padding: var(--esp-3);
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  transition: background-color var(--t-medio) var(--curva), border-color var(--t-medio) var(--curva),
+    box-shadow var(--t-medio) var(--curva);
+}
+
+/* O selo do arquivo: a planilha num quadrado na cor da aba. */
+.rf .rf-arquivo::before {
+  content: '';
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background:
+    var(--acento) center / 20px no-repeat;
+  -webkit-mask: var(--i-planilha) center / 20px no-repeat, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: var(--i-planilha) center / 20px no-repeat exclude, linear-gradient(#000 0 0);
+  opacity: 0.85;
 }
 
 .rf .rf-arquivo-info {
@@ -185,6 +252,7 @@
 .rf .rf-excluir.armado {
   font-size: 0.74rem;
   font-weight: 700;
+  animation: estalar var(--t-medio) var(--curva-mola);
 }
 
 /* ── Mercado e visão ────────────────────────────────────────────────────────────────── */
@@ -197,7 +265,9 @@
   flex: 1 1 auto;
 }
 
-/* ── Funil ──────────────────────────────────────────────────────────────────────────── */
+/* ── Funil ──────────────────────────────────────────────────────────────────────────────
+   As barras crescem da esquerda, uma depois da outra — o funil se lê de cima para baixo. A última
+   etapa, a que vai para o cliente, é a única cheia e com brilho. */
 
 .rf .rf-funil {
   display: flex;
@@ -209,7 +279,7 @@
   display: flex;
   align-items: baseline;
   gap: var(--esp-2);
-  margin-bottom: var(--esp-1);
+  margin-bottom: 0.3rem;
   font-size: 0.82rem;
 }
 
@@ -220,20 +290,20 @@
 
 .rf .rf-funil-pct {
   color: var(--texto-fraco);
-  font-family: var(--fonte-mono);
   font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .rf .rf-funil-rotulo b {
   min-width: 3.2rem;
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
+  font-weight: 700;
   text-align: right;
 }
 
 .rf .rf-funil-trilho {
-  height: 6px;
+  height: 7px;
   overflow: hidden;
   background: var(--fundo-sutil);
   border-radius: 999px;
@@ -241,13 +311,32 @@
 
 .rf .rf-funil-barra {
   height: 100%;
-  background: var(--borda-forte);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--acento) 30%, transparent), color-mix(in srgb, var(--acento) 55%, transparent));
   border-radius: 999px;
+  transform-origin: left;
+  animation: crescer 760ms var(--curva-saida) both;
   transition: width var(--t-lento) var(--curva);
 }
 
+.rf .rf-funil-etapa:nth-child(2) .rf-funil-barra {
+  animation-delay: 90ms;
+}
+
+.rf .rf-funil-etapa:nth-child(3) .rf-funil-barra {
+  animation-delay: 180ms;
+}
+
+.rf .rf-funil-etapa:nth-child(4) .rf-funil-barra {
+  animation-delay: 270ms;
+}
+
 .rf .rf-funil-final .rf-funil-barra {
-  background: var(--marca);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--acento) 70%, var(--marca)), var(--acento));
+  box-shadow: 0 0 12px -2px var(--acento-sombra);
+}
+
+.rf .rf-funil-final .rf-funil-rotulo b {
+  color: var(--acento);
 }
 
 .rf .rf-quadro {
@@ -268,6 +357,11 @@
   font-weight: 600;
   cursor: pointer;
   list-style: none;
+  transition: color var(--t-rapido) var(--curva);
+}
+
+.rf .rf-quadro summary:hover {
+  color: var(--texto-forte);
 }
 
 .rf .rf-quadro summary::-webkit-details-marker,
@@ -285,6 +379,11 @@
 .rf .rf-quadro[open] summary::before,
 .rf .rf-bloqueados[open] summary::before {
   transform: rotate(90deg);
+}
+
+.rf .rf-quadro[open] > :not(summary),
+.rf .rf-bloqueados[open] > :not(summary) {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
 }
 
 .rf .rf-motivos {
@@ -308,7 +407,6 @@
 
 .rf .rf-motivos b {
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
 }
 
 .rf .rf-motivos .rf-separa {
@@ -336,6 +434,7 @@
   overflow: hidden;
   color: var(--texto-forte);
   font-family: var(--fonte-mono);
+  font-size: 0.78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -358,7 +457,12 @@
   min-width: 0;
 }
 
+.rf .rf-resultado-titulo .panel-title {
+  font-size: 1.12rem;
+}
+
 .rf .rf-resultado-titulo .meta-counter {
+  padding-left: calc(3px + var(--esp-2));
   text-align: left;
 }
 
@@ -383,12 +487,65 @@
   gap: var(--esp-4);
 }
 
+/* O cartão de cada categoria: um fio de cor no alto, o título com o ponto da categoria e a curva
+   de taxa × prazo na mesma cor. Os cartões chegam em sequência e as linhas logo depois. */
 .rf .rf-secao {
+  --cor: var(--acento);
+  position: relative;
+  overflow: hidden;
   padding: var(--esp-4);
-  background: var(--superficie-afundada);
+  background:
+    radial-gradient(90% 60% at 100% 0%, color-mix(in srgb, var(--cor) 8%, transparent), transparent 70%),
+    var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  animation: entrar var(--t-medio) var(--curva) backwards;
+  animation: entrar-cena var(--t-cena) var(--curva-saida) both;
+  transition: border-color var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva),
+    transform var(--t-medio) var(--curva);
+}
+
+.rf .rf-secao::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cor), color-mix(in srgb, var(--cor) 15%, transparent));
+}
+
+.rf .rf-secao:hover {
+  border-color: color-mix(in srgb, var(--cor) 40%, transparent);
+  box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--cor) 60%, transparent);
+  transform: translateY(-2px);
+}
+
+.rf .rf-secao[data-sec='pre'] {
+  --cor: var(--safira);
+}
+
+.rf .rf-secao[data-sec='pos'] {
+  --cor: var(--agua);
+}
+
+.rf .rf-secao[data-sec='ipca'] {
+  --cor: var(--ametista);
+}
+
+.rf .rf-secao[data-sec='isentos'] {
+  --cor: var(--marca);
+}
+
+.rf .rf-secao:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.rf .rf-secao:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.rf .rf-secao:nth-child(4) {
+  animation-delay: 210ms;
 }
 
 .rf .rf-secao-topo {
@@ -405,35 +562,86 @@
 }
 
 .rf .rf-secao-titulo strong {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.rf .rf-secao-titulo strong::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cor);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 20%, transparent);
 }
 
 .rf .rf-secao-titulo span {
+  padding-left: calc(8px + var(--esp-2));
   color: var(--texto-fraco);
   font-size: 0.74rem;
 }
 
+/* A curva se desenha da esquerda para a direita, a área enche por baixo e os pontos estalam
+   um a um, depois do traço. */
 .rf .rf-curva {
   flex: 0 0 auto;
-  width: 112px;
-  height: 36px;
+  width: 120px;
+  height: 38px;
   overflow: visible;
 }
 
-.rf .rf-curva path {
+.rf .rf-curva stop {
+  stop-color: var(--cor);
+}
+
+.rf .rf-curva stop[offset='0'] {
+  stop-opacity: 0.32;
+}
+
+.rf .rf-curva stop[offset='1'] {
+  stop-opacity: 0;
+}
+
+.rf .rf-area {
+  animation: entrar var(--t-cena) var(--curva-saida) 360ms both;
+}
+
+.rf .rf-traco {
   fill: none;
-  stroke: var(--texto-fraco);
-  stroke-width: 1.5;
+  stroke: var(--cor);
+  stroke-width: 1.8;
   stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: desenhar 900ms var(--curva-saida) 160ms both;
 }
 
 .rf .rf-curva circle {
   fill: var(--superficie-afundada);
-  stroke: var(--texto-fraco);
-  stroke-width: 1.5;
+  stroke: var(--cor);
+  stroke-width: 1.8;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+  animation-delay: 700ms;
+}
+
+.rf .rf-curva circle:nth-of-type(2) {
+  animation-delay: 760ms;
+}
+.rf .rf-curva circle:nth-of-type(3) {
+  animation-delay: 820ms;
+}
+.rf .rf-curva circle:nth-of-type(4) {
+  animation-delay: 880ms;
+}
+.rf .rf-curva circle:nth-of-type(n + 5) {
+  animation-delay: 940ms;
 }
 
 .rf .rf-linhas {
@@ -447,9 +655,40 @@
   grid-template-columns: 3.4rem auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--esp-3);
-  padding: var(--esp-2) 0;
+  margin: 0 calc(-1 * var(--esp-2));
+  padding: var(--esp-2);
   border-top: 1px solid var(--borda);
+  border-radius: var(--r-sm);
   font-size: 0.84rem;
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  animation-delay: calc(200ms + var(--n, 6) * 40ms);
+  transition: background-color var(--t-rapido) var(--curva);
+}
+
+.rf .rf-linha:nth-child(1) {
+  --n: 0;
+}
+.rf .rf-linha:nth-child(2) {
+  --n: 1;
+}
+.rf .rf-linha:nth-child(3) {
+  --n: 2;
+}
+.rf .rf-linha:nth-child(4) {
+  --n: 3;
+}
+.rf .rf-linha:nth-child(5) {
+  --n: 4;
+}
+
+.rf .rf-linha:hover {
+  background: color-mix(in srgb, var(--cor) 5%, transparent);
+}
+
+/* A borda de cima some sob a linha acesa e sob a seguinte, para o realce não virar uma caixa riscada. */
+.rf .rf-linha:hover,
+.rf .rf-linha:hover + .rf-linha {
+  border-top-color: transparent;
 }
 
 .rf .rf-linha:first-child {
@@ -458,16 +697,21 @@
 
 .rf .rf-prazo {
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .rf .rf-prazo small {
   margin-left: 0.25rem;
   color: var(--texto-fraco);
-  font-family: var(--fonte);
   font-size: 0.72rem;
   font-weight: 500;
+}
+
+/* O tipo do título (CDB, LCA…) leva a cor da categoria. */
+.rf .rf-linha .badge {
+  background: color-mix(in srgb, var(--cor) 10%, transparent);
+  border-color: color-mix(in srgb, var(--cor) 32%, transparent);
+  color: var(--cor);
 }
 
 .rf .rf-ativo {
@@ -500,45 +744,80 @@
 
 .rf .rf-taxa-valor {
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .rf .rf-taxa-pre,
 .rf .rf-taxa-suf {
   color: var(--texto-fraco);
-  font-family: var(--fonte);
   font-size: 0.74rem;
   font-weight: 500;
+  letter-spacing: 0;
 }
 
 .rf .rf-delta {
-  font-family: var(--fonte-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
+  margin-top: 2px;
+  padding: 0 0.35rem;
+  border-radius: var(--r-pilula);
+  font-size: 0.68rem;
+  font-weight: 700;
+  animation: estalar var(--t-lento) var(--curva-mola) 600ms both;
 }
 
 .rf .rf-sobe {
+  background: var(--positivo-fundo);
   color: var(--positivo);
 }
 
 .rf .rf-desce {
+  background: var(--negativo-fundo);
   color: var(--negativo);
 }
 
-/* A mensagem como vai chegar no WhatsApp: fonte do texto, quebras preservadas, negrito aplicado. */
+/* A mensagem como vai chegar no WhatsApp: um balão de mensagem enviada, com a pontinha, fonte do
+   texto, quebras preservadas e negrito aplicado. Ele chega como uma mensagem que acabou de sair. */
 .rf .rf-bolha {
+  position: relative;
   max-width: 34rem;
-  padding: var(--esp-4);
-  background: var(--superficie-afundada);
-  border: 1px solid var(--borda);
-  border-radius: var(--r-md);
+  margin-left: var(--esp-2);
+  padding: var(--esp-4) var(--esp-4) var(--esp-4) calc(var(--esp-4) + 2px);
+  background: color-mix(in srgb, var(--acento) 7%, var(--superficie-afundada));
+  border: 1px solid var(--acento-borda);
+  border-radius: 4px var(--r-lg) var(--r-lg) var(--r-lg);
+  box-shadow: 0 10px 26px -18px var(--acento-sombra);
   color: var(--texto-forte);
   font-size: 0.88rem;
-  line-height: 1.6;
+  line-height: 1.62;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  transform-origin: top left;
+  animation: rf-mensagem var(--t-cena) var(--curva-mola) both;
+}
+
+.rf .rf-bolha::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -9px;
+  width: 10px;
+  height: 14px;
+  background: inherit;
+  border-top: 1px solid var(--acento-borda);
+  border-left: 1px solid var(--acento-borda);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+@keyframes rf-mensagem {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .rf .rf-bolha strong {
@@ -548,10 +827,12 @@
 .rf .rf-bloqueados {
   margin-top: var(--esp-4);
   padding: var(--esp-3) var(--esp-4);
-  background: var(--atencao-fundo);
+  background: linear-gradient(90deg, var(--atencao-fundo), transparent 70%), var(--superficie-afundada);
   border: 1px solid var(--atencao-borda);
   border-radius: var(--r-md);
+  box-shadow: inset 3px 0 0 var(--atencao);
   font-size: 0.82rem;
+  animation: entrar var(--t-lento) var(--curva-saida) 300ms both;
 }
 
 .rf .rf-bloqueados summary {
@@ -593,10 +874,6 @@
 
 /* ── Histórico ──────────────────────────────────────────────────────────────────────── */
 
-.rf .rf-historico .panel-title .counter-badge {
-  font-family: var(--fonte-mono);
-}
-
 .rf .rf-historico-lista {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
@@ -612,11 +889,30 @@
   display: flex;
   flex-direction: column;
   gap: var(--esp-2);
-  padding: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
   font-size: 0.8rem;
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  transition: border-color var(--t-medio) var(--curva), transform var(--t-medio) var(--curva),
+    box-shadow var(--t-medio) var(--curva);
+}
+
+.rf .rf-hist:nth-child(2) {
+  animation-delay: 50ms;
+}
+.rf .rf-hist:nth-child(3) {
+  animation-delay: 100ms;
+}
+.rf .rf-hist:nth-child(n + 4) {
+  animation-delay: 150ms;
+}
+
+.rf .rf-hist:hover {
+  border-color: var(--acento-borda);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -18px var(--acento-sombra);
 }
 
 .rf .rf-hist-topo {
@@ -651,8 +947,8 @@
 }
 
 .rf .rf-hist-numeros b {
-  color: var(--texto-forte);
-  font-family: var(--fonte-mono);
+  color: var(--acento);
+  font-weight: 700;
 }
 
 .rf .rf-hist-previa {
@@ -661,10 +957,14 @@
   color: var(--texto);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  -webkit-mask: linear-gradient(180deg, #000 60%, transparent);
+  mask: linear-gradient(180deg, #000 60%, transparent);
 }
 
 .rf .rf-hist.aberto .rf-hist-previa {
   max-height: none;
+  -webkit-mask: none;
+  mask: none;
 }
 
 .rf .rf-hist-acoes {
@@ -690,10 +990,6 @@
   color: var(--texto);
 }
 
-.rf .rf-atalhos::backdrop {
-  background: var(--veu);
-}
-
 .rf .rf-atalhos dl {
   display: flex;
   flex-direction: column;
@@ -710,12 +1006,14 @@
 .rf .rf-atalhos kbd {
   display: inline-grid;
   place-items: center;
-  min-width: 1.7rem;
-  padding: 0.1rem 0.4rem;
-  background: var(--fundo-sutil);
+  min-width: 1.8rem;
+  padding: 0.12rem 0.45rem;
+  background: var(--superficie);
   border: 1px solid var(--borda-forte);
+  border-bottom-width: 2px;
   border-radius: var(--r-sm);
-  color: var(--texto-forte);
+  color: var(--acento);
   font-family: var(--fonte-mono);
   font-size: 0.78rem;
+  font-weight: 700;
 }

@@ -1,7 +1,8 @@
 /* ── Componentes compartilhados ─────────────────────────────────────────────────────────
-   Painel, segmentado, selo, botão de copiar, alerta e estado vazio: nasceram no Ordens e
-   agora servem às três ferramentas. Um componente novo só entra aqui quando dois módulos o
-   usam; o que é de um módulo só fica escopado no CSS dele. */
+   Painel, segmentado, selo, botões, alerta, estado vazio e esqueleto: servem às quatro
+   ferramentas. Um componente só entra aqui quando dois módulos o usam; o que é de um módulo só
+   fica escopado no CSS dele. As cores vêm de `--acento`, a pedra da ferramenta em que o
+   componente está (ver base.css). */
 
 /* ── Painéis ────────────────────────────────────────────────────────────────────────── */
 
@@ -11,7 +12,8 @@
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
   box-shadow: var(--sombra);
-  transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva);
+  transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva),
+    box-shadow var(--t-lento) var(--curva);
 }
 
 .panel-header-row {
@@ -22,6 +24,8 @@
   margin-bottom: var(--esp-4);
 }
 
+/* O título de seção leva um traço na cor da ferramenta: é o que dá ritmo à tela e diz, de relance,
+   em que aba se está — sem ícone decorativo em cada painel. */
 .panel-title {
   display: flex;
   align-items: center;
@@ -32,22 +36,21 @@
   color: var(--texto-forte);
 }
 
-.meta-counter {
-  font-family: var(--fonte-mono);
-  font-size: 0.73rem;
-  color: var(--texto-fraco);
-  text-align: right;
+.panel-title::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 1em;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--acento), color-mix(in srgb, var(--acento) 45%, transparent));
 }
 
-@keyframes entrar {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.meta-counter {
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: right;
 }
 
 /* ── Controle segmentado ────────────────────────────────────────────────────────────────
@@ -56,58 +59,70 @@
 
 .segmentado {
   display: inline-flex;
-  padding: 2px;
-  background: var(--fundo-sutil);
+  gap: 2px;
+  padding: 3px;
+  background: var(--superficie-afundada);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
 }
 
 .seg {
-  padding: 0.24rem 0.55rem;
+  padding: 0.26rem 0.65rem;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: calc(var(--r-md) - 4px);
   color: var(--texto-fraco);
   font-family: inherit;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-medio) var(--curva), color var(--t-medio) var(--curva),
+    box-shadow var(--t-medio) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .seg:hover:not(.ativo) {
   color: var(--texto-forte);
+  background: color-mix(in srgb, var(--texto-fraco) 9%, transparent);
+}
+
+.seg:active {
+  transform: scale(0.96);
 }
 
 .seg.ativo {
-  background: var(--superficie);
+  background: var(--superficie-alta);
   color: var(--texto-forte);
-  box-shadow: var(--sombra);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), inset 0 0 0 1px var(--acento-borda);
 }
 
 /* Compra e venda ganham cor só quando escolhidas: a cor aqui responde "o que vai ser feito",
    e pintar as duas o tempo todo tiraria a resposta. */
 .seg.compra.ativo {
-  background: var(--positivo-fundo);
+  background: color-mix(in srgb, var(--positivo) 12%, var(--superficie));
   color: var(--positivo);
+  box-shadow: inset 0 0 0 1px var(--positivo-borda);
 }
 
 .seg.venda.ativo {
-  background: var(--negativo-fundo);
+  background: color-mix(in srgb, var(--negativo) 13%, var(--superficie));
   color: var(--negativo);
+  box-shadow: inset 0 0 0 1px var(--negativo-borda);
 }
+
+/* ── Selos ──────────────────────────────────────────────────────────────────────────── */
 
 .badge {
   display: inline-block;
-  padding: 0.12rem 0.45rem;
-  border-radius: var(--r-sm);
+  padding: 0.12rem 0.48rem;
+  border-radius: var(--r-pilula);
   background: var(--fundo-sutil);
   border: 1px solid var(--borda);
   color: var(--texto);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .badge.buy {
@@ -122,44 +137,159 @@
   color: var(--negativo);
 }
 
+.counter-badge {
+  display: inline-block;
+  min-width: 1.4rem;
+  padding: 0 0.38rem;
+  border-radius: var(--r-pilula);
+  background: var(--acento-fundo);
+  border: 1px solid var(--acento-borda);
+  color: var(--acento);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────────────────────────
+   Secundário (`.copy-btn`): contorno, ganha a cor da ferramenta ao passar o mouse.
+   Principal (`.btn-primario`): cheio, na cor da ferramenta, com um fio de luz no alto; ao passar
+   o mouse, uma faixa de brilho atravessa uma vez. Um principal por área, no máximo. */
+
 .copy-btn {
+  position: relative;
+  display: inline-flex;
   flex: 0 0 auto;
-  padding: 0.4rem 0.9rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.9rem;
   background: var(--superficie);
   border: 1px solid var(--borda-forte);
   border-radius: var(--r-sm);
   color: var(--texto);
   font-size: 0.8rem;
   font-weight: 600;
+  line-height: 1.35;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
-    transform var(--t-rapido) var(--curva);
+  box-shadow: 0 1px 0 var(--realce) inset;
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva),
+    box-shadow var(--t-medio) var(--curva);
 }
 
 .copy-btn:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
 }
 
 .copy-btn:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
-/* ── Alertas ────────────────────────────────────────────────────────────────────────── */
+.btn-primario {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acento) 94%, white), color-mix(in srgb, var(--acento) 90%, black));
+  border-color: color-mix(in srgb, var(--acento) 70%, black);
+  color: var(--texto-no-acento);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 6px 16px -8px var(--acento-sombra);
+}
+
+.btn-primario::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-100%);
+}
+
+.btn-primario:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acento) 86%, white), var(--acento));
+  border-color: color-mix(in srgb, var(--acento) 70%, black);
+  color: var(--texto-no-acento);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.26) inset, 0 10px 22px -8px var(--acento-sombra);
+}
+
+.btn-primario:hover::after {
+  animation: varrer 720ms var(--curva) both;
+}
+
+.btn-primario:disabled,
+.btn-primario:disabled:hover {
+  background: var(--superficie);
+  border-color: var(--borda-forte);
+  color: var(--texto-fraco);
+  box-shadow: none;
+}
+
+.btn-primario:disabled::after {
+  display: none;
+}
+
+/* Confirmação de cópia: o botão vira verde por um instante, com o visto que se desenha.
+   A classe é posta pelo módulo; o texto do botão pode ou não mudar. */
+.copy-btn.copiado,
+.copy-btn.copiado:hover {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--positivo) 16%, transparent);
+}
+
+.copy-btn.copiado::before {
+  content: '';
+  width: 13px;
+  flex: none;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+}
+
+.copy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.copy-btn:disabled:hover {
+  background: var(--superficie);
+  border-color: var(--borda-forte);
+  color: var(--texto);
+}
+
+/* ── Alertas ────────────────────────────────────────────────────────────────────────────
+   Cartão com ícone e um filete de cor na borda esquerda: chama o olho sem tingir o bloco inteiro. */
 
 .alert {
   display: flex;
   align-items: center;
   gap: var(--esp-3);
   padding: var(--esp-3) var(--esp-4);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   border: 1px solid var(--borda);
   background: var(--superficie);
   color: var(--texto);
   font-size: 0.83rem;
   line-height: 1.5;
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.alert::before {
+  content: '';
+  flex: none;
+  align-self: flex-start;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  background: var(--texto-fraco);
+  -webkit-mask: var(--i-info) center / contain no-repeat;
+  mask: var(--i-info) center / contain no-repeat;
 }
 
 .alert + .alert {
@@ -167,40 +297,84 @@
 }
 
 .alert-danger {
-  background: var(--superficie);
+  background: linear-gradient(90deg, var(--negativo-fundo), transparent 55%), var(--superficie);
   border-color: var(--negativo-borda);
+  box-shadow: inset 3px 0 0 var(--negativo);
   color: var(--texto-forte);
+}
+
+.alert-danger::before {
+  background: var(--negativo);
+  -webkit-mask-image: var(--i-alerta);
+  mask-image: var(--i-alerta);
 }
 
 .alert-warning {
-  background: var(--atencao-fundo);
+  background: linear-gradient(90deg, var(--atencao-fundo), transparent 60%), var(--superficie);
   border-color: var(--atencao-borda);
+  box-shadow: inset 3px 0 0 var(--atencao);
   color: var(--texto-forte);
 }
 
-/* ── Estado vazio ───────────────────────────────────────────────────────────────────── */
+.alert-warning::before {
+  background: var(--atencao);
+  -webkit-mask-image: var(--i-alerta);
+  mask-image: var(--i-alerta);
+}
+
+/* ── Estado vazio ───────────────────────────────────────────────────────────────────────
+   Um selo redondo na cor da ferramenta, com o ícone de "caixa vazia" dentro. */
 
 .empty-state {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--esp-2);
   padding: var(--esp-6) var(--esp-4);
   text-align: center;
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.empty-state::before {
+  content: '';
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--esp-2);
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--acento) 26%, transparent), var(--acento-fundo) 70%);
+  box-shadow: inset 0 0 0 1px var(--acento-borda), 0 8px 24px -10px var(--acento-sombra);
+}
+
+.empty-state::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--esp-6) + 12px);
+  left: calc(50% - 11px);
+  width: 22px;
+  height: 22px;
+  background: var(--acento);
+  -webkit-mask: var(--i-caixa) center / contain no-repeat;
+  mask: var(--i-caixa) center / contain no-repeat;
 }
 
 .empty-state p {
-  color: var(--texto);
-  font-weight: 500;
+  color: var(--texto-forte);
+  font-weight: 600;
 }
 
 .empty-state span {
+  max-width: 34rem;
   color: var(--texto-fraco);
   font-size: 0.85rem;
 }
 
 .empty-state.pequeno {
   padding: var(--esp-5) var(--esp-4);
+}
+
+.empty-state.pequeno::after {
+  top: calc(var(--esp-5) + 12px);
 }
 
 .icon-close-btn {
@@ -215,10 +389,59 @@
   font-size: 1.3rem;
   line-height: 1;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
+    transform var(--t-medio) var(--curva-mola);
 }
 
 .icon-close-btn:hover {
   background: var(--fundo-sutil);
   color: var(--texto-forte);
+  transform: rotate(90deg);
+}
+
+/* ── Status ao vivo ─────────────────────────────────────────────────────────────────────
+   Calendário e Operacional mostram a conexão com o banco. "ao vivo" leva o ponto que pulsa. */
+
+.status-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.status-vivo::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulso-vivo 2.4s var(--curva) infinite;
+}
+
+/* ── Esqueleto de carregamento ──────────────────────────────────────────────────────────── */
+
+.esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+.esqueleto i {
+  display: block;
+  height: 2.6rem;
+  border-radius: var(--r-sm);
+  background: linear-gradient(100deg, var(--fundo-sutil) 30%, var(--superficie-alta) 50%, var(--fundo-sutil) 70%) 0 0 / 200% 100%;
+  animation: cintilar 1.4s linear infinite;
+  opacity: 0.7;
+}
+
+.esqueleto i:nth-child(2) {
+  width: 92%;
+}
+
+.esqueleto i:nth-child(3) {
+  width: 84%;
+}
+
+.esqueleto i:nth-child(4) {
+  width: 88%;
 }

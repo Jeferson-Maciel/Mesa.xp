@@ -1,15 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    Operacional — a base de conhecimento da mesa, no desenho do Slab e no visual da Mesa XP.
+   A pedra da aba é a turmalina (`--acento`, base.css).
 
    Barra lateral com a equipe, a busca e a árvore de tópicos, parada enquanto o conteúdo rola;
-   no meio, uma folha com largura de leitura, como o documento do Slab. Tudo escopado em `.op`
-   e escrito pelo token. Cor com significado: âmbar da marca no tópico aberto e na ação principal,
-   atenção no post com texto pendente, vermelho só ao passar em Excluir.
+   no meio, uma folha com largura de leitura, como o documento do Slab. Cada tópico tem um tom
+   (`--tom`, posto pelo render conforme a posição dele), que marca a árvore, o grupo e os ícones
+   dos posts — acha-se "Disparos" pela cor antes de ler. Tudo escopado em `.op`.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 .op {
+  --tom-0: var(--safira);
+  --tom-1: var(--agua);
+  --tom-2: var(--ametista);
+  --tom-3: var(--marca);
+  --tom-4: var(--turmalina);
   display: grid;
-  grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   min-height: calc(100vh - 59px);
 }
 
@@ -25,8 +31,20 @@
   height: calc(100vh - 59px);
   padding: var(--esp-4) var(--esp-3);
   overflow-y: auto;
-  background: var(--superficie);
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
   border-right: 1px solid var(--borda);
+  animation: op-lateral var(--t-cena) var(--curva-saida) both;
+}
+
+@keyframes op-lateral {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .op .op-equipe {
@@ -41,24 +59,25 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  background: var(--marca-fundo);
-  border: 1px solid var(--marca-borda);
-  border-radius: var(--r-sm);
-  color: var(--marca);
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--acento) 88%, white), color-mix(in srgb, var(--acento) 80%, black));
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset, 0 6px 16px -8px var(--acento-sombra);
+  color: var(--texto-no-acento);
   font-family: var(--fonte-titulo);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .op .op-equipe strong {
   display: block;
   color: var(--texto-forte);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
-.op .op-equipe span {
+/* `div span` e não `span`: o avatar também é um span, e ficaria com a letra miúda e apagada. */
+.op .op-equipe div span {
   color: var(--texto-fraco);
   font-size: 0.74rem;
 }
@@ -70,13 +89,17 @@
   padding: 0 var(--esp-3);
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   cursor: text;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
+}
+
+.op .op-busca:hover {
+  border-color: var(--borda-forte);
 }
 
 .op .op-busca:focus-within {
-  border-color: var(--marca-borda);
+  border-color: var(--acento-borda);
   box-shadow: var(--foco);
 }
 
@@ -88,12 +111,18 @@
   stroke: var(--texto-fraco);
   stroke-width: 2;
   stroke-linecap: round;
+  transition: stroke var(--t-rapido) var(--curva), transform var(--t-lento) var(--curva-mola);
+}
+
+.op .op-busca:focus-within svg {
+  stroke: var(--acento);
+  transform: scale(1.12) rotate(-8deg);
 }
 
 .op .op-busca input {
   flex: 1;
   min-width: 0;
-  padding: 0.52rem 0;
+  padding: 0.55rem 0;
   background: transparent;
   border: none;
   outline: none;
@@ -109,9 +138,9 @@
 .op .op-secao {
   margin: var(--esp-2) var(--esp-2) var(--esp-1);
   color: var(--texto-fraco);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -127,27 +156,51 @@
 }
 
 .op .op-no {
+  --tom: var(--acento);
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--esp-2);
-  padding: 0.4rem 0.6rem;
+  padding: 0.42rem 0.6rem;
   border-radius: var(--r-sm);
   color: var(--texto);
   font-size: 0.86rem;
   font-weight: 500;
   text-decoration: none;
-  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
+    transform var(--t-rapido) var(--curva);
+}
+
+/* O marcador do tópico: um quadradinho no tom dele. */
+.op .op-no::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--tom);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tom) 18%, transparent);
+  transition: transform var(--t-lento) var(--curva-mola);
 }
 
 .op .op-no:hover {
-  background: var(--fundo-sutil);
+  background: color-mix(in srgb, var(--tom) 9%, transparent);
   color: var(--texto-forte);
 }
 
+.op .op-no:hover::before {
+  transform: rotate(45deg) scale(1.1);
+}
+
 .op .op-no.ativo {
-  background: var(--marca-fundo);
-  color: var(--marca);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--tom) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tom) 32%, transparent);
+  color: var(--texto-forte);
+  font-weight: 700;
+}
+
+.op .op-no.ativo::before {
+  transform: rotate(45deg);
 }
 
 .op .op-nome {
@@ -159,20 +212,29 @@
 }
 
 .op .op-contagem {
+  min-width: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: var(--r-pilula);
+  background: var(--fundo-sutil);
   color: var(--texto-fraco);
-  font-family: var(--fonte-mono);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .op .op-no.ativo .op-contagem {
-  color: var(--marca);
+  background: var(--tom);
+  color: var(--texto-no-acento);
 }
 
 .op .op-novo-topico {
-  padding: 0.45rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.48rem 0.65rem;
   background: transparent;
   border: 1px dashed var(--borda-forte);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   color: var(--texto-fraco);
   font-family: inherit;
   font-size: 0.82rem;
@@ -184,27 +246,49 @@
 }
 
 .op .op-novo-topico:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  border-style: solid;
+  color: var(--acento);
 }
 
+/* O status da conexão, no pé da barra: pílula discreta; "ao vivo" com o ponto que pulsa. */
 .op .op-conexao {
+  align-self: flex-start;
   margin-top: auto;
-  padding: var(--esp-2);
+  padding: 0.16rem 0.6rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-pilula);
+  font-size: 0.72rem;
   text-align: left;
 }
 
+.op .op-conexao:empty {
+  display: none;
+}
+
 .op .op-conexao.op-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
   color: var(--positivo);
+  font-weight: 600;
 }
 
 .op .op-conexao.op-vivo::before {
-  content: '●';
-  margin-right: 0.35rem;
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulso-vivo 2.4s var(--curva) infinite;
 }
 
 .op .op-conexao.op-aviso {
+  background: var(--atencao-fundo);
+  border-color: var(--atencao-borda);
   color: var(--atencao);
 }
 
@@ -225,18 +309,59 @@
 }
 
 .op .op-folha {
+  position: relative;
   max-width: 900px;
   margin: 0 auto;
   padding: var(--esp-6) calc(var(--esp-6) + var(--esp-2));
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
-  box-shadow: var(--sombra);
+  box-shadow: var(--sombra), var(--sombra-media);
+  animation: var(--cena);
+  animation-delay: 60ms;
 }
 
-.op .copy-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* O esqueleto enquanto a base carrega: um título e as linhas dos posts. */
+.op .op-esqueleto i:first-child {
+  width: 55%;
+  height: 2.2rem;
+  margin-bottom: var(--esp-3);
+}
+
+/* Cada página da folha (início, tópico, post, editor, busca) entra ao ser aberta — `.em-cena`,
+   posta por src/ui/cena.js só quando a página muda, não a cada atualização ao vivo. */
+.op .op-folha.em-cena > * {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.op .op-folha.em-cena > :nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.op .op-folha.em-cena > :nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.op .op-folha.em-cena > :nth-child(n + 4) {
+  animation-delay: 120ms;
+}
+
+/* Na página de tópico, os grupos e as linhas chegam em sequência. */
+.op .op-folha.em-cena .op-grupo {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  animation-delay: 120ms;
+}
+
+.op .op-folha.em-cena .op-grupo:nth-of-type(2) {
+  animation-delay: 170ms;
+}
+
+.op .op-folha.em-cena .op-grupo:nth-of-type(3) {
+  animation-delay: 220ms;
+}
+
+.op .op-folha.em-cena .op-grupo:nth-of-type(n + 4) {
+  animation-delay: 270ms;
 }
 
 .op a.copy-btn {
@@ -245,21 +370,39 @@
   text-decoration: none;
 }
 
-/* A ação principal da página, no mesmo tom do Analisar do Ordens. */
-.op .op-primario {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
-}
-
-.op .op-primario:hover {
-  border-color: var(--marca);
-}
-
 .op .op-perigo:hover {
   background: var(--negativo-fundo);
   border-color: var(--negativo-borda);
   color: var(--negativo);
+}
+
+/* Ícones das ações do post. */
+.op [data-acao='copiar']:not(.copiado)::before,
+.op [data-acao='editar']::before,
+.op [data-acao='excluir']::before,
+.op [data-acao='criar-post']::before {
+  content: '';
+  width: 13px;
+  flex: none;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-copiar) center / contain no-repeat;
+  mask: var(--i-copiar) center / contain no-repeat;
+}
+
+.op [data-acao='editar']::before {
+  -webkit-mask-image: var(--i-lapis);
+  mask-image: var(--i-lapis);
+}
+
+.op [data-acao='excluir']::before {
+  -webkit-mask-image: var(--i-lixo);
+  mask-image: var(--i-lixo);
+}
+
+.op [data-acao='criar-post']::before {
+  -webkit-mask-image: var(--i-mais);
+  mask-image: var(--i-mais);
 }
 
 .op .op-trilha {
@@ -267,19 +410,24 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--esp-2);
-  margin-bottom: var(--esp-2);
+  margin-bottom: var(--esp-3);
   color: var(--texto-fraco);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .op .op-trilha a {
-  color: var(--texto-fraco);
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--r-pilula);
+  background: var(--fundo-sutil);
+  color: var(--texto);
+  font-weight: 600;
   text-decoration: none;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
 }
 
 .op .op-trilha a:hover {
-  color: var(--marca);
-  text-decoration: underline;
+  background: var(--acento-fundo);
+  color: var(--acento);
 }
 
 .op .op-cabeca {
@@ -298,17 +446,17 @@
   min-width: 0;
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
-  font-size: 1.85rem;
+  font-size: 1.95rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
   overflow-wrap: anywhere;
 }
 
 .op .op-descricao {
   margin-top: var(--esp-2);
   color: var(--texto);
-  font-size: 0.95rem;
+  font-size: 0.96rem;
 }
 
 .op .op-acoes {
@@ -319,7 +467,7 @@
 
 .op .op-abas-posts {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--esp-2);
   margin-bottom: var(--esp-3);
   padding-bottom: var(--esp-2);
@@ -328,16 +476,41 @@
   font-size: 0.9rem;
 }
 
+.op .op-abas-posts strong {
+  position: relative;
+}
+
+/* O sublinhado da "aba" Posts, como no Slab, na turmalina. */
+.op .op-abas-posts strong::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--esp-2) - 1px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acento);
+}
+
+.op .op-abas-posts .meta-counter {
+  padding: 0 0.4rem;
+  border-radius: var(--r-pilula);
+  background: var(--acento-fundo);
+  color: var(--acento);
+  font-weight: 700;
+}
+
 /* ── Listas de posts ────────────────────────────────────────────────────────────────── */
 
 .op .op-grupo {
+  --tom: var(--acento);
   margin-top: var(--esp-5);
 }
 
 .op .op-grupo-titulo {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--esp-2);
   margin-bottom: var(--esp-2);
   color: var(--texto-fraco);
@@ -346,13 +519,23 @@
   font-weight: 600;
 }
 
+.op .op-grupo-titulo::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--tom);
+  transform: rotate(45deg);
+}
+
 .op .op-grupo-titulo a {
   color: var(--texto-forte);
   text-decoration: none;
+  transition: color var(--t-rapido) var(--curva);
 }
 
 .op .op-grupo-titulo a:hover {
-  color: var(--marca);
+  color: var(--tom);
 }
 
 .op .op-lista {
@@ -362,37 +545,76 @@
   border-radius: var(--r-md);
 }
 
+/* A linha do post: o ícone no tom do tópico, o título, o trecho e, ao passar o mouse, uma seta
+   que entra da direita dizendo "abrir". */
 .op .op-linha {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--esp-3);
-  padding: 0.72rem var(--esp-4);
+  padding: 0.74rem var(--esp-4);
   border-top: 1px solid var(--borda);
   color: inherit;
   text-decoration: none;
-  transition: background-color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), padding var(--t-medio) var(--curva);
 }
 
 .op .op-linha:first-child {
   border-top: none;
 }
 
+.op .op-linha::after {
+  content: '';
+  position: absolute;
+  right: var(--esp-4);
+  top: calc(50% - 8px);
+  width: 16px;
+  height: 16px;
+  background: var(--tom, var(--acento));
+  -webkit-mask: var(--i-seta) center / contain no-repeat;
+  mask: var(--i-seta) center / contain no-repeat;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity var(--t-medio) var(--curva), transform var(--t-medio) var(--curva-saida);
+}
+
 .op .op-linha:hover {
-  background: var(--fundo-sutil);
+  padding-right: calc(var(--esp-4) + 26px);
+  background: color-mix(in srgb, var(--tom, var(--acento)) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--tom, var(--acento));
+}
+
+.op .op-linha:hover::after {
+  opacity: 1;
+  transform: none;
 }
 
 .op .op-linha:hover strong {
-  color: var(--marca);
+  color: var(--texto-forte);
+}
+
+.op .op-linha-icone {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--tom, var(--acento)) 13%, transparent);
+  transition: transform var(--t-lento) var(--curva-mola);
+}
+
+.op .op-linha:hover .op-linha-icone {
+  transform: scale(1.08) rotate(-4deg);
 }
 
 .op .op-linha-icone svg {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   fill: none;
-  stroke: var(--texto-fraco);
-  stroke-width: 1.6;
+  stroke: var(--tom, var(--acento));
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -421,8 +643,8 @@
 }
 
 .op .op-trecho mark {
-  padding: 0 2px;
-  background: var(--marca-fundo);
+  padding: 0 3px;
+  background: color-mix(in srgb, var(--acento) 26%, transparent);
   border-radius: 3px;
   color: var(--texto-forte);
 }
@@ -434,7 +656,6 @@
 
 .op .op-linha-meta {
   color: var(--texto-fraco);
-  font-family: var(--fonte-mono);
   font-size: 0.72rem;
   white-space: nowrap;
 }
@@ -448,25 +669,52 @@
 
 /* ── Post aberto ────────────────────────────────────────────────────────────────────── */
 
+.op .op-post {
+  --tom: var(--acento);
+}
+
+.op .op-post .op-titulo {
+  padding-left: var(--esp-3);
+  box-shadow: inset 3px 0 0 var(--tom);
+}
+
 .op .op-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: var(--esp-2) 0 var(--esp-5);
   color: var(--texto-fraco);
   font-size: 0.8rem;
 }
 
+.op .op-meta::before {
+  content: '';
+  width: 13px;
+  flex: none;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-relogio) center / contain no-repeat;
+  mask: var(--i-relogio) center / contain no-repeat;
+}
+
 /* O texto como vai ser colado: quebras de linha preservadas, largura de leitura. */
 .op .op-texto {
   max-width: 76ch;
+  padding: var(--esp-4) var(--esp-5);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
   color: var(--texto-forte);
   font-size: 0.98rem;
-  line-height: 1.7;
+  line-height: 1.72;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .op .op-vazio {
-  border: 1px dashed var(--borda-forte);
+  border: 1px dashed var(--atencao-borda);
   border-radius: var(--r-md);
+  background: var(--atencao-fundo);
 }
 
 /* ── Editor ─────────────────────────────────────────────────────────────────────────── */
@@ -482,16 +730,16 @@
   padding: 0.35rem 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--borda);
+  border-bottom: 2px solid var(--borda);
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
-  font-size: 1.6rem;
+  font-size: 1.65rem;
   font-weight: 700;
-  transition: border-color var(--t-rapido) var(--curva);
+  transition: border-color var(--t-medio) var(--curva);
 }
 
 .op .op-campo-titulo:focus {
-  border-bottom-color: var(--marca);
+  border-bottom-color: var(--acento);
   outline: none;
 }
 
@@ -504,9 +752,9 @@
 
 .op .op-campo > span {
   color: var(--texto-fraco);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -514,20 +762,26 @@
 .op .op-campo select,
 .op .op-campo textarea {
   min-width: 0;
-  padding: 0.5rem 0.7rem;
+  padding: 0.52rem 0.75rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
   color: var(--texto-forte);
   font-family: inherit;
   font-size: 0.9rem;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
+}
+
+.op .op-campo input:hover,
+.op .op-campo select:hover,
+.op .op-campo textarea:hover {
+  border-color: var(--borda-forte);
 }
 
 .op .op-campo input:focus,
 .op .op-campo select:focus,
 .op .op-campo textarea:focus {
-  border-color: var(--marca-borda);
+  border-color: var(--acento-borda);
   box-shadow: var(--foco);
   outline: none;
 }
@@ -555,12 +809,8 @@
   background: var(--superficie-alta);
   border: 1px solid var(--borda-forte);
   border-radius: var(--r-lg);
-  box-shadow: var(--sombra-alta);
+  box-shadow: var(--sombra-alta), inset 0 2px 0 var(--acento);
   color: var(--texto);
-}
-
-.op .op-dialogo::backdrop {
-  background: var(--veu);
 }
 
 .op .op-dialogo form {
@@ -611,5 +861,9 @@
 
   .op .op-linha-meta {
     grid-column: 2;
+  }
+
+  .op .op-texto {
+    padding: var(--esp-3);
   }
 }

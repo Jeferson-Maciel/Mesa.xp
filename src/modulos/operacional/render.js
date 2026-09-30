@@ -67,6 +67,14 @@ const ancestrais = (topico, topicos) => {
   return trilha;
 };
 
+// O tom de cada tópico: a posição dele entre os irmãos, numa paleta de cinco pedras
+// (operacional.css). Pinta o marcador na árvore, o cabeçalho do grupo e os ícones dos posts.
+const tomDe = (topico, topicos) => {
+  if (!topico || topico.paiId === null) return '';
+  const posicao = topicos.filter((t) => t.paiId === topico.paiId).findIndex((t) => t.id === topico.id);
+  return ` style="--tom:var(--tom-${posicao % 5})"`;
+};
+
 const htmlTrilha = (itens) =>
   `<nav class="op-trilha" aria-label="Trilha">${itens
     .map((t) => `<a href="${linkDoTopico(t)}">${esc(t.nome)}</a>`)
@@ -89,7 +97,7 @@ export const htmlLateral = ({ topicos, posts, ativo }) => {
     const filhos = filhosDe(t);
     return `
       <li>
-        <a class="op-no${ativo === t.id ? ' ativo' : ''}" href="${linkDoTopico(t)}"${ativo === t.id ? ' aria-current="page"' : ''}>
+        <a class="op-no${ativo === t.id ? ' ativo' : ''}"${tomDe(t, topicos)} href="${linkDoTopico(t)}"${ativo === t.id ? ' aria-current="page"' : ''}>
           <span class="op-nome">${esc(t.nome)}</span><span class="op-contagem">${total}</span>
         </a>
         ${filhos.length ? `<ul>${filhos.map(no).join('')}</ul>` : ''}
@@ -133,7 +141,7 @@ export const htmlTopico = ({ topico, topicos, posts }) => {
   const grupos = filhos
     .map(
       (filho) => `
-      <section class="op-grupo">
+      <section class="op-grupo"${tomDe(filho, topicos)}>
         <h3 class="op-grupo-titulo">
           <span>${esc(topico.nome)}</span>
           <span aria-hidden="true">›</span>
@@ -149,12 +157,12 @@ export const htmlTopico = ({ topico, topicos, posts }) => {
       ${trilha.length ? htmlTrilha(trilha) : ''}
       <div class="op-cabeca-linha">
         <h1 class="op-titulo">${esc(topico.nome)}</h1>
-        <button type="button" class="copy-btn op-primario" data-acao="criar-post">Criar post</button>
+        <button type="button" class="copy-btn btn-primario" data-acao="criar-post">Criar post</button>
       </div>
       ${topico.descricao ? `<p class="op-descricao">${esc(topico.descricao)}</p>` : ''}
     </header>
     <div class="op-abas-posts"><strong>Posts</strong><span class="meta-counter">${total}</span></div>
-    ${diretos.length || !filhos.length ? htmlLista(diretos) : ''}
+    ${diretos.length || !filhos.length ? `<div${tomDe(topico, topicos)}>${htmlLista(diretos)}</div>` : ''}
     ${grupos}`;
 };
 
@@ -166,12 +174,12 @@ export const htmlPost = ({ post, topicos }) => {
   const pendente = !post.conteudo.trim();
 
   return `
-    <article class="op-post">
+    <article class="op-post"${tomDe(topico, topicos)}>
       ${htmlTrilha(trilha)}
       <div class="op-cabeca-linha">
         <h1 class="op-titulo">${esc(post.titulo)}</h1>
         <div class="op-acoes">
-          ${pendente ? '' : '<button type="button" class="copy-btn op-primario" data-acao="copiar">Copiar texto</button>'}
+          ${pendente ? '' : '<button type="button" class="copy-btn btn-primario" data-acao="copiar">Copiar texto</button>'}
           <button type="button" class="copy-btn" data-acao="editar">Editar</button>
           <button type="button" class="copy-btn op-perigo" data-acao="excluir">Excluir</button>
         </div>
@@ -207,7 +215,7 @@ export const htmlEditor = ({ post, topicos, topicoId }) => {
         <span class="meta-counter">${post ? 'Editando o post' : 'Post novo'}</span>
         <div class="op-acoes">
           <button type="button" class="copy-btn" data-acao="cancelar">Cancelar</button>
-          <button type="submit" class="copy-btn op-primario">Salvar</button>
+          <button type="submit" class="copy-btn btn-primario">Salvar</button>
         </div>
       </div>
       <div data-op="aviso-editor"></div>

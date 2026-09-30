@@ -31,8 +31,17 @@ const faixa = (h) => `${h.inicio}–${h.fim}`;
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
+/** As iniciais do avatar: primeira letra do primeiro e do último nome ("Ana Ribeiro" → "AR"). */
+export const iniciais = (nome) => {
+  const partes = String(nome ?? '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '';
+  const letras = partes.length > 1 ? partes[0][0] + partes[partes.length - 1][0] : partes[0].slice(0, 2);
+  return letras.toLocaleUpperCase('pt-BR');
+};
+
+// A cor do colaborador (dado do banco) vai no avatar, e só nele.
 const pessoa = (c) =>
-  `<span class="cal-pessoa"><i class="cal-cor" style="background:${corSegura(c.cor)}"></i><span class="cal-nome" title="${esc(c.nome)}">${esc(c.nome)}</span></span>`;
+  `<span class="cal-pessoa"><i class="cal-cor" style="--cor:${corSegura(c.cor)}" aria-hidden="true">${esc(iniciais(c.nome))}</i><span class="cal-nome" title="${esc(c.nome)}">${esc(c.nome)}</span></span>`;
 
 /* ── Semana ───────────────────────────────────────────────────────────────────────────── */
 
@@ -79,7 +88,9 @@ export const htmlSemana = ({ colaboradores, registros, segunda, hoje }) => {
   const totais = dias
     .map((d) => {
       const n = colaboradores.filter((c) => registroDe(registros, d, c.id)?.presencial).length;
-      return `<td${mesmoDia(d, hoje) ? ' class="cal-hoje"' : ''}>${n}</td>`;
+      // A proporção da equipe no escritório vira uma barrinha sob o número (calendario.css).
+      const parte = (n / colaboradores.length).toFixed(3);
+      return `<td${mesmoDia(d, hoje) ? ' class="cal-hoje"' : ''} style="--parte:${parte}">${n}</td>`;
     })
     .join('');
 

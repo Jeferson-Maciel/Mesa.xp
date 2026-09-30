@@ -1,7 +1,7 @@
 # Mesa XP
 
 As ferramentas da mesa num link só: **Ordens**, **Renda Fixa**, **Calendário** e **Operacional**,
-em abas, com o mesmo visual e o mesmo tema claro/escuro.
+em abas, com o mesmo visual e o mesmo tema claro/escuro — cada aba com a sua cor.
 
 | Aba | Para quê | Atalho |
 | --- | --- | --- |

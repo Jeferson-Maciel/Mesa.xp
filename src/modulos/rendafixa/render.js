@@ -146,7 +146,13 @@ const htmlCurva = (secao) => {
     .join('');
   const descricao = itens.map((it) => `${fmtP(it.prazo)}: ${fmtT(it.taxa)}`).join(', ');
 
-  return `<svg class="rf-curva" viewBox="0 0 ${L} ${A}" role="img" aria-label="Curva por prazo — ${descricao}"><path d="${linha}"/>${marcas}</svg>`;
+  // A área sob a curva, fechada até a base, pintada por um degradê na cor da seção (rendafixa.css).
+  // pathLength="1" deixa a linha se desenhar com o mesmo tempo, qualquer que seja o comprimento.
+  const [ultimo, primeiro] = [pontos[pontos.length - 1], pontos[0]];
+  const area = `${linha} L${ultimo[0]} ${A} L${primeiro[0]} ${A} Z`;
+  const gradiente = `rf-degrade-${secao.id}`;
+
+  return `<svg class="rf-curva" viewBox="0 0 ${L} ${A}" role="img" aria-label="Curva por prazo — ${descricao}"><defs><linearGradient id="${gradiente}" x1="0" y1="0" x2="0" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs><path class="rf-area" d="${area}" fill="url(#${gradiente})"/><path class="rf-traco" d="${linha}" pathLength="1"/>${marcas}</svg>`;
 };
 
 // Variação contra a última análise salva antes de hoje, no mesmo mercado

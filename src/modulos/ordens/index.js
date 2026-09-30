@@ -89,6 +89,7 @@ export const iniciarOrdens = (secao) => {
 
     aplicarDeteccao(solicitacoes);
     render();
+    encenar();
 
     if (ignoradas.length > 0) {
       aviso(`${ignoradas.length} linha(s) do WhatsApp descartadas (carimbo, menção ou confirmação).`);
@@ -129,6 +130,17 @@ export const iniciarOrdens = (secao) => {
     container.innerHTML = estado.solicitacoes
       .map((s, i) => renderCartao(s, i, formatosDe(i), estado.confirmados[i]))
       .join('');
+  }
+
+  // Uma análise nova entra em cena — cartão, linhas e saídas em sequência (ordens.css). Editar o
+  // cartão depois refaz o HTML, mas não repete a entrada: ela seria um piscar a cada clique.
+  let fimDaCena = null;
+  function encenar() {
+    container.classList.remove('entrando');
+    void container.offsetWidth; // recomeça a animação quando se analisa duas vezes seguidas
+    container.classList.add('entrando');
+    clearTimeout(fimDaCena);
+    fimDaCena = setTimeout(() => container.classList.remove('entrando'), 1600);
   }
 
   function renderSaidasDe(indice) {
@@ -209,6 +221,10 @@ export const iniciarOrdens = (secao) => {
 
       const ok = await copiar(saida.texto, saida.html);
       aviso(ok ? `${ROTULOS[formato]} copiado.` : 'Não consegui copiar.');
+      if (ok) {
+        copiarBotao.classList.add('copiado');
+        setTimeout(() => copiarBotao.classList.remove('copiado'), 1600);
+      }
 
       if (ok) {
         historico.registrar({

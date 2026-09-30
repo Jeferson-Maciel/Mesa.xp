@@ -65,8 +65,24 @@ export const ligarBotaoDeTema = (botao) => {
 
   botao.addEventListener('click', () => {
     const proximo = oOutro(document.documentElement.dataset.tema);
-    aplicar(proximo);
-    rotular(proximo);
+    const trocar = () => {
+      aplicar(proximo);
+      rotular(proximo);
+    };
+
+    // O tema novo se abre em círculo a partir do botão (base.css, View Transitions). Sem suporte,
+    // ou com movimento reduzido pedido no sistema, troca na hora.
+    const reduzido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (typeof document.startViewTransition !== 'function' || reduzido) return trocar();
+    const caixa = botao.getBoundingClientRect();
+    const x = caixa.left + caixa.width / 2;
+    const y = caixa.top + caixa.height / 2;
+    const raio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const estilo = document.documentElement.style;
+    estilo.setProperty('--vt-x', `${x}px`);
+    estilo.setProperty('--vt-y', `${y}px`);
+    estilo.setProperty('--vt-r', `${raio}px`);
+    document.startViewTransition(trocar);
   });
 
   return inicial;

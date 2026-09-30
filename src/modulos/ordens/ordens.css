@@ -1,3 +1,11 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Ordens — o que é só desta aba. A pedra dela é a safira (`--acento`, ver base.css).
+
+   Os seletores de elemento ficam presos a `:where(#modulo-ordens)`, que não muda a
+   especificidade; as classes são as de sempre do Assistente de Ordens. Nenhum seletor daqui
+   pode pegar elemento de outra aba (npm run verificar confere).
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
 /* ── Grade principal ────────────────────────────────────────────────────────────────── */
 
 .container {
@@ -28,6 +36,23 @@
 /* Vazio, o contêiner ainda ocuparia uma linha da grade e abriria dois vãos onde não há nada. */
 #solicitacoes:empty {
   display: none;
+}
+
+/* Entrada da aba: os três blocos sobem em sequência (a cena está em casca.css). */
+#painel-entrada,
+#painel-formatos,
+#solicitacoes,
+#vazio {
+  animation: var(--cena);
+}
+
+#painel-formatos {
+  animation-delay: 70ms;
+}
+
+#solicitacoes,
+#vazio {
+  animation-delay: 140ms;
 }
 
 @media (max-width: 1180px) {
@@ -66,14 +91,19 @@
   font-size: 0.85rem;
   line-height: 1.65;
   resize: vertical;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva),
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva),
     background-color var(--t-lento) var(--curva);
+}
+
+:where(#modulo-ordens) textarea:hover {
+  border-color: var(--borda-forte);
 }
 
 :where(#modulo-ordens) textarea:focus {
   outline: none;
-  border-color: var(--marca-borda);
-  box-shadow: var(--foco);
+  border-color: var(--acento-borda);
+  box-shadow: var(--foco), inset 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 :where(#modulo-ordens) textarea::placeholder {
@@ -87,47 +117,55 @@
   margin: var(--esp-4) 0;
 }
 
-
-
 .button-group button {
+  position: relative;
   /* Os secundários ficam do tamanho do rótulo e o primário absorve a sobra: com flex igual
      para todos, "Colar e analisar" quebrava em duas linhas e desalinhava a fileira. */
   flex: 0 1 auto;
   white-space: nowrap;
-  padding: 0.56rem 0.9rem;
+  padding: 0.58rem 0.95rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--borda);
-  background: var(--superficie);
-  color: var(--texto);
   font-size: 0.87rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
-    transform var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
-.button-group button:hover {
-  background: var(--fundo-sutil);
-  border-color: var(--borda-forte);
+.button-group button:not(.btn-primario) {
+  background: var(--superficie);
+  color: var(--texto);
+  box-shadow: 0 1px 0 var(--realce) inset;
+}
+
+.button-group button:not(.btn-primario):hover {
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
   color: var(--texto-forte);
 }
 
 .button-group button:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
+/* O Analisar é a ação principal da aba: cheio, na safira, com o brilho do .btn-primario. */
 .button-group .primary {
   flex: 1 1 auto;
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
 }
 
-.button-group .primary:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca);
-  color: var(--marca);
+.button-group .primary::before {
+  content: '';
+  width: 15px;
+  flex: none;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: var(--i-brilho) center / contain no-repeat;
+  mask: var(--i-brilho) center / contain no-repeat;
 }
 
 .button-group .danger:hover {
@@ -146,9 +184,9 @@
 
 .presets-label {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--texto-fraco);
 }
 
@@ -159,23 +197,28 @@
 }
 
 .preset-btn {
-  padding: 0.28rem 0.58rem;
+  padding: 0.3rem 0.66rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pilula);
   color: var(--texto-fraco);
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .preset-btn:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
+  transform: translateY(-1px);
+}
+
+.preset-btn:active {
+  transform: scale(0.96);
 }
 
 /* ── Formatos de saída ──────────────────────────────────────────────────────────────── */
@@ -190,17 +233,17 @@
   display: flex;
   align-items: center;
   gap: var(--esp-2);
-  padding: 0.5rem 0.85rem;
+  padding: 0.52rem 0.9rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   color: var(--texto);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-medio) var(--curva), border-color var(--t-medio) var(--curva),
+    color var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .formato:hover {
@@ -208,46 +251,96 @@
   color: var(--texto-forte);
 }
 
+.formato:active {
+  transform: scale(0.98);
+}
+
 .formato:has(input:checked) {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
   color: var(--texto-forte);
   font-weight: 600;
+  box-shadow: 0 4px 14px -8px var(--acento-sombra);
 }
 
 .formato input {
   width: 15px;
   height: 15px;
-  accent-color: var(--marca);
+  accent-color: var(--acento);
   cursor: pointer;
+}
+
+.formato input:checked {
+  animation: estalar var(--t-lento) var(--curva-mola);
 }
 
 /* ── Cartão de solicitação ──────────────────────────────────────────────────────────── */
 
-.solicitacao + .solicitacao,
-#solicitacoes > .solicitacao:first-child {
+.solicitacao + .solicitacao {
   margin-top: var(--esp-5);
 }
 
-#solicitacoes > .solicitacao:first-child {
-  margin-top: 0;
+/* Uma análise nova entra em cena (src/modulos/ordens/index.js põe `.entrando` por um instante):
+   os cartões em sequência, as linhas da tabela uma a uma, e as saídas por último. Editar o cartão
+   depois refaz o HTML sem a classe, e nada pisca. */
+#solicitacoes.entrando .solicitacao {
+  animation: entrar-cena var(--t-cena) var(--curva-saida) both;
 }
 
-.solicitacao {
-  animation: entrar var(--t-lento) var(--curva) both;
+#solicitacoes.entrando .solicitacao:nth-child(2) {
+  animation-delay: 80ms;
 }
 
-/* Escalonado: os cartões entram em sequência, o que deixa claro que são vários e quantos. */
-.solicitacao:nth-child(2) {
-  animation-delay: 60ms;
-}
-.solicitacao:nth-child(3) {
-  animation-delay: 120ms;
-}
-.solicitacao:nth-child(n + 4) {
-  animation-delay: 180ms;
+#solicitacoes.entrando .solicitacao:nth-child(n + 3) {
+  animation-delay: 160ms;
 }
 
+#solicitacoes.entrando table.preview tbody tr {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  animation-delay: calc(140ms + var(--linha, 7) * var(--cascata));
+}
+
+#solicitacoes.entrando table.preview tbody tr:nth-child(1) {
+  --linha: 0;
+}
+#solicitacoes.entrando table.preview tbody tr:nth-child(2) {
+  --linha: 1;
+}
+#solicitacoes.entrando table.preview tbody tr:nth-child(3) {
+  --linha: 2;
+}
+#solicitacoes.entrando table.preview tbody tr:nth-child(4) {
+  --linha: 3;
+}
+#solicitacoes.entrando table.preview tbody tr:nth-child(5) {
+  --linha: 4;
+}
+#solicitacoes.entrando table.preview tbody tr:nth-child(6) {
+  --linha: 5;
+}
+
+#solicitacoes.entrando .saida {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  animation-delay: 360ms;
+}
+
+#solicitacoes.entrando .saida + .saida {
+  animation-delay: 430ms;
+}
+
+/* A saída pronta recebe uma faixa de luz que atravessa uma vez: "está aqui, pode copiar". */
+#solicitacoes.entrando .saida:not(.bloqueada) .output-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--acento) 16%, transparent) 50%, transparent 70%);
+  animation: varrer 900ms var(--curva) 520ms both;
+}
+
+.solicitacao .panel-title {
+  flex-wrap: wrap;
+}
 
 /* ── Tabela do preview ──────────────────────────────────────────────────────────────── */
 
@@ -265,20 +358,20 @@
 }
 
 :where(#modulo-ordens) thead th {
-  padding: 0.6rem 0.85rem;
+  padding: 0.62rem 0.85rem;
   background: var(--fundo-sutil);
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 0.66rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-align: left;
   white-space: nowrap;
 }
 
 :where(#modulo-ordens) tbody td {
-  padding: 0.5rem 0.85rem;
+  padding: 0.52rem 0.85rem;
   border-bottom: 1px solid var(--borda);
   color: var(--texto);
   vertical-align: middle;
@@ -290,22 +383,25 @@
 }
 
 :where(#modulo-ordens) tbody tr {
-  transition: background-color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
 }
 
+/* A linha sob o mouse ganha um filete da safira na esquerda: é a ordem que se está conferindo. */
 :where(#modulo-ordens) tbody tr:hover {
-  background: var(--fundo-sutil);
+  background: color-mix(in srgb, var(--acento) 5%, var(--superficie-afundada));
+  box-shadow: inset 3px 0 0 var(--acento);
 }
 
 .campo {
-  padding: 0.34rem 0.5rem;
+  padding: 0.36rem 0.55rem;
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
   color: var(--texto-forte);
   font-family: var(--fonte-mono);
   font-size: 0.82rem;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva),
+    background-color var(--t-rapido) var(--curva);
 }
 
 .campo:hover {
@@ -314,14 +410,15 @@
 
 .campo:focus {
   outline: none;
-  border-color: var(--marca-borda);
+  border-color: var(--acento-borda);
+  background: var(--superficie-alta);
   box-shadow: var(--foco);
 }
 
 .campo-conta {
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 /* Colunas justas ao conteúdo, com a folga toda indo para a coluna de ações, na direita.
@@ -344,7 +441,6 @@ table.preview td:last-child {
   gap: var(--esp-2);
 }
 
-
 /* ── Resumo da cesta ────────────────────────────────────────────────────────────────── */
 
 .resumo {
@@ -354,10 +450,10 @@ table.preview td:last-child {
 }
 
 .ficha {
-  padding: 0.16rem 0.5rem;
+  padding: 0.18rem 0.6rem;
   background: var(--fundo-sutil);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pilula);
   color: var(--texto);
   font-size: 0.76rem;
   font-weight: 600;
@@ -382,9 +478,12 @@ table.preview td:last-child {
   color: var(--atencao);
 }
 
+/* O total em reais é o número que se confere: mais peso, na cor forte. */
 .ficha.valor {
-  font-family: var(--fonte-mono);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
   color: var(--texto-forte);
+  font-weight: 700;
 }
 
 /* ── Selo de classificação do ticker ────────────────────────────────────────────────── */
@@ -392,13 +491,13 @@ table.preview td:last-child {
 .selo {
   display: inline-block;
   margin-left: var(--esp-2);
-  padding: 0.08rem 0.38rem;
-  border-radius: var(--r-sm);
+  padding: 0.08rem 0.42rem;
+  border-radius: var(--r-pilula);
   font-family: var(--fonte);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   vertical-align: middle;
 }
 
@@ -415,8 +514,8 @@ table.preview td:last-child {
 
 .selo {
   --cor: var(--classe-outros);
-  background: color-mix(in srgb, var(--cor) 13%, transparent);
-  border: 1px solid color-mix(in srgb, var(--cor) 34%, transparent);
+  background: color-mix(in srgb, var(--cor) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor) 36%, transparent);
   color: var(--cor);
 }
 
@@ -438,6 +537,9 @@ table.preview td:last-child {
 .selo.classe-fundo {
   --cor: var(--classe-fundo);
 }
+.selo.classe-cetipado {
+  --cor: var(--classe-cetipado);
+}
 
 .selo.suspeito {
   --cor: var(--negativo);
@@ -447,7 +549,11 @@ table.preview td:last-child {
   --cor: var(--atencao);
 }
 
-
+/* O selo de alarme chega com um estalo, uma vez, quando a análise entra. */
+#solicitacoes.entrando .selo.suspeito,
+#solicitacoes.entrando .selo.desconhecido {
+  animation: estalar var(--t-lento) var(--curva-mola) 420ms both;
+}
 
 .btn-remover {
   width: 26px;
@@ -463,14 +569,21 @@ table.preview td:last-child {
   font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  opacity: 0.55;
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), opacity var(--t-rapido) var(--curva), transform var(--t-medio) var(--curva-mola);
+}
+
+:where(#modulo-ordens) tbody tr:hover .btn-remover,
+.btn-remover:focus-visible {
+  opacity: 1;
 }
 
 .btn-remover:hover {
   background: var(--negativo-fundo);
   border-color: var(--negativo-borda);
   color: var(--negativo);
+  transform: rotate(90deg);
 }
 
 /* Botão + para acrescentar uma linha em branco. Tracejado e em tom fraco: é espaço a preencher,
@@ -479,22 +592,23 @@ table.preview td:last-child {
   display: inline-flex;
   align-items: center;
   margin-top: var(--esp-3);
-  padding: 0.34rem 0.75rem;
+  padding: 0.36rem 0.8rem;
   background: transparent;
-  border: 1px dashed var(--borda);
-  border-radius: var(--r-sm);
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-pilula);
   color: var(--texto-fraco);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva);
 }
 
 .btn-adicionar:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  border-style: solid;
+  color: var(--acento);
 }
 
 /* ── Horário e descartes ────────────────────────────────────────────────────────────── */
@@ -523,9 +637,10 @@ table.preview td:last-child {
 .descartadas {
   margin-top: var(--esp-4);
   padding: var(--esp-3) var(--esp-4);
-  background: var(--atencao-fundo);
+  background: linear-gradient(90deg, var(--atencao-fundo), transparent 70%), var(--superficie-afundada);
   border: 1px solid var(--atencao-borda);
   border-radius: var(--r-md);
+  box-shadow: inset 3px 0 0 var(--atencao);
   font-size: 0.82rem;
 }
 
@@ -584,12 +699,30 @@ table.preview td:last-child {
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  animation: entrar var(--t-medio) var(--curva) both;
+  transition: border-color var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
+.saida:not(.bloqueada):hover {
+  border-color: var(--acento-borda);
+  box-shadow: 0 8px 22px -14px var(--acento-sombra);
+}
+
+/* Bloqueada: o cartão fica neutro, e o vermelho vai no filete da esquerda e no selo — o alerta
+   dentro dele já diz o que falta. Um bloco inteiro tingido de vermelho cansava e escondia o texto. */
 .saida.bloqueada {
+  box-shadow: inset 3px 0 0 var(--negativo);
+}
+
+.saida.bloqueada > .panel-header-row .meta-counter {
+  padding: 0.1rem 0.55rem;
   background: var(--negativo-fundo);
-  border-color: var(--negativo-borda);
+  border: 1px solid var(--negativo-borda);
+  border-radius: var(--r-pilula);
+  color: var(--negativo);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .saida .panel-header-row {
@@ -601,7 +734,28 @@ table.preview td:last-child {
   white-space: nowrap;
 }
 
+.saida.bloqueada .panel-title::before {
+  background: var(--negativo);
+}
+
+/* O filete vermelho já está no cartão; o alerta de dentro não repete o dele. */
+.saida.bloqueada .alert-danger {
+  box-shadow: none;
+}
+
+/* O Copiar da saída leva o ícone; copiado, vira o visto verde (componentes.css). */
+.saida .copy-btn:not(.copiado)::before {
+  content: '';
+  width: 13px;
+  flex: none;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--i-copiar) center / contain no-repeat;
+  mask: var(--i-copiar) center / contain no-repeat;
+}
+
 .output-box {
+  position: relative;
   max-height: 24rem;
   padding: var(--esp-4);
   overflow: auto;
@@ -633,6 +787,7 @@ table.preview td:last-child {
 /* As tabelas do sistema acendem a linha sob o mouse; esta é uma saída, não uma lista. */
 .output-tabela tr:hover {
   background: none;
+  box-shadow: none;
 }
 
 .output-tabela td {
@@ -640,31 +795,30 @@ table.preview td:last-child {
   color: var(--texto-forte);
 }
 
-
-
 .btn-confirmar {
   flex: 0 0 auto;
   margin-left: auto;
-  padding: 0.34rem 0.75rem;
+  padding: 0.36rem 0.8rem;
   background: var(--superficie);
-  border: 1px solid var(--marca-borda);
+  border: 1px solid var(--acento-borda);
   border-radius: var(--r-sm);
-  color: var(--marca);
+  color: var(--acento);
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    transform var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 .btn-confirmar:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento);
+  box-shadow: 0 4px 14px -8px var(--acento-sombra);
 }
 
 .btn-confirmar:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 /* Conserto de um clique e confirmar, lado a lado, no canto do alerta. */
@@ -682,17 +836,27 @@ table.preview td:last-child {
 }
 
 .confirmado {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
   margin-left: auto;
   color: var(--positivo);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
-
+.confirmado::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--i-check) center / contain no-repeat;
+  mask: var(--i-check) center / contain no-repeat;
+}
 
 /* ── Gaveta do histórico ────────────────────────────────────────────────────────────── */
 
@@ -701,9 +865,10 @@ table.preview td:last-child {
   inset: 0;
   z-index: 90;
   background: var(--veu);
+  backdrop-filter: blur(2px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--t-medio) var(--curva), visibility var(--t-medio) var(--curva);
+  transition: opacity var(--t-lento) var(--curva), visibility var(--t-lento) var(--curva);
 }
 
 .drawer-overlay.open {
@@ -724,11 +889,29 @@ table.preview td:last-child {
   border-left: 1px solid var(--borda);
   box-shadow: var(--sombra-alta);
   transform: translateX(100%);
-  transition: transform var(--t-lento) var(--curva);
+  transition: transform var(--t-cena) var(--curva-saida);
 }
 
 .history-drawer.open {
   transform: none;
+}
+
+/* Aberta, os itens entram em sequência logo atrás da gaveta. */
+.history-drawer.open .history-item {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.history-drawer.open .history-item:nth-child(2) {
+  animation-delay: 40ms;
+}
+.history-drawer.open .history-item:nth-child(3) {
+  animation-delay: 80ms;
+}
+.history-drawer.open .history-item:nth-child(4) {
+  animation-delay: 120ms;
+}
+.history-drawer.open .history-item:nth-child(n + 5) {
+  animation-delay: 160ms;
 }
 
 .drawer-header {
@@ -747,11 +930,13 @@ table.preview td:last-child {
 
 .drawer-title-group strong {
   font-family: var(--fonte-titulo);
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: var(--texto-forte);
 }
 
-
+.drawer-title-group .meta-counter {
+  text-align: left;
+}
 
 .drawer-search {
   padding: var(--esp-4) var(--esp-5) var(--esp-3);
@@ -759,19 +944,19 @@ table.preview td:last-child {
 
 .drawer-search input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.52rem 0.8rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   color: var(--texto-forte);
   font-family: inherit;
   font-size: 0.85rem;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 .drawer-search input:focus {
   outline: none;
-  border-color: var(--marca-borda);
+  border-color: var(--acento-borda);
   box-shadow: var(--foco);
 }
 
@@ -789,11 +974,14 @@ table.preview td:last-child {
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  transition: border-color var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), transform var(--t-medio) var(--curva),
+    box-shadow var(--t-medio) var(--curva);
 }
 
 .history-item:hover {
-  border-color: var(--borda-forte);
+  border-color: var(--acento-borda);
+  transform: translateX(-2px);
+  box-shadow: 0 6px 18px -12px var(--acento-sombra);
 }
 
 .history-item-header {
@@ -805,8 +993,7 @@ table.preview td:last-child {
 }
 
 .history-time {
-  font-family: var(--fonte-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--texto-fraco);
 }
 
@@ -818,8 +1005,8 @@ table.preview td:last-child {
 
 .history-client {
   font-family: var(--fonte-mono);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.84rem;
+  font-weight: 700;
   color: var(--texto-forte);
 }
 
@@ -840,7 +1027,7 @@ table.preview td:last-child {
 
 .btn-history-load {
   flex: 1;
-  padding: 0.34rem 0.6rem;
+  padding: 0.36rem 0.6rem;
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
@@ -849,14 +1036,14 @@ table.preview td:last-child {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva);
 }
 
 .btn-history-load:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
 }
 
 .btn-history-delete {
@@ -886,7 +1073,7 @@ table.preview td:last-child {
 
 .btn-clear-history {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.52rem;
   background: transparent;
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
@@ -895,20 +1082,14 @@ table.preview td:last-child {
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva);
 }
 
 .btn-clear-history:hover {
   background: var(--negativo-fundo);
   border-color: var(--negativo-borda);
   color: var(--negativo);
-}
-
-
-
-.selo.classe-cetipado {
-  --cor: var(--classe-cetipado);
 }
 
 /* ── Candidatos de fundo ────────────────────────────────────────────────────────────────
@@ -919,13 +1100,13 @@ table.preview td:last-child {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 3px;
   margin-top: var(--esp-2);
   max-width: 34rem;
 }
 
 .candidato {
-  padding: 0.22rem 0.5rem;
+  padding: 0.26rem 0.6rem;
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-left: 3px solid var(--classe-cetipado);
@@ -936,15 +1117,16 @@ table.preview td:last-child {
   text-align: left;
   white-space: normal;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva),
-    border-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .candidato:hover {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  border-left-color: var(--marca);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  border-left-color: var(--acento);
   color: var(--texto-forte);
+  transform: translateX(2px);
 }
 
 /* Nome de fundo é texto longo: a célula do ativo deixa de forçar uma linha só. */
@@ -952,4 +1134,3 @@ table.preview td:last-child {
   white-space: normal;
   max-width: 36rem;
 }
-

@@ -1,18 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
-   Calendário — o que é só desta aba.
+   Calendário — o que é só desta aba. A pedra dela é a ametista (`--acento`, base.css).
 
-   Tudo escopado em `.cal`. A tabela do Ordens era estilizada por seletor de elemento; aqui a
-   matriz tem classe própria (`.cal-matriz`) e o mesmo desenho: cabeçalho em versalete miúdo,
-   linhas separadas por borda fina, o dia de hoje destacado pelo fundo da marca.
+   Tudo escopado em `.cal`. A matriz tem classe própria (`.cal-matriz`): cabeçalho em versalete
+   miúdo, linhas separadas por borda fina, a coluna de hoje acesa na ametista.
 
    Cor com significado: verde é presencial, âmbar é horário indisponível e aviso de conexão.
-   A cor de cada colaborador é dado do banco — vai só no pontinho ao lado do nome.
+   A cor de cada colaborador é dado do banco — vai só no avatar com as iniciais.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 .cal {
   max-width: 1520px;
   margin: var(--esp-5) auto;
   padding: 0 var(--esp-5);
+}
+
+.cal > .panel {
+  animation: var(--cena);
 }
 
 @media (max-width: 1180px) {
@@ -41,18 +44,25 @@
 .cal .cal-novo-horario input,
 .cal .cal-filtro select {
   min-width: 0;
-  padding: 0.44rem 0.65rem;
+  padding: 0.46rem 0.7rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-sm);
   color: var(--texto-forte);
   font-family: inherit;
   font-size: 0.85rem;
-  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-rapido) var(--curva);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 .cal .cal-novo input {
   flex: 1;
+}
+
+.cal .cal-novo input:hover,
+.cal .cal-campo textarea:hover,
+.cal .cal-novo-horario input:hover,
+.cal .cal-filtro select:hover {
+  border-color: var(--borda-forte);
 }
 
 .cal .cal-novo input:focus,
@@ -60,24 +70,45 @@
 .cal .cal-novo-horario input:focus,
 .cal .cal-filtro select:focus {
   outline: none;
-  border-color: var(--marca-borda);
+  border-color: var(--acento-borda);
   box-shadow: var(--foco);
 }
 
+/* O status da conexão com o banco: pílula discreta; "ao vivo" com o ponto que pulsa. */
 .cal .cal-conexao {
   margin-left: auto;
+  padding: 0.16rem 0.6rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-pilula);
+  font-size: 0.74rem;
+}
+
+.cal .cal-conexao:empty {
+  display: none;
 }
 
 .cal .cal-conexao.cal-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
   color: var(--positivo);
+  font-weight: 600;
 }
 
 .cal .cal-conexao.cal-vivo::before {
-  content: '●';
-  margin-right: 0.35rem;
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulso-vivo 2.4s var(--curva) infinite;
 }
 
 .cal .cal-conexao.cal-aviso {
+  background: var(--atencao-fundo);
+  border-color: var(--atencao-borda);
   color: var(--atencao);
 }
 
@@ -87,21 +118,6 @@
 
 .cal .cal-erro .alert > span {
   flex: 1;
-}
-
-.cal .copy-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.cal .cal-primario {
-  background: var(--marca-fundo);
-  border-color: var(--marca-borda);
-  color: var(--marca);
-}
-
-.cal .cal-primario:hover {
-  border-color: var(--marca);
 }
 
 /* ── Navegação ──────────────────────────────────────────────────────────────────────── */
@@ -118,31 +134,37 @@
   min-width: 11rem;
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   text-align: center;
 }
 
 .cal .cal-nav {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: inline-grid;
   place-items: center;
-  background: transparent;
+  background: var(--superficie);
   border: 1px solid var(--borda);
-  border-radius: var(--r-sm);
+  border-radius: 50%;
   color: var(--texto);
   font-family: inherit;
   font-size: 1.15rem;
   line-height: 1;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
 }
 
 .cal .cal-nav:hover {
-  background: var(--fundo-sutil);
-  border-color: var(--borda-forte);
-  color: var(--texto-forte);
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
+}
+
+.cal .cal-nav:active {
+  transform: scale(0.9);
 }
 
 .cal .cal-filtro {
@@ -180,13 +202,13 @@
 }
 
 .cal .cal-matriz thead th {
-  padding: 0.6rem 0.85rem;
+  padding: 0.66rem 0.85rem;
   background: var(--fundo-sutil);
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -200,7 +222,7 @@
 .cal .cal-matriz tbody td,
 .cal .cal-matriz tfoot th,
 .cal .cal-matriz tfoot td {
-  padding: 0.35rem 0.5rem;
+  padding: 0.38rem 0.5rem;
   border-bottom: 1px solid var(--borda);
   text-align: left;
   vertical-align: middle;
@@ -209,6 +231,35 @@
 .cal .cal-matriz tbody tr:last-child th,
 .cal .cal-matriz tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* As linhas chegam uma a uma quando a semana carrega ou muda (`.em-cena`, src/ui/cena.js) — não a
+   cada atualização ao vivo. */
+.cal.em-cena .cal-matriz tbody tr {
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+  animation-delay: calc(var(--linha, 8) * 35ms);
+}
+
+.cal.em-cena .cal-matriz tbody tr:nth-child(1) {
+  --linha: 0;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(2) {
+  --linha: 1;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(3) {
+  --linha: 2;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(4) {
+  --linha: 3;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(5) {
+  --linha: 4;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(6) {
+  --linha: 5;
+}
+.cal.em-cena .cal-matriz tbody tr:nth-child(7) {
+  --linha: 6;
 }
 
 /* A coluna do nome fica parada quando a tabela rola de lado no celular. */
@@ -230,13 +281,31 @@
   white-space: nowrap;
 }
 
+/* Hoje: a coluna acesa na ametista, com um fio mais forte no alto e o rótulo "hoje". */
 .cal .cal-matriz .cal-hoje {
-  background: var(--marca-fundo);
+  background: color-mix(in srgb, var(--acento) 8%, transparent);
+}
+
+.cal .cal-matriz thead .cal-hoje {
+  position: relative;
+  background: color-mix(in srgb, var(--acento) 16%, var(--fundo-sutil));
+  box-shadow: inset 0 2px 0 var(--acento);
 }
 
 .cal .cal-matriz thead .cal-hoje,
 .cal .cal-matriz thead .cal-hoje span {
-  color: var(--marca);
+  color: var(--acento);
+}
+
+.cal .cal-matriz thead .cal-hoje::after {
+  content: 'hoje';
+  margin-left: var(--esp-2);
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--r-pilula);
+  background: var(--acento);
+  color: var(--texto-no-acento);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
 }
 
 .cal .cal-matriz tfoot th,
@@ -244,48 +313,96 @@
   border-top: 1px solid var(--borda-forte);
   border-bottom: none;
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .cal .cal-matriz tfoot th {
   color: var(--texto-fraco);
-  font-family: var(--fonte);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
+/* O total do dia e, logo abaixo, a barrinha com a parte da equipe no escritório. */
 .cal .cal-matriz tfoot td {
-  padding-left: 0.85rem;
+  position: relative;
+  padding: 0.5rem 0.85rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.cal .cal-matriz tfoot td::before,
+.cal .cal-matriz tfoot td::after {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  bottom: 0.45rem;
+  height: 3px;
+  border-radius: 3px;
+}
+
+.cal .cal-matriz tfoot td::before {
+  background: var(--fundo-sutil);
+}
+
+/* `--parte` (0 a 1) vem do render: presenciais sobre o total da equipe. A barra cresce até ela. */
+.cal .cal-matriz tfoot td::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--positivo) 55%, transparent), var(--positivo));
+  transform: scaleX(var(--parte, 0));
+  transform-origin: left;
+}
+
+.cal.em-cena .cal-matriz tfoot td::after {
+  animation: cal-parte 800ms var(--curva-saida) 250ms both;
+}
+
+@keyframes cal-parte {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--parte, 0));
+  }
 }
 
 .cal .cal-pessoa {
   display: inline-flex;
   align-items: center;
   gap: var(--esp-2);
-  max-width: 14rem;
+  max-width: 15rem;
   color: var(--texto-forte);
   vertical-align: middle;
 }
 
+/* O avatar: as iniciais num círculo na cor do colaborador. */
 .cal .cal-cor {
+  --cor: var(--texto-fraco);
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
+  background: color-mix(in srgb, var(--cor) 22%, var(--superficie));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cor) 70%, transparent);
+  color: var(--texto-forte);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .cal .cal-nome {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 /* Depois da regra base da coluna, para valer sobre ela. No celular a coluna do nome estreita, e a rolagem até uma célula (foco pelo teclado, Tab)
    para antes dela — sem isso o dia rolado para a vista ficava escondido sob os nomes. */
 @media (max-width: 720px) {
   .cal .cal-pessoa {
-    max-width: 6.5rem;
+    max-width: 7.5rem;
   }
 
   .cal .cal-rolagem {
@@ -293,6 +410,8 @@
   }
 }
 
+/* Remover só aparece na linha sob o mouse (ou com foco), para a coluna de nomes não virar uma
+   fileira de ×. */
 .cal .cal-remover {
   width: 24px;
   height: 24px;
@@ -308,7 +427,14 @@
   line-height: 1;
   vertical-align: middle;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+  opacity: 0;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva),
+    opacity var(--t-rapido) var(--curva);
+}
+
+.cal .cal-linha:hover .cal-remover,
+.cal .cal-remover:focus-visible {
+  opacity: 1;
 }
 
 .cal .cal-remover:hover {
@@ -317,16 +443,23 @@
   color: var(--negativo);
 }
 
-/* Cada célula é um botão: abre a janela do dia. */
+/* No toque não existe "passar o mouse": o × fica sempre à vista. */
+@media (hover: none) {
+  .cal .cal-remover {
+    opacity: 0.7;
+  }
+}
+
+/* Cada célula é um botão: abre a janela do dia, que cresce a partir dela. */
 .cal .cal-dia {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 3px;
   width: 100%;
   min-width: 7.5rem;
-  min-height: 2.6rem;
-  padding: 0.35rem 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.38rem 0.5rem;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
@@ -335,28 +468,85 @@
   font-size: 0.8rem;
   text-align: left;
   cursor: pointer;
-  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    transform var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 .cal .cal-dia:hover {
   background: var(--superficie);
-  border-color: var(--borda-forte);
+  border-color: var(--acento-borda);
+  box-shadow: 0 6px 16px -10px var(--acento-sombra);
 }
 
-.cal .cal-dia.presente .cal-status,
+.cal .cal-dia:active {
+  transform: scale(0.97);
+}
+
+.cal .cal-dia .cal-status {
+  opacity: 0.6;
+}
+
+/* Presencial vira um selo verde com o prédio, que estala ao aparecer. */
+.cal .cal-dia.presente .cal-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.12rem 0.55rem 0.12rem 0.45rem;
+  background: var(--positivo-fundo);
+  border: 1px solid var(--positivo-borda);
+  border-radius: var(--r-pilula);
+  color: var(--positivo);
+  font-size: 0.74rem;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.cal.em-cena .cal-dia.presente .cal-status {
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+  animation-delay: 160ms;
+}
+
+.cal .cal-dia.presente .cal-status::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--i-predio) center / contain no-repeat;
+  mask: var(--i-predio) center / contain no-repeat;
+}
+
 .cal .cal-status.presente {
   color: var(--positivo);
-  font-weight: 600;
+  font-weight: 700;
 }
 
+/* Observação e horário indisponível: marcas pequenas, com ícone, abaixo do status. */
 .cal .cal-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   max-width: 100%;
   overflow: hidden;
   color: var(--texto);
-  font-family: var(--fonte-mono);
   font-size: 0.68rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cal .cal-marca::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  -webkit-mask: var(--i-nota) center / contain no-repeat;
+  mask: var(--i-nota) center / contain no-repeat;
+}
+
+.cal .cal-marca.cal-indisponivel::before {
+  -webkit-mask-image: var(--i-relogio);
+  mask-image: var(--i-relogio);
 }
 
 .cal .cal-indisponivel {
@@ -371,8 +561,23 @@
   gap: var(--esp-4);
 }
 
-.cal .cal-semana-hist {
-  animation: entrar var(--t-medio) var(--curva) backwards;
+.cal.em-cena .cal-semana-hist {
+  animation: entrar var(--t-lento) var(--curva-saida) backwards;
+}
+
+.cal.em-cena .cal-semana-hist:nth-child(2) {
+  animation-delay: 60ms;
+}
+.cal.em-cena .cal-semana-hist:nth-child(3) {
+  animation-delay: 120ms;
+}
+.cal.em-cena .cal-semana-hist:nth-child(n + 4) {
+  animation-delay: 180ms;
+}
+
+/* Dentro do histórico as linhas não entram uma a uma: a semana inteira já chega em bloco. */
+.cal.em-cena .cal-semana-hist .cal-matriz tbody tr {
+  animation: none;
 }
 
 .cal .cal-semana-topo {
@@ -383,23 +588,30 @@
   gap: var(--esp-2);
   width: 100%;
   margin-bottom: var(--esp-2);
-  padding: 0;
+  padding: 0.3rem 0.4rem;
   background: none;
   border: none;
+  border-radius: var(--r-sm);
   color: var(--texto-forte);
   font-family: inherit;
   font-size: 0.9rem;
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva);
+}
+
+.cal .cal-semana-topo:hover {
+  background: var(--acento-fundo);
 }
 
 .cal .cal-semana-topo strong {
-  font-weight: 600;
+  flex: 1;
+  font-weight: 700;
 }
 
 .cal .cal-semana-topo::before {
   content: '▾';
-  color: var(--texto-fraco);
+  color: var(--acento);
   transition: transform var(--t-medio) var(--curva);
 }
 
@@ -407,22 +619,25 @@
   transform: rotate(-90deg);
 }
 
-.cal .cal-semana-topo strong {
-  flex: 1;
-}
-
 .cal .cal-resumo {
   display: flex;
-  gap: var(--esp-3);
-  color: var(--texto-fraco);
-  font-size: 0.78rem;
+  gap: var(--esp-2);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.cal .cal-resumo > * {
+  padding: 0.08rem 0.5rem;
+  border-radius: var(--r-pilula);
 }
 
 .cal .cal-presencas {
+  background: var(--positivo-fundo);
   color: var(--positivo);
 }
 
 .cal .cal-ausencias {
+  background: var(--atencao-fundo);
   color: var(--atencao);
 }
 
@@ -455,12 +670,8 @@
   background: var(--superficie-alta);
   border: 1px solid var(--borda-forte);
   border-radius: var(--r-lg);
-  box-shadow: var(--sombra-alta);
+  box-shadow: var(--sombra-alta), inset 0 2px 0 var(--acento);
   color: var(--texto);
-}
-
-.cal .cal-dialogo::backdrop {
-  background: var(--veu);
 }
 
 .cal .cal-dialogo form {
@@ -473,19 +684,35 @@
   margin-bottom: 0;
 }
 
+/* "Presencial neste dia" como um cartão que se acende em verde quando marcado. */
 .cal .cal-check {
   display: flex;
   align-items: center;
-  gap: var(--esp-2);
+  gap: var(--esp-3);
+  padding: 0.7rem 0.9rem;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
   color: var(--texto-forte);
   font-weight: 600;
   cursor: pointer;
+  transition: background-color var(--t-medio) var(--curva), border-color var(--t-medio) var(--curva);
+}
+
+.cal .cal-check:has(input:checked) {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
 }
 
 .cal .cal-check input {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   accent-color: var(--positivo);
+}
+
+.cal .cal-check input:checked {
+  animation: estalar var(--t-lento) var(--curva-mola);
 }
 
 .cal .cal-campo {
@@ -500,9 +727,9 @@
 .cal .cal-campo legend {
   margin-bottom: var(--esp-1);
   color: var(--texto-fraco);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -522,17 +749,31 @@
   display: flex;
   align-items: center;
   gap: var(--esp-3);
-  padding: 0.3rem 0.5rem;
+  padding: 0.34rem 0.4rem 0.34rem 0.6rem;
   background: var(--atencao-fundo);
   border: 1px solid var(--atencao-borda);
   border-radius: var(--r-sm);
+  box-shadow: inset 3px 0 0 var(--atencao);
+  animation: entrar var(--t-lento) var(--curva-saida) both;
 }
 
 .cal .cal-horario-faixa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--texto-forte);
-  font-family: var(--fonte-mono);
   font-size: 0.8rem;
+  font-weight: 700;
   white-space: nowrap;
+}
+
+.cal .cal-horario-faixa::before {
+  content: '';
+  width: 13px;
+  height: 13px;
+  background: var(--atencao);
+  -webkit-mask: var(--i-relogio) center / contain no-repeat;
+  mask: var(--i-relogio) center / contain no-repeat;
 }
 
 .cal .cal-horario-motivo {

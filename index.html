@@ -36,10 +36,19 @@
       </div>
 
       <nav class="abas" aria-label="Ferramentas">
-        <a class="aba" href="#ordens" data-aba="ordens" title="Ordens (Alt + 1)">Ordens</a>
-        <a class="aba" href="#rendafixa" data-aba="rendafixa" title="Renda Fixa (Alt + 2)">Renda Fixa</a>
-        <a class="aba" href="#calendario" data-aba="calendario" title="Calendário (Alt + 3)">Calendário</a>
-        <a class="aba" href="#operacional" data-aba="operacional" title="Operacional: base de conhecimento da mesa (Alt + 4)">Operacional</a>
+        <span class="abas-indicador" aria-hidden="true"></span>
+        <a class="aba" href="#ordens" data-aba="ordens" title="Ordens (Alt + 1)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5" /></svg>Ordens</a
+        >
+        <a class="aba" href="#rendafixa" data-aba="rendafixa" title="Renda Fixa (Alt + 2)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5 9 11.5l4 4 8-8M15 7.5h6v6" /></svg>Renda Fixa</a
+        >
+        <a class="aba" href="#calendario" data-aba="calendario" title="Calendário (Alt + 3)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>Calendário</a
+        >
+        <a class="aba" href="#operacional" data-aba="operacional" title="Operacional: base de conhecimento da mesa (Alt + 4)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2.5zm0 0A2 2 0 0 0 7 21h12M9 7.5h6" /></svg>Operacional</a
+        >
       </nav>
 
       <div class="header-actions">
@@ -76,7 +85,7 @@
             ></textarea>
 
             <div class="button-group">
-              <button class="primary" id="btn-analisar" title="Analisar (Ctrl + Enter)">Analisar</button>
+              <button class="primary btn-primario" id="btn-analisar" title="Analisar (Ctrl + Enter)">Analisar</button>
               <button class="secondary" id="btn-colar">Colar e analisar</button>
               <button class="danger" id="btn-limpar" title="Limpar (Esc)">Limpar</button>
             </div>

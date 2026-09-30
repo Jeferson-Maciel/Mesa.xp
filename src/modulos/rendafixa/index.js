@@ -19,6 +19,7 @@ import {
   htmlVazio,
   numero
 } from './render.js';
+import { abrirJanela } from '../../ui/janela.js';
 import './rendafixa.css';
 
 /**
@@ -251,8 +252,12 @@ export const iniciarRendaFixa = (secao) => {
       return;
     }
     ui.copiar.textContent = 'Copiada';
+    ui.copiar.classList.add('copiado');
     clearTimeout(voltarRotulo);
-    voltarRotulo = setTimeout(() => (ui.copiar.textContent = 'Copiar mensagem'), 1800);
+    voltarRotulo = setTimeout(() => {
+      ui.copiar.textContent = 'Copiar mensagem';
+      ui.copiar.classList.remove('copiado');
+    }, 1800);
     aviso('Mensagem copiada. É só colar no WhatsApp.');
   }
 
@@ -330,7 +335,7 @@ export const iniciarRendaFixa = (secao) => {
       c: () => !ui.copiar.disabled && copiarMensagem(),
       s: () => !ui.salvar.disabled && salvarAnalise(),
       t: () => document.getElementById('btn-tema')?.click(),
-      '?': () => ui.atalhos.showModal()
+      '?': () => abrirJanela(ui.atalhos, el('abrir-atalhos'))
     };
     const acao = acoes[e.key.toLowerCase()];
     if (acao) {
@@ -414,7 +419,7 @@ export const iniciarRendaFixa = (secao) => {
   ui.salvar.addEventListener('click', salvarAnalise);
   ui.historico.addEventListener('click', acaoHistorico);
 
-  el('abrir-atalhos').addEventListener('click', () => ui.atalhos.showModal());
+  el('abrir-atalhos').addEventListener('click', () => abrirJanela(ui.atalhos, el('abrir-atalhos')));
   ui.atalhos.addEventListener('click', (e) => {
     // Clique no fundo (fora da caixa) ou no botão de fechar.
     if (e.target === ui.atalhos || e.target.closest('[data-fechar]')) ui.atalhos.close();
@@ -492,7 +497,7 @@ const MARCACAO = `
             <button type="button" class="seg" role="tab" data-visao="mensagem">Mensagem</button>
           </div>
           <button type="button" class="copy-btn" data-rf="salvar" title="Salvar no histórico (S)">Salvar</button>
-          <button type="button" class="copy-btn rf-primario" data-rf="copiar" title="Copiar mensagem (C)">Copiar mensagem</button>
+          <button type="button" class="copy-btn btn-primario" data-rf="copiar" title="Copiar mensagem (C)">Copiar mensagem</button>
         </div>
       </div>
       <div class="rf-corpo" data-rf="corpo" aria-live="polite"></div>

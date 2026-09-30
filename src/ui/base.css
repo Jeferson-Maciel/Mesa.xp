@@ -46,44 +46,49 @@
   --curva: cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Modo escuro — cinza-azulado profundo, nunca preto. O contraste do texto principal fica
-   por volta de 11:1: legível com folga, sem o branco estourado que deixa halo na vista. */
+/* Modo escuro — grafite azulado, com cara de CRM financeiro.
+
+   Até 29/09/2026 o escuro era quase preto (#16181d), e a mesa o achava escuro demais. As
+   superfícies subiram de nível para um grafite médio, e o texto subiu junto para manter a mesma
+   faixa de contraste: corpo por volta de 8:1 no cartão, título por volta de 11,5:1 — legível com
+   folga, sem chegar ao branco, que deixa halo na vista. Medido com o contraste WCAG; ao mexer,
+   meça de novo. */
 :root[data-tema='escuro'] {
-  --fundo: #16181d;
-  --fundo-sutil: #1b1e24;
-  --superficie: #1e2128;
-  --superficie-alta: #242831;
-  --superficie-afundada: #141619;
+  --fundo: #1f242d;
+  --fundo-sutil: #272d38;
+  --superficie: #282e39;
+  --superficie-alta: #303745;
+  --superficie-afundada: #1b2028;
 
-  --borda: #2c313a;
-  --borda-forte: #3a404b;
+  --borda: #3a4251;
+  --borda-forte: #4b5567;
 
-  --texto-forte: #e3e6ec;
-  --texto: #b3bac6;
+  --texto-forte: #e8ecf2;
+  --texto: #c3cad6;
   /* Não desce mais que isto: rótulos e contadores usam corpo pequeno, e abaixo de 4.5:1
      viram esforço de leitura em vez de informação secundária. */
-  --texto-fraco: #8c95a2;
+  --texto-fraco: #98a3b3;
 
-  --marca: #e0a44e;
-  --marca-fundo: rgba(224, 164, 78, 0.12);
-  --marca-borda: rgba(224, 164, 78, 0.34);
+  --marca: #dcaa52;
+  --marca-fundo: rgba(220, 170, 82, 0.13);
+  --marca-borda: rgba(220, 170, 82, 0.36);
 
-  --positivo: #5cb98a;
-  --positivo-fundo: rgba(92, 185, 138, 0.13);
-  --positivo-borda: rgba(92, 185, 138, 0.32);
+  --positivo: #62bf92;
+  --positivo-fundo: rgba(98, 191, 146, 0.13);
+  --positivo-borda: rgba(98, 191, 146, 0.34);
 
-  --negativo: #e0837c;
-  --negativo-fundo: rgba(224, 131, 124, 0.12);
-  --negativo-borda: rgba(224, 131, 124, 0.3);
+  --negativo: #e8897f;
+  --negativo-fundo: rgba(232, 137, 127, 0.13);
+  --negativo-borda: rgba(232, 137, 127, 0.32);
 
-  --atencao: #d9a951;
-  --atencao-fundo: rgba(217, 169, 81, 0.12);
-  --atencao-borda: rgba(217, 169, 81, 0.3);
+  --atencao: #dfae5a;
+  --atencao-fundo: rgba(223, 174, 90, 0.13);
+  --atencao-borda: rgba(223, 174, 90, 0.32);
 
-  --info: #6fa8d6;
+  --info: #7ab0de;
 
   /* Classes de ativo — os mesmos matizes do modo claro, clareados e dessaturados para não
-     vibrarem sobre fundo escuro. */
+     vibrarem sobre fundo escuro. Todos acima de 5:1 sobre o cartão. */
   --classe-acao: #7cb0e0;
   --classe-fii: #5fc0ae;
   --classe-bdr: #b096e0;
@@ -93,56 +98,57 @@
   --classe-outros: #9aa3b0;
   --classe-cetipado: #bb9ad8;
 
-  --veu: rgba(8, 10, 14, 0.58);
+  --veu: rgba(12, 15, 20, 0.55);
 
-  /* No escuro a sombra quase não aparece: a separação vem da borda e do nível de superfície. */
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --sombra-alta: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --foco: 0 0 0 3px rgba(224, 164, 78, 0.28);
+  /* Com a superfície mais clara, a sombra volta a separar um pouco; a borda continua fazendo o
+     grosso do trabalho. */
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --sombra-alta: 0 10px 28px rgba(0, 0, 0, 0.38);
+  --foco: 0 0 0 3px rgba(220, 170, 82, 0.3);
 }
 
-/* Modo claro — neutro morno em quatro níveis, não branco sobre branco.
+/* Modo claro — porcelana neutra, em quatro níveis, não branco sobre branco.
 
-   O tom é levemente quente de propósito. Combina com o âmbar da marca, e uma luz de fundo com
-   menos azul é percebida como mais macia em leitura longa do que o branco azulado de tela.
+   O tom é um cinza levemente frio e pouco saturado, o de um CRM financeiro: mais sóbrio que o
+   neutro morno de antes, sem o azul de tela de escritório. O texto é grafite, nunca preto.
 
    Os níveis vão do mais escuro ao mais claro e cada um tem um papel fixo: a página afunda, o
    cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco puro fica reservado
    ao que flutua por cima de tudo. É a hierarquia que faltava quando o cartão era branco puro
    sobre um fundo quase branco — sem diferença entre os níveis, a tela vira uma chapa só. */
 :root[data-tema='claro'] {
-  --fundo-sutil: #e4e1d9; /* cabeçalho de tabela, trilho dos segmentados, fichas */
-  --fundo: #edeae3; /* a página */
-  --superficie-afundada: #f5f3ee; /* campos, blocos de saída, itens de lista */
-  --superficie: #fcfbf8; /* cartões e cabeçalho — off-white morno, nunca branco puro */
-  --superficie-alta: #ffffff; /* só o que flutua: gaveta e avisos */
+  --fundo-sutil: #e2e6ec; /* cabeçalho de tabela, trilho dos segmentados, fichas */
+  --fundo: #eceff3; /* a página */
+  --superficie-afundada: #f3f5f8; /* campos, blocos de saída, itens de lista */
+  --superficie: #fbfcfd; /* cartões e cabeçalho — quase branco, nunca branco puro */
+  --superficie-alta: #ffffff; /* só o que flutua: gaveta, avisos e janelas */
 
-  --borda: #e0dbd2;
-  --borda-forte: #c8c2b6;
+  --borda: #dce1e8;
+  --borda-forte: #c4cbd5;
 
-  /* Grafite morno, não preto: em cartão claro o preto puro produz contraste duro demais para
-     quem passa o dia lendo a tela. */
-  --texto-forte: #33302b;
-  --texto: #524f49;
-  --texto-fraco: #6b675f;
+  /* Grafite, não preto: em cartão claro o preto puro produz contraste duro demais para quem
+     passa o dia lendo a tela. Corpo por volta de 8:1, título por volta de 13:1. */
+  --texto-forte: #262f3e;
+  --texto: #465062;
+  --texto-fraco: #5b6576;
 
-  --marca: #945c06;
-  --marca-fundo: rgba(214, 145, 28, 0.14);
-  --marca-borda: rgba(173, 113, 16, 0.36);
+  --marca: #8f6310;
+  --marca-fundo: rgba(196, 138, 30, 0.13);
+  --marca-borda: rgba(143, 99, 16, 0.34);
 
-  --positivo: #1d7348;
-  --positivo-fundo: rgba(29, 115, 72, 0.11);
-  --positivo-borda: rgba(29, 115, 72, 0.28);
+  --positivo: #1c7650;
+  --positivo-fundo: rgba(28, 118, 80, 0.1);
+  --positivo-borda: rgba(28, 118, 80, 0.28);
 
-  --negativo: #ad3a2f;
-  --negativo-fundo: rgba(173, 58, 47, 0.1);
-  --negativo-borda: rgba(173, 58, 47, 0.26);
+  --negativo: #b03a31;
+  --negativo-fundo: rgba(176, 58, 49, 0.09);
+  --negativo-borda: rgba(176, 58, 49, 0.26);
 
-  --atencao: #855805;
-  --atencao-fundo: rgba(214, 145, 28, 0.14);
-  --atencao-borda: rgba(173, 113, 16, 0.3);
+  --atencao: #865b0b;
+  --atencao-fundo: rgba(196, 138, 30, 0.13);
+  --atencao-borda: rgba(134, 91, 11, 0.3);
 
-  --info: #2b6a9c;
+  --info: #2a6799;
 
   /* Classes de ativo — ver a nota em "Cores de classe de ativo". */
   --classe-acao: #2f6296;
@@ -154,10 +160,10 @@
   --classe-outros: #5c6068;
   --classe-cetipado: #7a5195;
 
-  --veu: rgba(48, 43, 36, 0.3);
-  --sombra: 0 1px 2px rgba(56, 48, 36, 0.07);
-  --sombra-alta: 0 12px 32px rgba(56, 48, 36, 0.13);
-  --foco: 0 0 0 3px rgba(173, 113, 16, 0.24);
+  --veu: rgba(30, 38, 52, 0.32);
+  --sombra: 0 1px 2px rgba(30, 38, 52, 0.07), 0 1px 3px rgba(30, 38, 52, 0.04);
+  --sombra-alta: 0 12px 32px rgba(30, 38, 52, 0.14);
+  --foco: 0 0 0 3px rgba(143, 99, 16, 0.24);
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────────────── */

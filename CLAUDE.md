@@ -119,12 +119,18 @@ Duas decisões do preview que vale manter:
   cartão convidaria a conferir a ordem contra um total sem sentido. Quando o total em reais não
   cobre a cesta inteira, ele se anuncia como parcial ("de 2 ordens").
 
-O modo claro é um **neutro morno em quatro níveis** (`--fundo-sutil` < `--fundo` <
+O modo claro é uma **porcelana neutra em quatro níveis** (`--fundo-sutil` < `--fundo` <
 `--superficie-afundada` < `--superficie` < `--superficie-alta`), cada um com papel fixo: a página
 afunda, o cartão sobe sobre ela, o campo afunda de novo dentro do cartão, e o branco puro fica
 reservado ao que flutua. Cartão branco puro sobre fundo quase branco não cria hierarquia nenhuma —
-a tela vira uma chapa só. O tom quente combina com o âmbar da marca e é percebido como mais macio
-em leitura longa que o branco azulado de tela.
+a tela vira uma chapa só.
+
+**A paleta mudou em 30/09/2026, a pedido da mesa:** o escuro, quase preto, era escuro demais. Ele
+virou um grafite azulado médio, e o claro deixou o neutro morno por uma porcelana levemente fria —
+"cara de CRM financeiro, para usar por horas sem cansar". As faixas de contraste continuaram as
+mesmas (corpo ~8:1 no cartão, título entre 11 e 13:1, secundário acima de 5:1), medidas por WCAG. As
+cores saturadas, os degradês e o texto quase branco que outro agente tinha aplicado ficaram de
+fora: estão na branch `antigravity/operacional`, se um dia fizerem falta.
 
 O tema vive em `document.documentElement.dataset.tema`, aplicado por um script inline no `<head>`
 antes da primeira pintura — sem isso a tela pisca no tema errado a cada carregamento. O padrão é

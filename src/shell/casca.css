@@ -18,6 +18,8 @@
   padding: var(--esp-3) var(--esp-6);
   background: var(--superficie);
   border-bottom: 1px solid var(--borda);
+  /* Com o escuro mais claro, página e topo ficaram próximos: a sombra sutil separa os dois. */
+  box-shadow: var(--sombra);
   transition: background-color var(--t-lento) var(--curva), border-color var(--t-lento) var(--curva);
 }
 

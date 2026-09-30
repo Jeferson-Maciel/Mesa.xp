@@ -315,7 +315,9 @@ chave *anon public* (em **Project Settings → API**) para as variáveis acima.
 
 Projetos do plano gratuito do Supabase são **pausados** depois de alguns dias sem uso, e o endereço
 deixa de responder. Se o Calendário mostrar “Sem conexão com o banco de presença” com a internet
-funcionando, confira no painel do Supabase se o projeto está pausado e retome-o.
+funcionando, confira no painel do Supabase se o projeto está pausado e retome-o. Foi o que aconteceu
+com o projeto do Calendário antigo: desde 30/09/2026 a Mesa XP usa outro projeto, e os registros de
+presença do antigo não vieram (ver o [roadmap](docs/ROADMAP.md)).
 
 ### Segurança — pendência
 
@@ -350,8 +352,9 @@ Fixing, Confirmação resgate fundos, Confirmação aplicação Fundos e Ações
 com a marca “texto pendente” — é só abrir, clicar em Editar e colar o texto do Slab.
 
 Como o Calendário, o Operacional **precisa de internet** e do banco da mesa. Para criar as tabelas e
-a base inicial: SQL Editor do Supabase → colar [`supabase/operacional.sql`](supabase/operacional.sql)
-→ executar. Pode rodar de novo sem duplicar nada nem desfazer edições.
+a base inicial num projeto novo: SQL Editor do Supabase → colar
+[`supabase/operacional.sql`](supabase/operacional.sql) → executar. Pode rodar de novo sem duplicar
+nada nem desfazer edições. No banco da mesa isso já foi feito.
 
 ## Modo claro e escuro
 
@@ -415,7 +418,7 @@ docs/                      formatos de saída do Ordens; roadmap e sugestões
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 650 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 655 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

@@ -480,7 +480,8 @@ e `on delete cascade`. Método novo ou alterado entra nos dois adaptadores e na 
 schema: atualize `supabase/schema.sql` junto com o adaptador e o fake.
 
 O domínio fala português (`colaborador`, `registro`, `indisponiveis`); o banco e o formato local
-continuam com os nomes do original, porque os dois apps dividem o mesmo banco enquanto a mesa migra.
+continuam com os nomes do original: `supabase/schema.sql` é o do app original, e os dados de um
+banco do Calendário antigo passam para o novo tabela por tabela, sem conversão.
 
 ### Regras
 
@@ -507,15 +508,35 @@ continuam com os nomes do original, porque os dois apps dividem o mesmo banco en
 ### Conexão
 
 `src/dados/config.js` resolve URL e chave de `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, lidas no
-build; sem elas vale o projeto atual (`ekughbuuvjoojgfgbqbz`). `src/dados/banco.js` cria o cliente do
-`@supabase/supabase-js` sem sessão de login (o app não tem login, e o hash da URL é a rota das
-abas) e com 15 s por requisição. O Realtime escuta as três tabelas e recarrega a visão com 300 ms
-de espera (um salvamento gera vários eventos); o status aparece no topo: "ao vivo", "sem
-atualização ao vivo", "sem conexão" ou "modo local".
+build; sem elas vale o projeto da mesa (`rtvtgulivtkpfprcfpie`). `src/dados/banco.js` cria o
+cliente do `@supabase/supabase-js` sem sessão de login (o app não tem login, e o hash da URL é a
+rota das abas) e com 15 s por requisição. O Realtime escuta as três tabelas e recarrega a visão com
+300 ms de espera (um salvamento gera vários eventos).
 
-Em 29/09/2026 o projeto Supabase não resolvia no DNS (provavelmente pausado por inatividade no plano
-gratuito), e o teste contra o banco real não foi feito. Retome o projeto no painel do Supabase antes
-de distribuir o link.
+O status no topo sai de dois fatos juntos, a última carga e o Realtime, e não do último evento que
+chegou: "carregando…", "sem conexão" (nunca carregou), "ao vivo", "sem atualização ao vivo"
+(carregou, mas o Realtime caiu), "conectado" ou "modo local". O Realtime costuma ficar pronto antes
+da primeira carga terminar; quando cada evento escrevia o status por cima do outro, a tela ficava em
+"conectado" com o Realtime funcionando.
+
+**"Ao vivo" só depois do aviso do banco.** O canal responde `SUBSCRIBED` quando o servidor do
+Realtime aceita a inscrição, mas o banco só começa a repassar mudanças uns 150 ms depois, quando
+chega a mensagem de sistema `postgres_changes` com status `ok`. Uma gravação feita nesse intervalo
+não gera evento nenhum. `src/dados/realtime.js` espera por esse aviso (é o mesmo para Calendário e
+Operacional), e a tela recarrega ao recebê-lo, para pegar o que mudou antes. Achado no primeiro
+teste contra o banco real: a outra aba perdia o primeiro colaborador criado.
+
+**Depois de salvar, a tela usa o que foi salvo sem esperar a releitura.** Um salvamento dispara
+eventos do Realtime no meio do caminho, e a carga que eles pedem pode ler o dia (ou o post) pela
+metade — o dia já gravado, os horários ainda não. Por isso `salvarDia` põe o registro salvo no
+estado antes de recarregar, e o Operacional faz o mesmo com o post salvo ou excluído. Sem isso, a
+janela do dia reaberta logo depois de salvar vinha sem os horários.
+
+**O projeto mudou em 30/09/2026.** O antigo (`ekughbuuvjoojgfgbqbz`, o do Calendário na Vercel)
+não resolvia no DNS desde 29/09 e não está na conta Supabase da mesa; os registros de presença dele
+não vieram. O projeto `rtvtgulivtkpfprcfpie` recebeu `supabase/schema.sql` e
+`supabase/operacional.sql` e começou vazio no Calendário. Se o projeto antigo reaparecer (outra
+conta, ou retomado no painel), os dados passam tabela por tabela, com os mesmos nomes.
 
 ### Tela
 
@@ -596,7 +617,8 @@ desfeita. Foi validado num Postgres de verdade (PGlite): roda duas vezes, semeia
 posts, o gatilho guarda o histórico, a trava de versão recusa a segunda gravação e o banco recusa
 título vazio, slug repetido e apagar tópico com posts.
 
-Para ligar no banco da mesa: SQL Editor do Supabase → colar `supabase/operacional.sql` → executar.
+No banco da mesa (`rtvtgulivtkpfprcfpie`) ele já rodou, em 30/09/2026. Num projeto novo: SQL Editor
+do Supabase → colar `supabase/operacional.sql` → executar.
 
 ### Tela
 
@@ -623,12 +645,13 @@ modo local.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 650 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 655 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; a UI não é. Os 449 testes do Ordens original continuam aqui.
 - Renda Fixa: goldens contra o motor original, histórico, render (escape), SheetJS vendorizado.
 - Calendário: contrato do repositório nos dois adaptadores, datas, configuração, render (escape).
+- Dados: a configuração do banco e o Realtime, que só diz "ao vivo" depois do aviso do banco.
 - Operacional: a semente contra o Slab, o contrato do repositório nos dois adaptadores (inclusive o
   conflito de versão), render (escape, busca) e o SQL gerado em dia com a semente.
 - Casca: rotas e atalhos das abas, CSS escopado, build de arquivo único.
@@ -657,10 +680,22 @@ Não declare pronto sem:
    abas, o texto do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
    `<img onerror>` como texto) e o Operacional em modo local (copiar e colar igual ao Slab, editar,
    criar, excluir, buscar e o conflito de duas abas). Não grava no banco.
-3. Mudança no Calendário que toca o banco: `npm run verificar:supabase`
-   (`scripts/verificar-supabase.mjs`) — leitura, gravação, exclusão em cascata, o Realtime entre
-   duas abas e as quedas de rede, num colaborador de teste apagado no fim. **Grava no banco da
-   mesa**: rode fora do expediente. Ainda não rodou contra o banco (ver o roadmap).
+3. Mudança no Calendário ou no Operacional que toca o banco: `npm run verificar:supabase`. **Grava
+   no banco da mesa**: rode fora do expediente.
+   - `scripts/verificar-supabase.mjs` (Calendário) — leitura, gravação, a janela reaberta logo
+     depois de salvar, exclusão em cascata, o Realtime entre duas abas e as quedas de rede, num
+     colaborador de teste apagado no fim.
+   - `scripts/verificar-supabase-operacional.mjs` — leitura, criação, edição, o conflito de versão
+     entre duas abas, a queda no salvamento, a exclusão que só esconde, e o que o banco garante
+     sozinho (a anon não apaga nem lê o histórico; o gatilho guarda cada versão), num post de teste.
+     A anon não apaga, então o post de teste só some de verdade com `SUPABASE_ACCESS_TOKEN` no
+     ambiente (token pessoal do Supabase, nunca gravado em arquivo); sem ele o script o deixa
+     escondido e imprime o SQL da limpeza, e o histórico não é conferido.
+
+   Os dois passaram contra o banco real em 30/09/2026, repetidos até não falhar mais (o Calendário
+   seis vezes seguidas, o Operacional cinco). Na primeira rodada do dia, o evento de post novo levou
+   15 s para chegar à outra aba; nas seguintes, menos de 1 s. Parece a partida a frio do Realtime do
+   Supabase, não do app — vale observar.
 
 ## Convenções
 

@@ -1,3 +1,4 @@
+import { assinarTabelas } from '../../../dados/realtime.js';
 import { ErroDoRepositorio, ordenarColaboradores, ordenarHorarios } from '../repositorio.js';
 
 /**
@@ -130,11 +131,6 @@ export const criarRepositorioSupabase = (cliente) => ({
   },
 
   assinarMudancas(aoMudar, aoStatus) {
-    const canal = cliente.channel('mesa-xp-presenca');
-    for (const table of TABELAS) canal.on('postgres_changes', { event: '*', schema: 'public', table }, aoMudar);
-    canal.subscribe((status, erro) => aoStatus?.(status, erro));
-    return () => {
-      cliente.removeChannel(canal);
-    };
+    return assinarTabelas(cliente, 'mesa-xp-presenca', TABELAS, aoMudar, aoStatus);
   }
 });

@@ -1,9 +1,13 @@
 /**
- * Onde o Calendário grava.
+ * Onde Calendário e Operacional gravam.
  *
  * URL e chave vêm de VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY, lidas no build. Sem elas vale o
- * projeto Supabase que a mesa já usa; as duas vazias ligam o modo local, que grava só no
- * navegador (`localStorage`). Só uma das duas vazia é erro de configuração e aparece na tela.
+ * projeto Supabase da mesa; as duas vazias ligam o modo local, que grava só no navegador
+ * (`localStorage`). Só uma das duas vazia é erro de configuração e aparece na tela.
+ *
+ * O projeto da mesa é o `rtvtgulivtkpfprcfpie` desde 30/09/2026. O anterior (`ekughbuuvjoojgfgbqbz`)
+ * não respondia mais e não estava na conta da mesa; os registros do Calendário que estavam nele não
+ * vieram junto.
  *
  * A chave anon é pública por desenho — ela vai para o navegador de qualquer jeito. Quem protege os
  * dados são as políticas RLS do banco, e as atuais liberam tudo para a anon: ver a pendência de
@@ -11,9 +15,9 @@
  */
 
 export const PADRAO = {
-  url: 'https://ekughbuuvjoojgfgbqbz.supabase.co',
+  url: 'https://rtvtgulivtkpfprcfpie.supabase.co',
   chave:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrdWdoYnV1dmpvb2pnZmdicWJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxODYwNzcsImV4cCI6MjEwMDc2MjA3N30.r-bohAQamvezhY-O0aVA25XQMlyuFFiihgWbAyhywfU'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0dnRndWxpdnRrcGZwcmNmcGllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MTAxODksImV4cCI6MjEwNjI4NjE4OX0.61GPFFuVxfjrXiNPwVq40GNDibMbvDxActRK2ARgt-4'
 };
 
 /**

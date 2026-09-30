@@ -11,15 +11,17 @@
  * Uso:  npm run build && node scripts/verificar-supabase.mjs
  * Usa o banco do build (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY, ou o padrão de config.js).
  *
- * Situação em 29/09/2026: preparado mas ainda não rodado — o projeto Supabase não resolvia no DNS
- * (pausado). A primeira execução é também o teste deste script.
+ * Rodou contra o banco da mesa pela primeira vez em 30/09/2026 e achou dois defeitos, já
+ * corrigidos: o Realtime perdia o primeiro evento (a tela dizia "ao vivo" antes de o banco estar
+ * repassando) e a janela do dia reaberta logo depois de salvar podia vir sem os horários.
+ * O Operacional tem o seu: scripts/verificar-supabase-operacional.mjs.
  */
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 
 const projeto = fileURLToPath(new URL('..', import.meta.url));
-const { resolverConfig } = await import(pathToFileURL(join(projeto, 'src/modulos/calendario/config.js')).href);
+const { resolverConfig } = await import(pathToFileURL(join(projeto, 'src/dados/config.js')).href);
 const PADRAO = (() => {
   const config = resolverConfig({ VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY });
   if (config.modo !== 'supabase') {
@@ -85,8 +87,10 @@ try {
     const t = await esperar(() => p.$eval('[data-cal="conexao"]', (e) => e.textContent === 'ao vivo').catch(() => false));
     ok(t >= 0, `aba ${rotulo}: leu o banco e o realtime conectou ("ao vivo" em ${t} ms)`);
   }
+  // O banco pode estar vazio (projeto novo): ler é carregar sem erro, com a matriz ou o aviso de vazio.
   const antes = await A.$$eval('.cal-linha', (l) => l.length);
-  ok(antes > 0, `leitura: a matriz carregou os colaboradores do banco (${antes} linhas)`);
+  const leu = (await A.$('.cal-erro .alert')) === null && ((await A.$('.cal-matriz')) !== null || (await A.$('[data-cal="semana"] .empty-state')) !== null);
+  ok(leu, `leitura: a semana carregou do banco, sem erro (${antes} colaborador(es))`);
 
   // Gravação: colaborador novo.
   await A.fill('[data-cal="nome"]', NOME);
@@ -131,6 +135,8 @@ try {
 
   // Substituir horários: os novos entram antes, os antigos saem depois.
   await celula(A).click();
+  const naJanela = await A.$$eval('.cal-horario', (l) => l.map((x) => x.textContent.trim().replace(/\s+/g, ' ')));
+  ok(naJanela.length === 2 && naJanela[0].includes('teste A'), `a janela reaberta logo depois de salvar mostra os dois horários ${JSON.stringify(naJanela)}`);
   await A.click('.cal-horario:has-text("teste A") [data-remover-horario]');
   await adicionarHorario(A, '10:00', '11:00', 'teste C');
   await A.click('[data-cal="salvar"]');

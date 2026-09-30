@@ -224,8 +224,9 @@ describe('repositório no Supabase', () => {
     const aoStatus = vi.fn();
     const cancelar = repo.assinarMudancas(aoMudar, aoStatus);
     expect(banco.canais).toHaveLength(1);
-    expect(banco.canais[0].assinaturas.map((a) => a.filtro.table).sort()).toEqual(['collaborators', 'daily_entries', 'unavailable_slots']);
-    expect(aoStatus).toHaveBeenCalledWith('SUBSCRIBED', undefined);
+    const tabelas = banco.canais[0].assinaturas.filter((a) => a.tipo === 'postgres_changes').map((a) => a.filtro.table);
+    expect(tabelas.sort()).toEqual(['collaborators', 'daily_entries', 'unavailable_slots']);
+    expect(aoStatus).toHaveBeenLastCalledWith('AO_VIVO');
     banco.emitir('daily_entries');
     expect(aoMudar).toHaveBeenCalledTimes(1);
     cancelar();

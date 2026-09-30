@@ -53,6 +53,8 @@ export const iniciarOperacional = (secao) => {
     topicos: [],
     posts: [],
     carregou: false,
+    falhou: false, // a última carga deu erro
+    tempoReal: null, // null enquanto conecta, 'AO_VIVO' ou 'ERRO'
     sequencia: 0,
     termo: '',
     // Editor aberto: { post: Post | null, topicoId, original: { titulo, topicoId, conteudo } }
@@ -72,6 +74,16 @@ export const iniciarOperacional = (secao) => {
     el('conexao').className = `meta-counter op-conexao ${classe}`;
   };
 
+  // O status vem da carga e do Realtime juntos, e não do último evento que chegou: o Realtime
+  // costuma ficar pronto antes da primeira carga terminar, e "ao vivo" só vale com a base lida.
+  const atualizarConexao = () => {
+    if (repo.modo === 'local') mostrarConexao('modo local: dados só neste navegador', 'op-aviso');
+    else if (!estado.carregou) mostrarConexao(estado.falhou ? 'sem conexão' : 'carregando…', estado.falhou ? 'op-aviso' : '');
+    else if (estado.tempoReal === 'ERRO') mostrarConexao('sem atualização ao vivo', 'op-aviso');
+    else if (estado.tempoReal === 'AO_VIVO') mostrarConexao('ao vivo', 'op-vivo');
+    else mostrarConexao('conectado');
+  };
+
   const mensagemDeErro = (erro) =>
     ehErroDeRede(erro) ? `Sem conexão com a base da mesa. ${erro.message}` : erro?.message || 'Erro desconhecido na base da mesa.';
 
@@ -87,23 +99,20 @@ export const iniciarOperacional = (secao) => {
 
   async function carregar() {
     const numero = ++estado.sequencia;
-    if (!estado.carregou) mostrarConexao('carregando…');
     try {
       const [topicos, posts] = await Promise.all([repo.listarTopicos(), repo.listarPosts()]);
       if (numero !== estado.sequencia) return;
-      Object.assign(estado, { topicos, posts, carregou: true });
+      Object.assign(estado, { topicos, posts, carregou: true, falhou: false });
       el('erro').innerHTML = '';
-      if (repo.modo === 'local') mostrarConexao('modo local: dados só neste navegador', 'op-aviso');
-      else if (!el('conexao').classList.contains('op-vivo') && !el('conexao').classList.contains('op-aviso')) mostrarConexao('conectado');
+      atualizarConexao();
       render();
     } catch (erro) {
       if (numero !== estado.sequencia) return;
       console.error(erro);
+      estado.falhou = true;
       mostrarErro(erro);
-      if (!estado.carregou) {
-        mostrarConexao('sem conexão', 'op-aviso');
-        principal.innerHTML = '';
-      }
+      atualizarConexao();
+      if (!estado.carregou) principal.innerHTML = '';
     }
   }
 
@@ -210,6 +219,10 @@ export const iniciarOperacional = (secao) => {
         ? await repo.atualizarPost({ ...post, titulo, topicoId, conteudo })
         : await repo.criarPost({ topicoId, titulo, conteudo, ordem: proximaOrdem(topicoId) });
       estado.editor = null;
+      // O post salvo vale já, sem esperar a releitura: uma carga disparada pelo Realtime no meio do
+      // caminho descarta a de baixo, e sem isto o post novo apareceria como "não encontrado" (ou o
+      // editado com o texto antigo) até ela terminar.
+      estado.posts = post ? estado.posts.map((p) => (p.id === salvo.id ? salvo : p)) : [...estado.posts, salvo];
       aviso(post ? 'Post salvo para toda a mesa.' : 'Post criado.');
       await carregar();
       irPara(linkDoPost(salvo));
@@ -280,6 +293,7 @@ export const iniciarOperacional = (secao) => {
     if (!confirm(`Excluir "${post.titulo}"? Ele some para toda a mesa.`)) return;
     try {
       await repo.excluirPost(post);
+      estado.posts = estado.posts.filter((p) => p.id !== post.id); // idem: não esperar a releitura
       aviso('Post excluído.');
       const topico = estado.topicos.find((t) => t.id === post.topicoId);
       await carregar();
@@ -411,25 +425,22 @@ export const iniciarOperacional = (secao) => {
 
   // Uma gravação gera mais de um evento: junta tudo numa recarga só.
   let espera = null;
-  let caiu = false;
   repo.assinarMudancas(
     () => {
       clearTimeout(espera);
       espera = setTimeout(carregar, 300);
     },
     (status) => {
-      if (status === 'SUBSCRIBED') {
-        mostrarConexao('ao vivo', 'op-vivo');
-        if (caiu) carregar();
-        caiu = false;
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        caiu = true;
-        mostrarConexao('sem atualização ao vivo', 'op-aviso');
-      }
+      if (status !== 'AO_VIVO' && status !== 'ERRO') return;
+      estado.tempoReal = status;
+      atualizarConexao();
+      // O que mudou entre a carga (ou a queda) e a inscrição ficar pronta não vem por evento.
+      if (status === 'AO_VIVO') carregar();
     }
   );
 
   principal.innerHTML = '<div class="empty-state pequeno"><p>Carregando a base da mesa…</p></div>';
+  atualizarConexao();
   carregar();
 };
 

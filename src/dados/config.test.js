@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { PADRAO, resolverConfig } from './config.js';
 
 describe('configuração do banco do Calendário', () => {
-  it('sem variáveis de ambiente, usa o projeto Supabase atual da mesa', () => {
+  it('sem variáveis de ambiente, usa o projeto Supabase da mesa', () => {
     expect(resolverConfig({})).toEqual({ modo: 'supabase', url: PADRAO.url, chave: PADRAO.chave });
-    expect(PADRAO.url).toBe('https://ekughbuuvjoojgfgbqbz.supabase.co');
+    expect(PADRAO.url).toBe('https://rtvtgulivtkpfprcfpie.supabase.co');
     expect(PADRAO.chave.split('.')).toHaveLength(3);
   });
 

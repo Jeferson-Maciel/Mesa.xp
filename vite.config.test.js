@@ -71,7 +71,7 @@ describe('build de arquivo único', () => {
     expect(codigo).toContain('Oportunidades de RENDA FIXA hoje!');
     expect(codigo).toContain('0.20.1');
     expect(codigo).toContain('presenca_app_data');
-    expect(codigo).toContain('ekughbuuvjoojgfgbqbz.supabase.co');
+    expect(codigo).toContain('rtvtgulivtkpfprcfpie.supabase.co');
     expect(codigo).toContain('Mesa de Operações Argentum');
   });
 });

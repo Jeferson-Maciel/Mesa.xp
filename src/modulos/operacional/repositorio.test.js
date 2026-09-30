@@ -161,8 +161,11 @@ describe('repositório do Operacional no Supabase', () => {
 
   it('escuta tópicos e posts, e cancela o canal', () => {
     const aoMudar = vi.fn();
-    const cancelar = repo.assinarMudancas(aoMudar, () => {});
-    expect(banco.canais[0].assinaturas.map((a) => a.filtro.table).sort()).toEqual(['operacional_posts', 'operacional_topicos']);
+    const aoStatus = vi.fn();
+    const cancelar = repo.assinarMudancas(aoMudar, aoStatus);
+    const tabelas = banco.canais[0].assinaturas.filter((a) => a.tipo === 'postgres_changes').map((a) => a.filtro.table);
+    expect(tabelas.sort()).toEqual(['operacional_posts', 'operacional_topicos']);
+    expect(aoStatus).toHaveBeenLastCalledWith('AO_VIVO');
     banco.emitir('operacional_posts');
     expect(aoMudar).toHaveBeenCalledTimes(1);
     cancelar();

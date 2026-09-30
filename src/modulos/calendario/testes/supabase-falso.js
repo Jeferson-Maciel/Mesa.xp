@@ -161,9 +161,11 @@ export const criarSupabaseFalso = () => {
         canal.assinaturas.push({ tipo, filtro, callback });
         return canal;
       },
+      // Como o servidor real: SUBSCRIBED e, em seguida, o aviso de que o banco está repassando.
       subscribe(aoStatus) {
         canal.aoStatus = aoStatus;
         aoStatus?.('SUBSCRIBED');
+        for (const a of canal.assinaturas) if (a.tipo === 'system') a.callback({ message: 'Subscribed to PostgreSQL', status: 'ok', extension: 'postgres_changes' });
         return canal;
       }
     };
@@ -188,7 +190,7 @@ export const criarSupabaseFalso = () => {
     /** Simula uma mudança vinda do banco (de outra aba ou outra pessoa). */
     emitir: (tabela) => {
       for (const canal of canais) {
-        for (const a of canal.assinaturas) if (a.filtro.table === tabela) a.callback({ table: tabela });
+        for (const a of canal.assinaturas) if (a.tipo === 'postgres_changes' && a.filtro.table === tabela) a.callback({ table: tabela });
       }
     }
   };

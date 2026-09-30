@@ -1,3 +1,4 @@
+import { assinarTabelas } from '../../../dados/realtime.js';
 import {
   ErroDeConflito,
   ErroDoRepositorio,
@@ -110,13 +111,6 @@ export const criarRepositorioSupabase = (cliente) => ({
   },
 
   assinarMudancas(aoMudar, aoStatus) {
-    const canal = cliente.channel('mesa-xp-operacional');
-    for (const table of ['operacional_topicos', 'operacional_posts']) {
-      canal.on('postgres_changes', { event: '*', schema: 'public', table }, aoMudar);
-    }
-    canal.subscribe((status, erro) => aoStatus?.(status, erro));
-    return () => {
-      cliente.removeChannel(canal);
-    };
+    return assinarTabelas(cliente, 'mesa-xp-operacional', ['operacional_topicos', 'operacional_posts'], aoMudar, aoStatus);
   }
 });

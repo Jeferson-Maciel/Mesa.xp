@@ -8,20 +8,22 @@ para cá em vez de entrar no código.
 
 ### Antes de distribuir o link
 
-1. **O projeto Supabase do Calendário não responde.** Em 29/09/2026, `ekughbuuvjoojgfgbqbz.supabase.co`
-   não existia no DNS (NXDOMAIN, também no DNS do Google) — o sintoma de projeto pausado por
-   inatividade no plano gratuito. O Calendário antigo, na Vercel, está no mesmo banco e também não
-   conecta. Retomar no painel do Supabase e, se a mesa depende disso, avaliar um plano que não pause.
-2. **O teste contra o banco real não foi feito** por causa do item 1. Com o projeto de volta, rodar
-   `npm run verificar:supabase`: leitura, gravação, exclusão em cascata, Realtime entre
-   duas abas e as duas quedas de rede (ao abrir e no meio do salvamento), num colaborador de teste
-   apagado no fim. Até lá, o adaptador do Supabase só foi exercitado contra o fake.
+1. **Os registros de presença do Calendário antigo não vieram.** O projeto dele
+   (`ekughbuuvjoojgfgbqbz`) não resolve no DNS desde 29/09/2026 e não está na conta Supabase da mesa.
+   Em 30/09/2026 a Mesa XP passou para o projeto `rtvtgulivtkpfprcfpie`, que começou vazio no
+   Calendário. Se o antigo estiver em outra conta, ou puder ser retomado, os dados passam tabela por
+   tabela (mesmos nomes); senão, a equipe cadastra os colaboradores de novo. O Calendário antigo, na
+   Vercel, continua apontando para o projeto que não responde.
+2. **O projeto novo é do plano gratuito, que pausa depois de alguns dias sem uso.** Usado todo dia
+   pela mesa, não deve pausar; num recesso, pode. Se a mesa depende disso, avaliar um plano que não
+   pause. (O teste contra o banco real, pendente na fusão, foi feito em 30/09/2026:
+   `npm run verificar:supabase`, Calendário e Operacional.)
 3. **Segurança do Calendário — fase 2** (ver [`CLAUDE.md`](../CLAUDE.md#pendência-de-segurança--fase-2)):
    hoje a chave anon, pública, lê e escreve tudo, e os dados têm nomes e motivos de ausência.
    Supabase Auth, políticas RLS fechadas para a equipe e repositório privado.
 4. **Aposentar os três links antigos** (Ordens no Netlify, RendaFixa Pro, Calendário na Vercel)
-   depois que a mesa migrar. Enquanto conviverem, o Calendário antigo e o novo dividem o mesmo banco,
-   com as mesmas tabelas — o novo foi escrito para isso.
+   depois que a mesa migrar. O Calendário antigo já não funciona (item 1) e não divide mais o banco
+   com o novo.
 
 ### Renda Fixa
 
@@ -80,11 +82,10 @@ e excluir, compartilhado e ao vivo. O resto ficou para depois, de propósito:
 1. **Colar o texto dos 15 posts pendentes.** Vieram do Slab só com o título: os 12 de Padrões de
    Fixing, Confirmação resgate fundos, Confirmação aplicação Fundos e Ações e Fundos Listados. Dá
    para colar pela própria tela (Editar); não se inventa texto para eles.
-2. **Ligar no banco da mesa.** Rodar `supabase/operacional.sql` no SQL Editor (depois de retomar o
-   projeto pausado) e estender `npm run verificar:supabase` ao Operacional — leitura, criação, a
-   trava de versão entre duas abas e a exclusão que só esconde — num post de teste. O SQL já foi
-   validado num Postgres (PGlite), mas o Realtime e a API do Supabase só foram exercitados contra o
-   fake.
+2. ~~**Ligar no banco da mesa.**~~ Feito em 30/09/2026: `supabase/operacional.sql` rodou no
+   projeto `rtvtgulivtkpfprcfpie`, e `npm run verificar:supabase` confere o Operacional contra ele
+   (leitura, criação, edição, a trava de versão entre duas abas, a exclusão que só esconde e o
+   histórico).
 3. **Anexos (foto, áudio, vídeo).** A primeira tentativa (branch `antigravity/operacional`) os
    gravava no navegador em base64, o que estoura o armazenamento com poucos arquivos e não chega aos
    colegas. O caminho certo é o Storage do Supabase, num bucket privado com URL assinada — e isso

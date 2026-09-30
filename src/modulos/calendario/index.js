@@ -48,7 +48,9 @@ export const iniciarCalendario = (secao) => {
     mes: hoje.getMonth(),
     filtro: '',
     sequencia: 0, // cada carga numerada: uma resposta atrasada de uma navegação antiga é descartada
-    carregou: false
+    carregou: false,
+    falhou: false, // a última carga deu erro
+    tempoReal: null // null enquanto conecta, 'AO_VIVO' ou 'ERRO'
   };
 
   const dia = { colaborador: null, data: null, horarios: [] };
@@ -59,6 +61,16 @@ export const iniciarCalendario = (secao) => {
   const mostrarConexao = (texto, classe) => {
     conexao.textContent = texto;
     conexao.className = `meta-counter cal-conexao ${classe}`;
+  };
+
+  // O status vem da carga e do Realtime juntos, e não do último evento que chegou: o Realtime
+  // costuma ficar pronto antes da primeira carga terminar, e "ao vivo" só vale com a semana lida.
+  const atualizarConexao = () => {
+    if (repo.modo === 'local') mostrarConexao('modo local: dados só neste navegador', 'cal-aviso');
+    else if (!estado.carregou) mostrarConexao(estado.falhou ? 'sem conexão' : 'carregando…', estado.falhou ? 'cal-aviso' : '');
+    else if (estado.tempoReal === 'ERRO') mostrarConexao('sem atualização ao vivo', 'cal-aviso');
+    else if (estado.tempoReal === 'AO_VIVO') mostrarConexao('ao vivo', 'cal-vivo');
+    else mostrarConexao('conectado', '');
   };
 
   const mensagemDeErro = (erro) =>
@@ -84,24 +96,23 @@ export const iniciarCalendario = (secao) => {
 
   async function carregar() {
     const numero = ++estado.sequencia;
-    if (!estado.carregou) mostrarConexao('carregando…', '');
     try {
       const { inicio, fim } = intervalo();
       const [colaboradores, registros] = await Promise.all([repo.listarColaboradores(), repo.listarRegistros(inicio, fim)]);
       if (numero !== estado.sequencia) return;
       estado.colaboradores = colaboradores;
       estado.registros = indexar(registros);
-      estado.carregou = true;
+      Object.assign(estado, { carregou: true, falhou: false });
       limparErro();
       render();
-      if (repo.modo === 'local') mostrarConexao('modo local: dados só neste navegador', 'cal-aviso');
-      else if (!conexao.classList.contains('cal-vivo') && !conexao.classList.contains('cal-aviso')) mostrarConexao('conectado', '');
+      atualizarConexao();
     } catch (erro) {
       if (numero !== estado.sequencia) return;
       console.error(erro);
+      estado.falhou = true;
       mostrarErro(erro);
       render();
-      if (!estado.carregou) mostrarConexao('sem conexão', 'cal-aviso');
+      atualizarConexao();
     }
   }
 
@@ -221,13 +232,19 @@ export const iniciarCalendario = (secao) => {
     botao.disabled = true;
     el('erro-dialogo').innerHTML = '';
     try {
-      await repo.salvarRegistro({
+      const registro = {
         colaboradorId: dia.colaborador.id,
         data: dia.data,
         presencial: el('presencial').checked,
         observacao: el('observacao').value.trim(),
-        indisponiveis: dia.horarios
-      });
+        indisponiveis: dia.horarios.map((h) => ({ ...h }))
+      };
+      await repo.salvarRegistro(registro);
+      // O dia salvo vale já, sem esperar a releitura. Uma carga que o Realtime disparou no meio do
+      // salvamento pode ter lido o dia sem os horários; a janela reaberta antes da releitura
+      // mostraria o dia vazio. A carga abaixo ganha número novo e descarta essa leitura atrasada.
+      estado.registros.set(`${registro.data}|${registro.colaboradorId}`, registro);
+      render();
       dialogo.close();
       aviso('Registro salvo.');
       await carregar();
@@ -338,26 +355,22 @@ export const iniciarCalendario = (secao) => {
 
   // Um salvamento gera vários eventos (o dia e cada horário): junta tudo numa recarga só.
   let espera = null;
-  let caiu = false;
   repo.assinarMudancas(
     () => {
       clearTimeout(espera);
       espera = setTimeout(carregar, 300);
     },
     (status) => {
-      if (status === 'SUBSCRIBED') {
-        mostrarConexao('ao vivo', 'cal-vivo');
-        // Voltou depois de cair: o que mudou nesse meio tempo não chegou por evento.
-        if (caiu) carregar();
-        caiu = false;
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        caiu = true;
-        mostrarConexao('sem atualização ao vivo', 'cal-aviso');
-      }
+      if (status !== 'AO_VIVO' && status !== 'ERRO') return;
+      estado.tempoReal = status;
+      atualizarConexao();
+      // O que mudou entre a carga (ou a queda) e a inscrição ficar pronta não vem por evento.
+      if (status === 'AO_VIVO') carregar();
     }
   );
 
   render();
+  atualizarConexao();
   carregar();
 };
 

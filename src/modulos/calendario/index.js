@@ -2,8 +2,7 @@ import { aviso } from '../../ui/avisos.js';
 import { esc } from '../../ui/html.js';
 import { criarRepositorioLocal } from './adaptadores/local.js';
 import { criarRepositorioSupabase } from './adaptadores/supabase.js';
-import { criarCliente } from './cliente.js';
-import { resolverConfig } from './config.js';
+import { conexaoDoBanco } from '../../dados/banco.js';
 import { DIAS, MESES, diaDaChave, intervaloDaSemana, intervaloDoMes, rotuloDaSemana, segundaDaSemana, somarDias } from './datas.js';
 import { CORES, htmlHistorico, htmlHorarios, htmlSemana, indexar } from './render.js';
 import { ehErroDeRede } from './repositorio.js';
@@ -28,10 +27,7 @@ export const iniciarCalendario = (secao) => {
   secao.innerHTML = MARCACAO;
   const el = (nome) => secao.querySelector(`[data-cal="${nome}"]`);
 
-  const config = resolverConfig({
-    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY
-  });
+  const { config, cliente } = conexaoDoBanco();
 
   if (config.modo === 'invalido') {
     el('erro').innerHTML = `<div class="alert alert-danger">Calendário sem banco configurado: ${esc(config.erro)}</div>`;
@@ -40,7 +36,7 @@ export const iniciarCalendario = (secao) => {
     return;
   }
 
-  const repo = config.modo === 'local' ? criarRepositorioLocal() : criarRepositorioSupabase(criarCliente(config.url, config.chave));
+  const repo = config.modo === 'local' ? criarRepositorioLocal() : criarRepositorioSupabase(cliente);
 
   const hoje = new Date();
   const estado = {

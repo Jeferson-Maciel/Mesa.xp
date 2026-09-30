@@ -28,12 +28,7 @@
  * engole erro nem troca de adaptador sozinho: falha de rede aparece para quem está usando.
  */
 
-export class ErroDoRepositorio extends Error {
-  constructor(mensagem, opcoes) {
-    super(mensagem, opcoes);
-    this.name = 'ErroDoRepositorio';
-  }
-}
+export { ErroDoRepositorio, ehErroDeRede } from '../../dados/erros.js';
 
 /** Ordem de nome como uma pessoa espera: sem diferenciar maiúscula nem acento. */
 export const ordenarColaboradores = (lista) =>
@@ -42,7 +37,3 @@ export const ordenarColaboradores = (lista) =>
 /** Os horários do dia na ordem em que acontecem. */
 export const ordenarHorarios = (lista) =>
   [...lista].sort((a, b) => a.inicio.localeCompare(b.inicio) || a.fim.localeCompare(b.fim));
-
-/** Erro de rede do navegador, do jeito que o supabase-js o repassa. */
-export const ehErroDeRede = (erro) =>
-  /Failed to fetch|NetworkError|Load failed|fetch failed|AbortError|TimeoutError|timed out/i.test(String(erro?.message ?? erro));

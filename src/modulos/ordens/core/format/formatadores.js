@@ -100,19 +100,23 @@ export const formatarLoteSimples = (solicitacao) => {
 };
 
 /**
- * As tabelas do e-mail: o Lote Simples, com a última coluna dizendo o tipo do valor.
+ * As tabelas do e-mail: Ativo, C/V, Preço e a coluna de valor, que diz o tipo do valor.
  *
- * Cesta por quantidade sai idêntica ao Lote Simples. Cesta em reais troca `Qtd. Total` por
- * `Financeiro`. Cesta mista vira **duas tabelas**, a de financeiro primeiro — decisão do
- * operador, no lugar de uma tabela só com uma coluna vazia em cada linha. Dentro de cada uma, os
- * ativos seguem a ordem do pedido (invariante 9).
+ * É o Lote Simples **sem `Estratégia` e sem `Cliente`** (pedido do operador em 30/09): o e-mail vai
+ * para o cliente, "Simples" é coisa da planilha da XP, e a conta já está na frase de abertura. O
+ * Lote Simples em TSV continua com as duas, porque a planilha precisa delas.
+ *
+ * Cesta por quantidade termina em `Qtd. Total`; em reais, em `Financeiro`. Cesta mista vira
+ * **duas tabelas**, a de financeiro primeiro — decisão do operador, no lugar de uma tabela só com
+ * uma coluna vazia em cada linha. Dentro de cada uma, os ativos seguem a ordem do pedido
+ * (invariante 9).
  *
  * @returns {Array<{cabecalho: string[], linhas: string[][]}>}
  */
 const tabelasDoEmail = (solicitacao) => {
   const tabela = (ordens, coluna, valor) => ({
-    cabecalho: ['Estratégia', 'Cliente', 'Ativo', 'C/V', 'Preço', coluna],
-    linhas: ordens.map((o) => ['Simples', solicitacao.conta, o.ativo, o.operacao, precoDe(o), valor(o)])
+    cabecalho: ['Ativo', 'C/V', 'Preço', coluna],
+    linhas: ordens.map((o) => [o.ativo, o.operacao, precoDe(o), valor(o)])
   });
 
   const emReais = solicitacao.ordens.filter(porFinanceiro);

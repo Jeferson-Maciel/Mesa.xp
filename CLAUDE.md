@@ -366,9 +366,11 @@ A comporta (`gerar`, em `ui/saidas.js`) só aceita confirmação de bloqueio con
 depende de o botão estar escondido.
 
 A **Auditoria por E-mail** — na tela, **E-mail em tabela**, que é como o operador a chama — é o
-e-mail da ordem com a tabela do Lote Simples no corpo, copiada em HTML e em texto com TAB, os dois
-de uma vez. Desde 28/09 a coluna de valor **acompanha a cesta**: só quantidade, `Qtd. Total`, igual
-ao Lote Simples; só reais, `Financeiro` no lugar dela; mista, **duas tabelas** — a de financeiro
+e-mail da ordem com uma tabela das ordens no corpo, copiada em HTML e em texto com TAB, os dois
+de uma vez. A tabela é o Lote Simples **sem `Estratégia` e `Cliente`** (pedido do operador em
+30/09: "Simples" é coisa da planilha, e a conta já está na frase de abertura) — o Lote Simples em
+TSV continua com as duas. Desde 28/09 a coluna de valor **acompanha a cesta**: só quantidade,
+`Qtd. Total`; só reais, `Financeiro` no lugar dela; mista, **duas tabelas** — a de financeiro
 primeiro, a de quantidade depois, duas linhas em branco entre elas. Isso reverteu uma decisão
 anterior de manter a tabela sem financeiro — o operador mudou de ideia com um pedido real na mão.
 O Lote Simples em TSV, colado na planilha da XP, continua sem financeiro. "Tabela igual Excel", para o operador, é **grade

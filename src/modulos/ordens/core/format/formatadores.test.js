@@ -79,7 +79,7 @@ describe('formatarEmail — ordem', () => {
 
 describe('formatarAuditoria — texto', () => {
   // O exemplo que o operador trouxe, reproduzido caractere a caractere: o e-mail da ordem com a
-  // tabela do Lote Simples no lugar dos blocos de ativo.
+  // tabela no lugar dos blocos de ativo. Desde 30/09 a tabela não tem Estratégia nem Cliente.
   it('monta o e-mail do exemplo do operador', () => {
     const s = solicitacao({ conta: '1234567', ordens: [ordem({ ativo: 'IVVB11', quantidade: 7 })] });
     expect(formatarAuditoria(s)).toBe(
@@ -88,8 +88,8 @@ describe('formatarAuditoria — texto', () => {
         '',
         'Conforme conversado, gostaria de realizar a ordem abaixo na conta XP 1234567:',
         '',
-        'Estratégia\tCliente\tAtivo\tC/V\tPreço\tQtd. Total',
-        'Simples\t1234567\tIVVB11\tC\tA mercado\t7',
+        'Ativo\tC/V\tPreço\tQtd. Total',
+        'IVVB11\tC\tA mercado\t7',
         '',
         '',
         'Observações importantes: Toda solicitação lançada no sistema antes do leilão de encerramento sofrerá tentativa de processamento no mesmo dia. Toda solicitação lançada após o leilão de encerramento sofrerá tentativa de processamento no próximo dia útil.',
@@ -101,9 +101,38 @@ describe('formatarAuditoria — texto', () => {
     );
   });
 
-  it('na cesta por quantidade, a tabela é exatamente o Lote Simples', () => {
+  // Pedido do operador em 30/09: o e-mail vai para o cliente, e "Estratégia: Simples" é coisa da
+  // planilha da XP; a conta já está na frase de abertura. O Lote Simples continua com as duas.
+  it('não tem as colunas Estratégia e Cliente: a conta já está na frase de abertura', () => {
     const s = solicitacao({ ordens: [ordem(), ordem({ ativo: 'VALE3', operacao: 'V', preco: '61,20' })] });
-    expect(formatarAuditoria(s)).toContain(formatarLoteSimples(s));
+    const texto = formatarAuditoria(s);
+    expect(texto).toContain('Ativo\tC/V\tPreço\tQtd. Total\nPETR4\tC\tA mercado\t100\nVALE3\tV\t61,20\t100\n');
+    expect(texto).not.toMatch(/Estratégia|Cliente\t|Simples\t|\t7000001\t/);
+    expect(formatarLoteSimples(s).split('\n')[0]).toBe('Estratégia\tCliente\tAtivo\tC/V\tPreço\tQtd. Total');
+  });
+
+  it('monta o e-mail do pedido de 30/09, do jeito que o operador pediu', () => {
+    const emReais = (ativo, financeiro) => ordem({ ativo, quantidade: null, financeiro });
+    const s = solicitacao({ conta: '1234567', ordens: [emReais('BTLG11', 3000), emReais('XPML11', 3000), emReais('KNCR11', 5000)] });
+    expect(formatarAuditoria(s)).toBe(
+      [
+        'Prezado(a) Cliente,',
+        '',
+        'Conforme conversado, gostaria de realizar as ordens abaixo na conta XP 1234567:',
+        '',
+        'Ativo\tC/V\tPreço\tFinanceiro',
+        'BTLG11\tC\tA mercado\tR$ 3.000,00',
+        'XPML11\tC\tA mercado\tR$ 3.000,00',
+        'KNCR11\tC\tA mercado\tR$ 5.000,00',
+        '',
+        '',
+        'Observações importantes: Toda solicitação lançada no sistema antes do leilão de encerramento sofrerá tentativa de processamento no mesmo dia. Toda solicitação lançada após o leilão de encerramento sofrerá tentativa de processamento no próximo dia útil.',
+        '',
+        'Aguardo confirmação para realizar as ordens.',
+        '',
+        'Att,'
+      ].join('\n')
+    );
   });
 
   it('pluraliza com dois ou mais ativos', () => {
@@ -131,19 +160,19 @@ describe('formatarAuditoriaHtml', () => {
     expect(html).toContain('Att,');
   });
 
-  it('põe o Lote Simples numa tabela: cabeçalho e uma linha por ativo, na ordem digitada', () => {
+  it('põe as ordens numa tabela: cabeçalho e uma linha por ativo, na ordem digitada', () => {
     const s = solicitacao({ ordens: [ordem({ ativo: 'VALE3', quantidade: 4900 }), ordem({ preco: '39,47' })] });
     expect(linhas(formatarAuditoriaHtml(s))).toEqual([
-      ['Estratégia', 'Cliente', 'Ativo', 'C/V', 'Preço', 'Qtd. Total'],
-      ['Simples', '7000001', 'VALE3', 'C', 'A mercado', '4900'],
-      ['Simples', '7000001', 'PETR4', 'C', '39,47', '100']
+      ['Ativo', 'C/V', 'Preço', 'Qtd. Total'],
+      ['VALE3', 'C', 'A mercado', '4900'],
+      ['PETR4', 'C', '39,47', '100']
     ]);
   });
 
   it('desenha a grade: borda em todas as células', () => {
     const html = formatarAuditoriaHtml(solicitacao());
     const tags = [...html.matchAll(/<td[^>]*>/g)].map((m) => m[0]);
-    expect(tags).toHaveLength(12);
+    expect(tags).toHaveLength(8);
     for (const tag of tags) expect(tag).toMatch(/border:1px solid/);
   });
 
@@ -187,13 +216,13 @@ describe('e-mail em tabela — financeiro', () => {
         '',
         'Conforme conversado, gostaria de realizar as ordens abaixo na conta XP 7000002:',
         '',
-        'Estratégia\tCliente\tAtivo\tC/V\tPreço\tFinanceiro',
-        'Simples\t7000002\tBTLG11\tC\tA mercado\tR$ 3.000,00',
-        'Simples\t7000002\tXPML11\tC\tA mercado\tR$ 3.000,00',
-        'Simples\t7000002\tKNSC11\tC\tA mercado\tR$ 5.000,00',
-        'Simples\t7000002\tKNCR11\tC\tA mercado\tR$ 5.000,00',
-        'Simples\t7000002\tMCRE11\tC\tA mercado\tR$ 1.000,00',
-        'Simples\t7000002\tAFHI11\tC\tA mercado\tR$ 1.000,00',
+        'Ativo\tC/V\tPreço\tFinanceiro',
+        'BTLG11\tC\tA mercado\tR$ 3.000,00',
+        'XPML11\tC\tA mercado\tR$ 3.000,00',
+        'KNSC11\tC\tA mercado\tR$ 5.000,00',
+        'KNCR11\tC\tA mercado\tR$ 5.000,00',
+        'MCRE11\tC\tA mercado\tR$ 1.000,00',
+        'AFHI11\tC\tA mercado\tR$ 1.000,00',
         '',
         '',
         'Observações importantes: Toda solicitação lançada no sistema antes do leilão de encerramento sofrerá tentativa de processamento no mesmo dia. Toda solicitação lançada após o leilão de encerramento sofrerá tentativa de processamento no próximo dia útil.',
@@ -208,8 +237,8 @@ describe('e-mail em tabela — financeiro', () => {
   it('cesta toda em reais: Financeiro no lugar de Qtd. Total, também na grade', () => {
     const s = solicitacao({ ordens: [emReais('BTLG11', 3000)] });
     expect(linhas(formatarAuditoriaHtml(s))).toEqual([
-      ['Estratégia', 'Cliente', 'Ativo', 'C/V', 'Preço', 'Financeiro'],
-      ['Simples', '7000001', 'BTLG11', 'C', 'A mercado', 'R$ 3.000,00']
+      ['Ativo', 'C/V', 'Preço', 'Financeiro'],
+      ['BTLG11', 'C', 'A mercado', 'R$ 3.000,00']
     ]);
   });
 
@@ -230,14 +259,14 @@ describe('e-mail em tabela — financeiro', () => {
           '',
           'Conforme conversado, gostaria de realizar as ordens abaixo na conta XP 1234567:',
           '',
-          'Estratégia\tCliente\tAtivo\tC/V\tPreço\tFinanceiro',
-          'Simples\t1234567\tBTLG11\tC\tA mercado\tR$ 3.000,00',
-          'Simples\t1234567\tXPML11\tC\tA mercado\tR$ 5.000,00',
+          'Ativo\tC/V\tPreço\tFinanceiro',
+          'BTLG11\tC\tA mercado\tR$ 3.000,00',
+          'XPML11\tC\tA mercado\tR$ 5.000,00',
           '',
           '',
-          'Estratégia\tCliente\tAtivo\tC/V\tPreço\tQtd. Total',
-          'Simples\t1234567\tPETR4\tC\tA mercado\t100',
-          'Simples\t1234567\tVALE3\tC\tA mercado\t50',
+          'Ativo\tC/V\tPreço\tQtd. Total',
+          'PETR4\tC\tA mercado\t100',
+          'VALE3\tC\tA mercado\t50',
           '',
           '',
           'Observações importantes: Toda solicitação lançada no sistema antes do leilão de encerramento sofrerá tentativa de processamento no mesmo dia. Toda solicitação lançada após o leilão de encerramento sofrerá tentativa de processamento no próximo dia útil.',
@@ -254,14 +283,14 @@ describe('e-mail em tabela — financeiro', () => {
       const tabelas = [...html.matchAll(/<table[^>]*>(.*?)<\/table>/g)].map((m) => linhas(m[1]));
       expect(tabelas).toEqual([
         [
-          ['Estratégia', 'Cliente', 'Ativo', 'C/V', 'Preço', 'Financeiro'],
-          ['Simples', '1234567', 'BTLG11', 'C', 'A mercado', 'R$ 3.000,00'],
-          ['Simples', '1234567', 'XPML11', 'C', 'A mercado', 'R$ 5.000,00']
+          ['Ativo', 'C/V', 'Preço', 'Financeiro'],
+          ['BTLG11', 'C', 'A mercado', 'R$ 3.000,00'],
+          ['XPML11', 'C', 'A mercado', 'R$ 5.000,00']
         ],
         [
-          ['Estratégia', 'Cliente', 'Ativo', 'C/V', 'Preço', 'Qtd. Total'],
-          ['Simples', '1234567', 'PETR4', 'C', 'A mercado', '100'],
-          ['Simples', '1234567', 'VALE3', 'C', 'A mercado', '50']
+          ['Ativo', 'C/V', 'Preço', 'Qtd. Total'],
+          ['PETR4', 'C', 'A mercado', '100'],
+          ['VALE3', 'C', 'A mercado', '50']
         ]
       ]);
     });
@@ -274,13 +303,13 @@ describe('e-mail em tabela — financeiro', () => {
   it('nunca escreve quantidade e financeiro na mesma linha', () => {
     const s = solicitacao({ ordens: [ordem({ quantidade: 100 }), emReais('BTLG11', 3000)] });
     for (const linha of linhas(formatarAuditoriaHtml(s)).slice(1)) {
-      expect(linha.slice(5).filter(Boolean)).toHaveLength(1);
+      expect(linha.slice(3).filter(Boolean)).toHaveLength(1);
     }
   });
 
   it('preserva o preço informado na ordem por valor', () => {
     const s = solicitacao({ ordens: [ordem({ ativo: 'BTLG11', quantidade: null, financeiro: 3000, preco: '95,50' })] });
-    expect(formatarAuditoria(s)).toContain('Simples\t7000001\tBTLG11\tC\t95,50\tR$ 3.000,00');
+    expect(formatarAuditoria(s)).toContain('\nBTLG11\tC\t95,50\tR$ 3.000,00\n');
   });
 
   it('a grade continua sem fonte, fundo nem negrito', () => {

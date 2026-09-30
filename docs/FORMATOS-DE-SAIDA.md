@@ -37,19 +37,18 @@ Att,
 
 ## 2. Auditoria por E-mail (na tela, "E-mail em tabela")
 
-O e-mail do formato 1, com a mesma abertura e o mesmo fecho, mas com a **tabela do Lote Simples**
-(formato 3) no lugar dos blocos de ativo. Na tela ele se chama **E-mail em tabela**, que é como o
-operador o chama; no código continua `auditoria`. "Via email" no pedido marca este e o formato 1 —
-salvo quando a cesta tem fundo cetipado, que não entra na tabela; aí marca só o formato 1.
-"Auditar" marca só este.
+O e-mail do formato 1, com a mesma abertura e o mesmo fecho, mas com uma **tabela das ordens** no
+lugar dos blocos de ativo. Na tela ele se chama **E-mail em tabela**, que é como o operador o chama;
+no código continua `auditoria`. "Via email" no pedido marca este e o formato 1 — salvo quando a
+cesta tem fundo cetipado, que não entra na tabela; aí marca só o formato 1. "Auditar" marca só este.
 
 ```
 Prezado(a) Cliente,
 
 Conforme conversado, gostaria de realizar a[s] ordem[ns] abaixo na conta XP [CONTA]:
 
-Estratégia	Cliente	Ativo	C/V	Preço	Qtd. Total
-Simples	[CONTA]	[TICKER]	[C|V]	[PREÇO]	[QUANTIDADE]
+Ativo	C/V	Preço	Qtd. Total
+[TICKER]	[C|V]	[PREÇO]	[QUANTIDADE]
 
 
 Observações importantes: Toda solicitação lançada no sistema antes do leilão de encerramento sofrerá tentativa de processamento no mesmo dia. Toda solicitação lançada após o leilão de encerramento sofrerá tentativa de processamento no próximo dia útil.
@@ -59,8 +58,11 @@ Aguardo confirmação para realizar a[s] ordem[ns].
 Att,
 ```
 
-- **Na cesta por quantidade, a tabela é o Lote Simples, célula por célula**: mesmo cabeçalho,
-  mesma ordem de colunas, uma linha por ativo na ordem digitada. Valem todas as regras da seção 3.
+- **A tabela é o Lote Simples sem `Estratégia` e sem `Cliente`** (pedido do operador em 30/09):
+  o e-mail vai para o cliente, "Simples" é coisa da planilha da XP, e a conta já está na frase de
+  abertura. `Ativo`, `C/V` e `Preço` seguem as regras da seção 3, uma linha por ativo na ordem
+  digitada. **O Lote Simples em TSV (seção 3) continua com as duas colunas**: a planilha precisa
+  delas. (Até 29/09 a tabela do e-mail era o Lote Simples célula por célula.)
 - **A coluna de valor acompanha a cesta** (decidido com o operador em 28/09):
 
   | cesta | tabelas |
@@ -76,9 +78,9 @@ Att,
   O pedido real de 28/09, cesta toda em reais:
 
   ```
-  Estratégia	Cliente	Ativo	C/V	Preço	Financeiro
-  Simples	7000002	BTLG11	C	A mercado	R$ 3.000,00
-  Simples	7000002	XPML11	C	A mercado	R$ 3.000,00
+  Ativo	C/V	Preço	Financeiro
+  BTLG11	C	A mercado	R$ 3.000,00
+  XPML11	C	A mercado	R$ 3.000,00
   ```
 
   `Financeiro` sai como `R$ X.XXX,XX`, igual ao TWAP. Coluna inteira vazia não aparece: no e-mail

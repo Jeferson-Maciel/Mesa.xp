@@ -28,7 +28,7 @@ carimbo e tudo —, confere o que o sistema entendeu, e copia a saída pronta.
 | Formato | Para quê | Saída |
 | --- | --- | --- |
 | **Ordem por E-mail** | pedir confirmação da execução ao cliente | texto |
-| **E-mail em tabela** (auditoria) | o e-mail da ordem com a tabela do Lote Simples no corpo; ganha a coluna `Financeiro` quando a cesta é em reais, e vira duas tabelas quando mistura reais e quantidade | tabela em grade (+ texto com TAB) |
+| **E-mail em tabela** (auditoria) | o e-mail da ordem com a tabela das ordens no corpo (Ativo, C/V, Preço e o valor — sem Estratégia e Cliente); a coluna vira `Financeiro` quando a cesta é em reais, e são duas tabelas quando mistura reais e quantidade | tabela em grade (+ texto com TAB) |
 | **Lote Simples** | colar na planilha de lote | TSV |
 | **Lote TWAP** | colar na planilha de TWAP | TSV |
 

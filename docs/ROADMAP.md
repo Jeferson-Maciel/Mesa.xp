@@ -100,6 +100,24 @@ e excluir, compartilhado e ao vivo. O resto ficou para depois, de propósito:
 
 ---
 
+## Anotações — o que ficou de fora (30/09/2026)
+
+A aba entrou com o que o operador pediu: anotar, colar prints, links, etiquetas, datas e o lembrete
+amarelo/vermelho com alerta na tela. Ficou para depois:
+
+1. **Acompanhar a pessoa entre computadores.** Hoje as anotações moram no navegador (ver
+   CLAUDE.md, Anotações); o backup leva à mão. Com login (fase 2), um adaptador do Supabase com
+   política por usuário e o Storage privado para os prints.
+2. **Alerta com o navegador fechado.** Exigiria service worker e push, que o arquivo único
+   (`file://`) não permite; só na versão do Netlify, e com login.
+3. **Lembrete que se repete** (todo dia 5, toda segunda), como o Todoist.
+4. **Lista de tarefas dentro da anotação** (`[ ]` que vira caixinha), como o Keep.
+5. **Anotar a partir das outras abas**: um "anotar" no cartão do Ordens que já leva a conta e o
+   ativo; um "lembrar" no dia do Calendário.
+6. **Compartilhar uma anotação com um colega** (depende do login).
+
+---
+
 ## Ordens — levantamento anterior à fusão
 
 O que segue é o roadmap do Assistente de Ordens, de 22/09 a 28/09/2026, mantido como estava. Os

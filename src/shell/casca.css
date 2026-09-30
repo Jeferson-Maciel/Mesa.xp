@@ -314,20 +314,62 @@
   }
 }
 
-/* Quatro abas em 360px: sem ícone, e com a letra um pouco menor. */
-@media (max-width: 420px) {
+/* Cinco abas em 360px: o ícone em cima e o nome embaixo, em letra miúda — como a barra de abas de
+   um aplicativo de celular. */
+@media (max-width: 480px) {
   .abas {
     gap: 2px;
     padding: 2px;
   }
 
   .aba {
-    padding-inline: 2px;
-    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.32rem 2px 0.28rem;
+    font-size: 0.64rem;
+    line-height: 1.2;
   }
 
   .aba svg {
-    display: none;
+    width: 17px;
+    height: 17px;
+  }
+}
+
+/* ── Contador da aba Anotações ──────────────────────────────────────────────────────────
+   Posto pelo vigia dos lembretes (src/modulos/anotacoes/vigia.js): âmbar com os lembretes de
+   hoje, vermelho — e pulsando devagar — com os vencidos. Aparece em qualquer aba. */
+
+.aba-contador {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pilula);
+  background: var(--atencao);
+  box-shadow: 0 0 0 2px var(--superficie);
+  color: var(--texto-no-acento);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  animation: estalar var(--t-lento) var(--curva-mola);
+}
+
+.aba-contador.vencidas {
+  background: var(--negativo);
+  animation: estalar var(--t-lento) var(--curva-mola), aba-alerta 2.4s var(--curva) 0.4s infinite;
+}
+
+@keyframes aba-alerta {
+  0% {
+    box-shadow: 0 0 0 2px var(--superficie), 0 0 0 2px color-mix(in srgb, var(--negativo) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 2px var(--superficie), 0 0 0 9px transparent;
   }
 }
 

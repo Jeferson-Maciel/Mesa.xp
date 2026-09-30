@@ -6,7 +6,7 @@
     <title>Mesa XP</title>
     <meta
       name="description"
-      content="Ordens de renda variável, disparo de renda fixa e calendário de presença da mesa, num link só."
+      content="Ordens de renda variável, disparo de renda fixa, calendário de presença, base da mesa e anotações com lembretes, num link só."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
@@ -48,6 +48,13 @@
         >
         <a class="aba" href="#operacional" data-aba="operacional" title="Operacional: base de conhecimento da mesa (Alt + 4)"
           ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2.5zm0 0A2 2 0 0 0 7 21h12M9 7.5h6" /></svg>Operacional</a
+        >
+        <a class="aba" href="#anotacoes" data-aba="anotacoes" title="Anotações: o seu bloco de notas, com lembretes (Alt + 5)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3H6.5A2 2 0 0 0 4.5 5v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8zM14.5 3v5h5M8.5 13h7M8.5 17h4" /></svg>Anotações<span
+            class="aba-contador"
+            data-contador="anotacoes"
+            hidden
+          ></span></a
         >
       </nav>
 
@@ -144,8 +151,10 @@
       <section id="modulo-rendafixa" class="modulo" aria-label="Renda Fixa" hidden></section>
       <section id="modulo-calendario" class="modulo" aria-label="Calendário" hidden></section>
       <section id="modulo-operacional" class="modulo" aria-label="Operacional" hidden></section>
+      <section id="modulo-anotacoes" class="modulo" aria-label="Anotações" hidden></section>
     </main>
 
+    <div id="alertas-lembrete" class="an-alertas" aria-live="assertive"></div>
     <div id="toasts"></div>
 
     <script type="module" src="/src/main.js"></script>

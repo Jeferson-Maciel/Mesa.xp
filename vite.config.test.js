@@ -64,7 +64,7 @@ describe('build de arquivo único', () => {
 
   // Um literal de cada parte, que sobrevive à minificação: se algum módulo ficasse fora do
   // arquivo, a aba dele abriria vazia.
-  it('embute a casca e as quatro ferramentas', () => {
+  it('embute a casca e as cinco ferramentas', () => {
     const [, codigo] = html.match(/<script type="module">([\s\S]*?)<\/script>/);
     expect(codigo).toContain('Esta ferramenta não abriu');
     expect(codigo).toContain('A mercado');
@@ -73,5 +73,6 @@ describe('build de arquivo único', () => {
     expect(codigo).toContain('presenca_app_data');
     expect(codigo).toContain('rtvtgulivtkpfprcfpie.supabase.co');
     expect(codigo).toContain('Mesa de Operações Argentum');
+    expect(codigo).toContain('mesa_anotacoes');
   });
 });

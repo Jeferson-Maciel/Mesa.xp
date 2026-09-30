@@ -2,6 +2,10 @@ import './ui/base.css';
 import './ui/componentes.css';
 import './shell/casca.css';
 
+import { iniciarAnotacoes } from './modulos/anotacoes/index.js';
+import { repositorioDasAnotacoes } from './modulos/anotacoes/banco.js';
+import { linkDaNota } from './modulos/anotacoes/render.js';
+import { iniciarVigia } from './modulos/anotacoes/vigia.js';
 import { iniciarCalendario } from './modulos/calendario/index.js';
 import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
@@ -34,7 +38,16 @@ ligarAbas({
   preguicosos: {
     rendafixa: iniciarRendaFixa,
     calendario: iniciarCalendario,
-    operacional: iniciarOperacional
+    operacional: iniciarOperacional,
+    anotacoes: iniciarAnotacoes
   },
   aoFalhar: falhar
 });
+
+// Os lembretes das Anotações vigiam desde já, em qualquer aba: quem passa o dia no Ordens também
+// tem de ver o alerta. A aba Anotações em si continua abrindo só na primeira visita.
+try {
+  iniciarVigia({ repo: repositorioDasAnotacoes(), abrirNota: (id) => (location.hash = linkDaNota(id)) });
+} catch (erro) {
+  console.error('Os lembretes das Anotações não iniciaram:', erro);
+}

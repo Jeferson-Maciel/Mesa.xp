@@ -9,6 +9,7 @@ em abas, com o mesmo visual e o mesmo tema claro/escuro — cada aba com a sua c
 | **Renda Fixa** | Ler a planilha de renda fixa da XP e montar a mensagem de WhatsApp com as maiores taxas por prazo | Alt + 2 |
 | **Calendário** | Marcar quem vai estar presencial em cada dia, com observações e horários indisponíveis | Alt + 3 |
 | **Operacional** | Consultar e copiar os modelos e procedimentos da mesa — a base que estava no Slab — e mantê-los em dia | Alt + 4 |
+| **Anotações** | O seu bloco de notas: anotar, colar prints, guardar links, etiquetar e marcar lembretes que avisam na tela | Alt + 5 |
 
 Cada aba tem link próprio: `…/#ordens`, `…/#rendafixa`, `…/#calendario`, `…/#operacional` — e cada
 post do Operacional também (`…/#operacional/post/confirmacao-de-ordem-venda`).
@@ -356,6 +357,29 @@ a base inicial num projeto novo: SQL Editor do Supabase → colar
 [`supabase/operacional.sql`](supabase/operacional.sql) → executar. Pode rodar de novo sem duplicar
 nada nem desfazer edições. No banco da mesa isso já foi feito.
 
+## Anotações
+
+O bloco de notas de cada um, para o que não pode ser esquecido: "estorno do dia 25", "ajudar a Ana
+com o relatório", o print da tela do cliente, o link do HUB.
+
+- **Nova anotação** (ou a tecla N): escreva o título e o texto. Salva sozinho.
+- **Prints**: copie a tela e cole com **Ctrl+V** dentro da anotação — ou arraste o arquivo. Clique
+  na miniatura para ver grande, copiar de novo (para colar no e-mail ou no WhatsApp) ou baixar.
+- **Links** colados no texto viram botões embaixo dele.
+- **Etiquetas** (#estorno, #ajudar…) filtram a lista com um clique.
+- **Lembrete**: escolha o dia (e a hora, se quiser) ou um atalho — daqui 1 hora, amanhã às 9h, em 2
+  dias. A anotação fica **amarela** até o dia chegar e **vermelha** quando chega o dia ou a hora. Na
+  hora, um alerta aparece na tela — em qualquer aba da Mesa XP —, a aba Anotações ganha um contador
+  vermelho e o título da página mostra quantos venceram. Abrir, adiar (+1 hora, amanhã 9h) ou
+  marcar **Resolvido** tira o alerta.
+- Se quiser o alerta também no canto do Windows, clique em "Ligar alertas do Windows" (no pé da
+  lista). O som do alerta se desliga ali também.
+
+**As anotações ficam só neste navegador, neste computador — ninguém mais vê.** Para levar para
+outro computador (ou da versão aberta do disco para a do link), use **Exportar backup** e
+**Importar**. Limpar os dados do navegador apaga as anotações: faça backup de vez em quando. O alerta
+só aparece com a Mesa XP aberta (em qualquer aba).
+
 ## Modo claro e escuro
 
 O botão no canto superior direito alterna os dois, para todas as abas. **Navegador novo abre sempre
@@ -373,7 +397,7 @@ npm install
 npm run dev      # servidor local de desenvolvimento
 npm test         # testes
 npm run build    # gera dist/index.html, um arquivo só
-npm run verificar  # abre o dist/index.html no Chromium e confere as quatro abas (Playwright)
+npm run verificar  # abre o dist/index.html no Chromium e confere as cinco abas (Playwright)
 ```
 
 Requer Node 22+.
@@ -382,8 +406,8 @@ Requer Node 22+.
 
 `npm run build` gera **um único arquivo**, `dist/index.html`, com o JS, o CSS e o ícone dentro dele.
 Abre com dois cliques, sem servidor e sem Node, e pode ser copiado para outra pasta, um pendrive ou
-a rede. **Ordens e Renda Fixa funcionam sem internet** nesse arquivo; Calendário e Operacional
-precisam de conexão com o banco.
+a rede. **Ordens, Renda Fixa e Anotações funcionam sem internet** nesse arquivo; Calendário e
+Operacional precisam de conexão com o banco.
 
 O `index.html` da raiz do projeto **não** funciona aberto com dois cliques: é a fonte que o Vite lê.
 
@@ -398,11 +422,13 @@ redirecionamento de todas as rotas para o `index.html`. Qualquer host de estáti
   máquina. Não há backend, telemetria nem chamada de rede nessas abas; os históricos ficam no
   `localStorage` do navegador.
 - **Calendário** e **Operacional** gravam no Supabase — veja a pendência de segurança acima.
+- **Anotações** ficam no navegador de quem usa (IndexedDB), com os prints: não vão para servidor
+  nenhum, justamente porque costumam ter dado de cliente.
 
 ## Estrutura
 
 ```
-index.html                 a casca: topo, abas e as quatro seções
+index.html                 a casca: topo, abas e as cinco seções
 src/main.js                liga tema, abas e o início de cada ferramenta
 src/shell/                 rotas e atalhos das abas
 src/ui/                    tema, avisos, escape de HTML, tokens e componentes compartilhados
@@ -410,6 +436,7 @@ src/modulos/ordens/        parsing, validação e formatação (core/), preview 
 src/modulos/rendafixa/     motor, leitura da planilha, histórico, tela; fixtures/ e golden/ dos testes
 src/modulos/calendario/    repositório e adaptadores (Supabase e local), datas, tela
 src/modulos/operacional/   base de conhecimento: a cópia do Slab, repositório e adaptadores, tela
+src/modulos/anotacoes/     anotações com lembretes: regras puras, IndexedDB, backup, vigia, tela
 src/dados/                 a conexão única com o Supabase e a configuração
 src/vendor/                SheetJS 0.20.1 (licença Apache 2.0)
 supabase/schema.sql        tabelas, políticas e Realtime do Calendário
@@ -418,7 +445,7 @@ docs/                      formatos de saída do Ordens; roadmap e sugestões
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 655 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 726 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

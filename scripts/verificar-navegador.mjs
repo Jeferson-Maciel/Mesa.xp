@@ -2,8 +2,8 @@
  * Verificação no navegador: o que os testes do core não veem.
  *
  * Abre o `dist/index.html` via file:// no Chromium (Playwright) e confere:
- *   - as quatro abas, pelo clique, pelo hash e por Alt+1/2/3/4, e os atalhos do Ordens presos à aba;
- *   - as quatro abas nos dois temas, a 1400px e a ~360px, sem rolagem horizontal e sem erro no console;
+ *   - as cinco abas, pelo clique, pelo hash e por Alt+1 a Alt+5, e os atalhos do Ordens presos à aba;
+ *   - as cinco abas nos dois temas, a 1400px e a ~360px, sem rolagem horizontal e sem erro no console;
  *   - que nenhum seletor do CSS do Ordens pega elemento das outras abas;
  *   - Operacional em modo local: o texto de um post copiado e colado igual ao do Slab, editar,
  *     criar e excluir post (título com <img onerror> como texto), criar tópico, busca, link direto
@@ -14,7 +14,10 @@
  *   - Calendário em modo local (um build à parte, com as duas variáveis vazias): nome com
  *     <img onerror> aparece como texto, a janela do dia, o histórico e a exclusão em cascata;
  *   - Calendário no build normal: ou conecta ("ao vivo"), ou mostra o erro na tela — nunca cai calado
- *     no modo local.
+ *     no modo local;
+ *   - Anotações, com o relógio controlado: lembrete amarelo, a hora chegando com a pessoa em outra
+ *     aba (alerta, contador vermelho, título), print anexado, recarregar sem perder nada, marcação
+ *     como texto, só link http(s), e o backup.
  *
  * Uso:  npm run build && node scripts/verificar-navegador.mjs
  * Na primeira vez: npx playwright install chromium
@@ -121,11 +124,13 @@ try {
     ok((await visivel()) === 'modulo-calendario', 'Alt+3 abre o Calendário');
     await pagina.keyboard.press('Alt+4');
     ok((await visivel()) === 'modulo-operacional', 'Alt+4 abre o Operacional');
+    await pagina.keyboard.press('Alt+5');
+    ok((await visivel()) === 'modulo-anotacoes', 'Alt+5 abre as Anotações');
     await pagina.click('.aba[data-aba="ordens"]');
     // O clique troca pelo hashchange, que chega logo depois.
     await pagina.waitForFunction(() => !document.getElementById('modulo-ordens').hidden, null, { timeout: 2000 }).catch(() => {});
     ok((await visivel()) === 'modulo-ordens', 'o clique na aba Ordens volta');
-    for (const hash of ['#rendafixa', '#calendario', '#operacional', '#xyz']) {
+    for (const hash of ['#rendafixa', '#calendario', '#operacional', '#anotacoes', '#xyz']) {
       await pagina.goto(pathToFileURL(distLocal).href + hash);
       const esperado = hash === '#xyz' ? 'modulo-ordens' : `modulo-${hash.slice(1)}`;
       ok((await visivel()) === esperado, `link direto ${hash} abre ${esperado}`);
@@ -159,7 +164,7 @@ try {
   }
 
   /* ── Três abas, dois temas, duas larguras ───────────────────────────────────────── */
-  titulo('Quatro abas × dois temas × 1400px e 360px (build em modo local)');
+  titulo('Cinco abas × dois temas × 1400px e 360px (build em modo local)');
   const ordensCss = readFileSync(join(raiz, 'src/modulos/ordens/ordens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const seletoresDoOrdens = [...new Set(
     ordensCss
@@ -221,15 +226,24 @@ try {
       await pagina.click('[data-acao="editar"]');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, editor, sem rolagem lateral`);
       await pagina.click('[data-acao="cancelar"]');
+
+      await pagina.keyboard.press('Alt+5');
+      await pagina.waitForSelector('.an-lateral', { state: 'visible' });
+      await pagina.click('[data-an="nova"]');
+      await pagina.waitForSelector('[data-campo="titulo"]', { state: 'visible' });
+      await pagina.fill('[data-campo="titulo"]', 'Anotação de um título bem comprido para ver se cabe na tela do celular');
+      await pagina.click('[data-atalho="2-dias"]');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Anotações, anotação aberta com lembrete, sem rolagem lateral`);
+
       const abas = await pagina.$$eval('.aba', (as) => as.map((a) => a.getBoundingClientRect().right));
-      ok(Math.max(...abas) <= (largura <= 720 ? largura - 15 : largura), `${tema} ${largura}px: as quatro abas cabem dentro da margem`);
+      ok(Math.max(...abas) <= (largura <= 720 ? largura - 15 : largura), `${tema} ${largura}px: as cinco abas cabem dentro da margem`);
 
       if (tema === 'escuro' && largura === 1400) {
         await pagina.keyboard.press('Alt+3');
         await pagina.click('[data-visao="semana"]');
         const vazamentos = await pagina.evaluate((seletores) => {
           const achados = [];
-          for (const raizModulo of ['#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional']) {
+          for (const raizModulo of ['#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional', '#modulo-anotacoes']) {
             const alvo = document.querySelector(raizModulo);
             for (const s of seletores) {
               let n = 0;
@@ -419,6 +433,90 @@ try {
     await outra.close();
 
     ok(rede.length === 0, `o modo local não faz requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
+  /* ── Anotações ──────────────────────────────────────────────────────────────────── */
+  titulo('Anotações: lembrete amarelo e vermelho, alerta em outra aba, prints, backup');
+  {
+    // Relógio instalado (e não só parado): os timers do vigia andam com o fastForward.
+    const contexto = await navegador.newContext({ viewport: { width: 1400, height: 900 }, timezoneId: 'America/Sao_Paulo', reducedMotion: 'reduce' });
+    await contexto.clock.install({ time: new Date('2026-09-30T10:05:00-03:00') });
+    const pagina = await contexto.newPage();
+    const erros = [];
+    pagina.on('console', (m) => m.type() === 'error' && erros.push(m.text()));
+    pagina.on('pageerror', (e) => erros.push(String(e)));
+    pagina.on('dialog', (d) => d.accept());
+    const rede = [];
+    pagina.on('request', (r) => /^https?:/.test(r.url()) && rede.push(r.url()));
+
+    // Um print de verdade: a planilha sintética não serve, então um PNG desenhado no canvas.
+    const print = join(temporario, 'print.png');
+    writeFileSync(
+      print,
+      Buffer.from(
+        await pagina.evaluate(() => {
+          const c = Object.assign(document.createElement('canvas'), { width: 200, height: 120 });
+          c.getContext('2d').fillRect(10, 10, 100, 50);
+          return c.toDataURL('image/png').split(',')[1];
+        }),
+        'base64'
+      )
+    );
+
+    await pagina.goto(pathToFileURL(distLocal).href + '#anotacoes');
+    await pagina.waitForSelector('.an-boas-vindas');
+    await pagina.keyboard.press('n');
+    await pagina.waitForSelector('[data-campo="titulo"]');
+    ok(await pagina.evaluate(() => document.activeElement?.dataset.campo === 'titulo'), 'N cria a anotação com o cursor no título');
+    await pagina.keyboard.type('Estorno do dia 25 <img src=x onerror=window.__xss=1>');
+    await pagina.fill('[data-campo="texto"]', 'Ver https://hub.xpi.com.br/relatorios?conta=1234567 e javascript:alert(1)');
+    await pagina.fill('[data-campo="etiqueta"]', 'estorno');
+    await pagina.press('[data-campo="etiqueta"]', 'Enter');
+    await pagina.click('[data-atalho="2-dias"]');
+    ok(
+      (await pagina.textContent('.an-lembrete .an-selo')) === 'Lembrar sex 02/10' &&
+        (await pagina.$eval('.an-cartao[aria-current="true"]', (c) => c.classList.contains('an-pendente'))),
+      'lembrete para daqui 2 dias: a anotação fica amarela'
+    );
+    ok((await pagina.$$eval('.an-link-externo', (l) => l.map((a) => a.href))).join() === 'https://hub.xpi.com.br/relatorios?conta=1234567', 'o link http vira botão; o javascript: não');
+    ok((await pagina.evaluate(() => window.__xss)) === undefined && (await pagina.$$eval('.an-lista img', (l) => l.length)) === 0, 'título com <img onerror> fica texto na lista');
+    await pagina.setInputFiles('[data-an="arquivo"]', print);
+    await pagina.waitForSelector('.an-miniatura img[src^="blob:"]');
+    ok(true, 'o print anexado aparece em miniatura');
+
+    // Lembrete para hoje às 10:30, e a pessoa vai para o Ordens.
+    await pagina.fill('[data-campo="data"]', '2026-09-30');
+    await pagina.dispatchEvent('[data-campo="data"]', 'change');
+    await pagina.fill('[data-campo="hora"]', '10:30');
+    await pagina.dispatchEvent('[data-campo="hora"]', 'change');
+    ok((await pagina.textContent('.aba-contador')) === '1' && !(await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'lembrete para hoje: contador âmbar na aba');
+    await pagina.keyboard.press('Alt+1');
+    await contexto.clock.fastForward('26:00');
+    await pagina.waitForSelector('.an-alerta', { timeout: 5000 }).catch(() => null);
+    ok(Boolean(await pagina.$('.an-alerta')), 'no Ordens, quando a hora chega, o alerta do lembrete aparece');
+    ok((await pagina.title()).startsWith('(1) ') && (await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'o título da página e o contador da aba ficam em alerta');
+    await pagina.click('.an-alerta [data-alerta="abrir"]');
+    await pagina.waitForSelector('.an-editor');
+    ok(await pagina.$eval('.an-cartao[aria-current="true"]', (c) => c.classList.contains('an-vencida')), 'Abrir leva à anotação, vermelha');
+
+    await pagina.reload();
+    await pagina.waitForSelector('.an-editor');
+    ok((await pagina.inputValue('[data-campo="titulo"]')).startsWith('Estorno do dia 25') && (await pagina.$$eval('.an-miniatura', (l) => l.length)) === 1, 'depois de recarregar, a anotação e o print continuam lá');
+    ok(!(await pagina.$('.an-alerta')), 'o alerta já visto não volta ao recarregar');
+
+    await pagina.click('[data-acao="resolver"]');
+    // O contador é do vigia, que relê depois que a gravação termina: espera por ele.
+    const contadorSumiu = await pagina.waitForFunction(() => document.querySelector('.aba-contador').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+    ok((await pagina.textContent('[data-filtro="resolvidas"] span')) === '1' && contadorSumiu, 'Resolvido: vai para "Resolvidas" e o contador some');
+
+    const [download] = await Promise.all([pagina.waitForEvent('download'), pagina.click('[data-an="exportar"]')]);
+    const backup = JSON.parse(readFileSync(await download.path(), 'utf8'));
+    ok(backup.formato === 'mesa-xp-anotacoes' && backup.notas.length === 1 && backup.anexos.length === 1, 'o backup leva a anotação e o print');
+
+    ok(rede.length === 0, `as anotações não fazem requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);
+    ok(await semRolagemLateral(pagina), 'sem rolagem lateral');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }

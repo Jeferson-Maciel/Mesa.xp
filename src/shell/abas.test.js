@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { ABAS, ABA_PADRAO, abaDoAtalho, abaDoHash } from './abas.js';
 
 describe('abaDoHash', () => {
-  it('reconhece as quatro rotas', () => {
+  it('reconhece as cinco rotas', () => {
     expect(abaDoHash('#ordens')).toBe('ordens');
     expect(abaDoHash('#rendafixa')).toBe('rendafixa');
     expect(abaDoHash('#calendario')).toBe('calendario');
     expect(abaDoHash('#operacional')).toBe('operacional');
+    expect(abaDoHash('#anotacoes')).toBe('anotacoes');
+    expect(abaDoHash('#anotacoes/nota/abc')).toBe('anotacoes');
   });
 
   // O link de um post da base leva à aba Operacional, não cai no Ordens.
@@ -37,12 +39,13 @@ describe('abaDoHash', () => {
 describe('abaDoAtalho', () => {
   const tecla = (code, extra = {}) => ({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, code, ...extra });
 
-  it('Alt+1 a Alt+4 levam às abas na ordem da barra', () => {
+  it('Alt+1 a Alt+5 levam às abas na ordem da barra', () => {
     expect(abaDoAtalho(tecla('Digit1'))).toBe(ABAS[0]);
     expect(abaDoAtalho(tecla('Digit2'))).toBe(ABAS[1]);
     expect(abaDoAtalho(tecla('Digit3'))).toBe(ABAS[2]);
     expect(abaDoAtalho(tecla('Digit4'))).toBe(ABAS[3]);
-    expect(ABAS).toEqual(['ordens', 'rendafixa', 'calendario', 'operacional']);
+    expect(abaDoAtalho(tecla('Digit5'))).toBe(ABAS[4]);
+    expect(ABAS).toEqual(['ordens', 'rendafixa', 'calendario', 'operacional', 'anotacoes']);
   });
 
   it('aceita o teclado numérico', () => {
@@ -61,7 +64,7 @@ describe('abaDoAtalho', () => {
   });
 
   it('ignora números sem aba e outras teclas', () => {
-    expect(abaDoAtalho(tecla('Digit5'))).toBeNull();
+    expect(abaDoAtalho(tecla('Digit6'))).toBeNull();
     expect(abaDoAtalho(tecla('KeyH'))).toBeNull();
     expect(abaDoAtalho(tecla(undefined))).toBeNull();
   });

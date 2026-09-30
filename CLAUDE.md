@@ -10,9 +10,11 @@ XP usarem o dia inteiro:
 - **Calendário** — o calendário semanal de presença da equipe, gravado no Supabase.
 - **Operacional** — a base de conhecimento da mesa (a cópia do Slab): modelos de e-mail, disparos,
   passo a passo e regras, compartilhada e editável, no Supabase.
+- **Anotações** — o bloco de notas de cada um, com prints, links, etiquetas e lembretes que ficam
+  amarelos até o dia e vermelhos quando chega a hora, com alerta na tela. Fica no navegador.
 
 Nasceu da fusão de três repositórios — `Ordens.XP` (a base), `RendaFixaDisparo` e
-`Calendario.Mesa` — sem funcionalidade nova; o Operacional veio depois, a pedido da mesa. Sugestões
+`Calendario.Mesa` — sem funcionalidade nova; o Operacional e as Anotações vieram depois, a pedido da mesa. Sugestões
 vão para [`docs/ROADMAP.md`](docs/ROADMAP.md), não para o código.
 
 É uma ferramenta de expediente, aberta o dia todo: alinhada, objetiva e sem enfeite. Isso vale para
@@ -21,15 +23,16 @@ a tela e para o código.
 ## A casca
 
 ```
-index.html            a casca: topo com as abas e as quatro seções (a marcação do Ordens é estática)
+index.html            a casca: topo com as abas e as cinco seções (a marcação do Ordens é estática)
 src/main.js           liga tema, abas e o início de cada ferramenta
-src/shell/abas.js     rota por hash e atalhos Alt+1/2/3/4
+src/shell/abas.js     rota por hash e atalhos Alt+1 a Alt+5
 src/ui/               o que as abas dividem: tema, avisos de tela, escape de HTML, tokens e componentes
 src/dados/            a conexão única com o Supabase, a configuração e os erros dos repositórios
 src/modulos/ordens/       Assistente de Ordens
 src/modulos/rendafixa/    RendaFixa Pro
 src/modulos/calendario/   Calendário de presença
 src/modulos/operacional/  base de conhecimento (a cópia do Slab)
+src/modulos/anotacoes/    anotações de cada um, com lembretes (no navegador)
 src/vendor/           SheetJS 0.20.1 vendorizado, com a licença
 supabase/schema.sql   o banco do Calendário
 supabase/operacional.sql  o banco do Operacional (gerado: npm run sql:operacional)
@@ -37,21 +40,22 @@ docs/                 formatos de saída do Ordens e o roadmap
 scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda Fixa), verificar no navegador
 ```
 
-- **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`, `#operacional`; hash vazio ou
+- **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
   desconhecido abre o Ordens. A aba é o primeiro trecho do hash, e o resto é do módulo:
   `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no Netlify e aberto do disco (`file://`).
-- **Alt+1/2/3/4** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
+- **Alt+1 a Alt+5** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
   aba anterior. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
-- **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras três só na primeira
+- **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras quatro só na primeira
   vez que a aba abre. O código já está no arquivo (não há `import()` dinâmico) — o que espera é a
-  inicialização, e é nela que Calendário e Operacional conectam ao banco.
+  inicialização, e é nela que Calendário e Operacional conectam ao banco. A exceção é o vigia dos
+  lembretes das Anotações, que começa com a página (ver Anotações).
 - **Cada módulo sabe se está à vista pelo `hidden` da própria seção.** Os atalhos de teclado e o
   arrastar-e-soltar de um módulo só valem com a aba dele aberta: Ctrl+Enter na aba Renda Fixa não
   analisa o Ordens, e "m" na aba Ordens não troca o mercado do Renda Fixa. Ao trocar de aba, um
   foco deixado numa seção escondida é solto.
 - **Uma ferramenta que falha ao iniciar não derruba as outras**: o erro aparece no lugar dela.
-- IDs: o Ordens usa os seus de sempre (`entrada`, `solicitacoes`…); Renda Fixa e Calendário não
-  usam `id`, só `data-rf="…"` e `data-cal="…"` consultados dentro da própria seção.
+- IDs: o Ordens usa os seus de sempre (`entrada`, `solicitacoes`…); os outros módulos não usam
+  `id`, só `data-rf`, `data-cal`, `data-op` e `data-an` consultados dentro da própria seção.
 
 Um módulo exporta `iniciarX(secao)` e não conhece os outros. O que dois módulos usam mora em
 `src/ui/`; o que um usa só fica nele.
@@ -65,19 +69,19 @@ drive — a tela aparece e nada funciona. Por isso:
 
 - o plugin `arquivoUnico` do `vite.config.js` embute tudo e **falha o build** se sobrar arquivo;
 - `vite.config.test.js` confere que a marcação não aponta para arquivo nenhum, que não sobrou
-  `import()` dinâmico e que a casca e as quatro ferramentas estão embutidas;
+  `import()` dinâmico e que a casca e as cinco ferramentas estão embutidas;
 - proibido: recurso externo (Google Fonts, CDN), `import()` dinâmico, `fetch` de arquivo local e
   service worker.
 
-**Ordens e Renda Fixa funcionam offline**, abertos do disco. **Calendário e Operacional exigem
-rede**: sem conexão mostram o erro na tela, e as outras abas seguem funcionando.
+**Ordens, Renda Fixa e Anotações funcionam offline**, abertos do disco. **Calendário e Operacional
+exigem rede**: sem conexão mostram o erro na tela, e as outras abas seguem funcionando.
 
 **Dependências de runtime:** uma só, `@supabase/supabase-js`, empacotada no build e usada por
 Calendário e Operacional, por uma conexão única (`src/dados/banco.js`): o primeiro que abre cria o
 cliente, o segundo reaproveita — um cliente por módulo abriria duas conexões do Realtime. O SheetJS não é dependência npm (ver Renda Fixa). Vite e Vitest são ferramentas de
 desenvolvimento. O Netlify roda Node 22 (`netlify.toml`): supabase-js e Vitest 5 exigem Node 22+.
 
-`dist/index.html` fica em torno de 1,3 MB, quase todo do SheetJS.
+`dist/index.html` fica em torno de 1,4 MB, quase todo do SheetJS.
 
 ## Sistema visual
 
@@ -111,7 +115,8 @@ A ferramenta fica aberta o dia inteiro, e isso governa a paleta:
 - **Saturação baixa no escuro.** Cor saturada sobre fundo escuro vibra na retina. Os tons do modo
   escuro são suavizados, não os do claro reaproveitados.
 - **Uma cor por aba — a pedra dela.** Safira no Ordens, água-marinha no Renda Fixa, ametista no
-  Calendário, turmalina no Operacional; o ouro é a marca (o selo XP). A pedra fica em `--acento`
+  Calendário, turmalina no Operacional, prata nas Anotações (Argentum; neutra de propósito, para o
+  amarelo e o vermelho dos lembretes falarem); o ouro é a marca (o selo XP). A pedra fica em `--acento`
   (com `--acento-fundo`, `--acento-borda`, `--acento-sombra` e `--foco` derivados no mesmo
   elemento) e aparece na aba ativa, na ação principal (`.btn-primario`), no foco, no traço dos
   títulos de painel e no brilho do fundo. É ela que tira a tela do monocromático sem virar enfeite:
@@ -685,11 +690,96 @@ Fora desta versão, e registrados no roadmap: anexos (foto, áudio, vídeo), ras
 A base exige rede, como o Calendário: sem conexão o erro aparece na tela, e nada cai calado no
 modo local.
 
+## Anotações
+
+O bloco de notas de cada um, com lembretes. Código em `src/modulos/anotacoes/`. Entrou em
+30/09/2026, a pedido da mesa: o operador anotava no Bloco de Notas do Windows ("estorno do dia 25"),
+prometia ajudar alguém e esquecia, e depois ia atrás dos prints e dos textos.
+
+Desenho tirado das ferramentas que já fazem isso: etiquetas, fixar e lembrete com hora do Google
+Keep; o print colado direto na nota, com data e hora no nome, do Sticky Notes; o vermelho do que
+venceu, do Todoist.
+
+### Onde ficam: no navegador de cada um
+
+**As anotações ficam no IndexedDB do navegador, não no Supabase.** É o que faz "cada um ter o seu"
+sem login: o banco da mesa ainda libera leitura para quem tem a chave anon, que é pública, e uma
+anotação com o print de um estorno ou a conta de um cliente não pode ficar legível para qualquer um
+com o link. Consequências, todas explicadas na tela:
+
+- ninguém mais vê; também não acompanha a pessoa para outro computador. O **backup** (Exportar /
+  Importar, `backup.js`) leva — um .json com as anotações e os prints em base64; importar junta,
+  sem duplicar, e não troca uma anotação por uma versão mais velha dela;
+- a versão do Netlify e a aberta do disco (`file://`) são endereços diferentes para o navegador,
+  cada uma com as suas anotações;
+- quem limpa os dados do navegador perde as anotações. No Netlify (HTTPS) a primeira gravação pede
+  `navigator.storage.persist()`, que protege os dados da limpeza automática por falta de espaço.
+
+Quando a Mesa XP tiver login (fase 2), um adaptador do Supabase com política por usuário cumpre o
+mesmo contrato (`repositorio.js`) e as anotações passam a acompanhar a pessoa.
+
+### Os lembretes
+
+Um lembrete é `{ data: 'YYYY-MM-DD', hora: 'HH:MM' | null }`, no fuso local — nunca `toISOString()`
+(`lembretes.js`, mesma regra do Calendário). O estado da anotação sai dele:
+
+- **pendente** — o dia ainda não chegou: **amarelo**;
+- **hoje** — é hoje, antes da hora marcada: amarelo mais forte;
+- **vencida** — chegou o dia (lembrete sem hora vence à meia-noite: o dia inteiro já é "o dia") ou
+  a hora: **vermelho**;
+- **resolvida** — sai do caminho (filtro "Resolvidas"), com ou sem lembrete.
+
+Os atalhos (Daqui 1 hora, Hoje às 17:00, Amanhã às 09:00, Em 2 dias, Segunda às 09:00) marcam o
+lembrete e, depois que ele vence, viram "Adiar".
+
+### O vigia (`vigia.js`)
+
+A aba Anotações inicia na primeira visita, como as outras; **o vigia dos lembretes começa com a
+página** (main.js), porque quem passa o dia no Ordens também tem de ser avisado. Ele:
+
+- põe o contador na aba Anotações (âmbar com os de hoje, vermelho com os vencidos) e "(n)" no título
+  da página, que aparece na aba do navegador;
+- mostra o **alerta na tela** quando um lembrete vence, em qualquer aba (Abrir, +1 hora, Amanhã 9h,
+  Resolvido, ×), com um som curto que se desliga na barra da aba;
+- dispara o **alerta do Windows** (Notification) se a pessoa ligou. O navegador só pergunta a
+  partir de um clique, e pode recusar numa página aberta do disco: o alerta na tela vale sempre.
+
+Um alerta visto ou fechado não volta (`lembrete.avisado`); a anotação continua vermelha até ser
+resolvida ou adiada, e o lembrete novo avisa de novo. Aba do navegador escondida há mais de 5
+minutos: o Chrome só roda timers uma vez por minuto, e o alerta pode chegar até um minuto depois.
+Ao voltar para a aba, o vigia confere na hora. Com o navegador fechado não há alerta — seria
+preciso um service worker, que o arquivo único não permite.
+
+Vigia e aba conversam por `eventos.js`: quem grava avisa, com a origem; os outros releem. Entre abas
+do navegador, BroadcastChannel.
+
+### A tela
+
+Lista à esquerda (busca, filtros por estado com contagem, etiquetas), anotação aberta à direita;
+no celular, uma de cada vez. `#anotacoes/nota/<id>` abre a anotação. N cria, / busca.
+
+- **Salva sozinho** (450 ms depois da última tecla, e ao sair do campo, da aba ou da página). Toda
+  gravação passa por uma fila: um print que entra enquanto o texto é salvo não pode ser apagado pela
+  gravação do texto, que leu a anotação antes dele.
+- **Ctrl+V com uma imagem** anexa o print (nome "print AAAA-MM-DD HHhMM.png"); arrastar arquivos
+  também; o arquivo fica como Blob no IndexedDB, até 15 MB cada. No visor, "Copiar imagem" põe o
+  print de volta na área de transferência (convertido para PNG, o único tipo que ela aceita).
+- **Links** http(s) do texto viram botões que abrem em outra aba; `javascript:` e afins, nunca.
+- Anotação nova abandonada sem nada escrito some sozinha.
+- Tudo que é texto passa por `esc`: anotação é texto livre, às vezes colado de um e-mail.
+
+### Mapa
+
+`lembretes.js` e `notas.js` (funções puras: estado, rótulo, atalhos, etiquetas, links, ordem,
+filtros, busca) · `repositorio.js` (contrato e validação) · `adaptadores/indexeddb.js` e
+`adaptadores/memoria.js` · `backup.js` · `eventos.js` · `banco.js` (um repositório para a página) ·
+`vigia.js` · `render.js` (HTML puro) · `index.js` (estado, eventos) · `anotacoes.css`.
+
 ---
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 655 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 726 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; a UI não é. Os 449 testes do Ordens original continuam aqui.
@@ -698,6 +788,9 @@ reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 - Dados: a configuração do banco e o Realtime, que só diz "ao vivo" depois do aviso do banco.
 - Operacional: a semente contra o Slab, o contrato do repositório nos dois adaptadores (inclusive o
   conflito de versão), render (escape, busca) e o SQL gerado em dia com a semente.
+- Anotações: estado e rótulo dos lembretes com data fixa, atalhos, etiquetas, links, ordem e
+  filtros; o contrato do repositório no IndexedDB (fake-indexeddb) e em memória, com anexos e o
+  backup de ida e volta; render (escape, só link http(s)).
 - Casca: rotas e atalhos das abas, CSS escopado, build de arquivo único.
 
 Trabalhe **test-first**: escreva o caso de negócio como teste em `*.test.js` ao lado do módulo,
@@ -719,11 +812,13 @@ Não declare pronto sem:
 
 1. `npm test` e `npm run build` passando.
 2. `npm run verificar` (`scripts/verificar-navegador.mjs`; na primeira vez,
-   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as quatro
+   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as cinco
    abas, os dois temas, a largura de ~360px sem rolagem horizontal, o console, o CSS que vaza entre
    abas, o texto do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
    `<img onerror>` como texto) e o Operacional em modo local (copiar e colar igual ao Slab, editar,
-   criar, excluir, buscar e o conflito de duas abas). Não grava no banco.
+   criar, excluir, buscar e o conflito de duas abas) e as Anotações com o relógio controlado (o
+   lembrete amarelo, a hora chegando com a pessoa no Ordens — alerta, contador, título —, o print,
+   recarregar sem perder nada e o backup). Não grava no banco.
 3. Mudança no Calendário ou no Operacional que toca o banco: `npm run verificar:supabase`. **Grava
    no banco da mesa**: rode fora do expediente.
    - `scripts/verificar-supabase.mjs` (Calendário) — leitura, gravação, a janela reaberta logo

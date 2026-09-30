@@ -36,7 +36,9 @@ const seletores = (css) => {
 const MODULOS = [
   { arquivo: '../modulos/rendafixa/rendafixa.css', raizes: ['.rf', '#modulo-rendafixa'] },
   { arquivo: '../modulos/calendario/calendario.css', raizes: ['.cal', '#modulo-calendario'] },
-  { arquivo: '../modulos/operacional/operacional.css', raizes: ['.op', '#modulo-operacional'] }
+  { arquivo: '../modulos/operacional/operacional.css', raizes: ['.op', '#modulo-operacional'] },
+  // Os alertas de lembrete aparecem em qualquer aba, fora da seção: têm raiz própria.
+  { arquivo: '../modulos/anotacoes/anotacoes.css', raizes: ['.an', '#modulo-anotacoes', '.an-alertas'] }
 ];
 
 describe('CSS escopado dos módulos novos', () => {

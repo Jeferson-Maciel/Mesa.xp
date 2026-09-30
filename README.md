@@ -317,7 +317,7 @@ Projetos do plano gratuito do Supabase são **pausados** depois de alguns dias s
 deixa de responder. Se o Calendário mostrar “Sem conexão com o banco de presença” com a internet
 funcionando, confira no painel do Supabase se o projeto está pausado e retome-o. Foi o que aconteceu
 com o projeto do Calendário antigo: desde 30/09/2026 a Mesa XP usa outro projeto, e os registros de
-presença do antigo não vieram (ver o [roadmap](docs/ROADMAP.md)).
+presença do antigo ficaram para trás, e o Calendário começou do zero.
 
 ### Segurança — pendência
 

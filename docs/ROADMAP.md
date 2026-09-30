@@ -8,12 +8,10 @@ para cá em vez de entrar no código.
 
 ### Antes de distribuir o link
 
-1. **Os registros de presença do Calendário antigo não vieram.** O projeto dele
-   (`ekughbuuvjoojgfgbqbz`) não resolve no DNS desde 29/09/2026 e não está na conta Supabase da mesa.
-   Em 30/09/2026 a Mesa XP passou para o projeto `rtvtgulivtkpfprcfpie`, que começou vazio no
-   Calendário. Se o antigo estiver em outra conta, ou puder ser retomado, os dados passam tabela por
-   tabela (mesmos nomes); senão, a equipe cadastra os colaboradores de novo. O Calendário antigo, na
-   Vercel, continua apontando para o projeto que não responde.
+1. ~~**Os registros de presença do Calendário antigo não vieram.**~~ Decidido em 30/09/2026: o
+   Calendário começa do zero no projeto `rtvtgulivtkpfprcfpie`, e os dados do projeto antigo
+   (`ekughbuuvjoojgfgbqbz`, fora do ar e fora da conta da mesa) não serão migrados. A equipe cadastra
+   os colaboradores de novo.
 2. **O projeto novo é do plano gratuito, que pausa depois de alguns dias sem uso.** Usado todo dia
    pela mesa, não deve pausar; num recesso, pode. Se a mesa depende disso, avaliar um plano que não
    pause. (O teste contra o banco real, pendente na fusão, foi feito em 30/09/2026:

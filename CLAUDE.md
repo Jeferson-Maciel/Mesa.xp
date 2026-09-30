@@ -534,9 +534,8 @@ janela do dia reaberta logo depois de salvar vinha sem os horários.
 
 **O projeto mudou em 30/09/2026.** O antigo (`ekughbuuvjoojgfgbqbz`, o do Calendário na Vercel)
 não resolvia no DNS desde 29/09 e não está na conta Supabase da mesa; os registros de presença dele
-não vieram. O projeto `rtvtgulivtkpfprcfpie` recebeu `supabase/schema.sql` e
-`supabase/operacional.sql` e começou vazio no Calendário. Se o projeto antigo reaparecer (outra
-conta, ou retomado no painel), os dados passam tabela por tabela, com os mesmos nomes.
+não vieram, e a mesa decidiu não migrá-los: o Calendário começa do zero. O projeto
+`rtvtgulivtkpfprcfpie` recebeu `supabase/schema.sql` e `supabase/operacional.sql`.
 
 ### Tela
 

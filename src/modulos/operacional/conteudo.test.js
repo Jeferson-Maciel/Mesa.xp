@@ -10,8 +10,8 @@ import { EQUIPE, POSTS, TOPICOS, slugDe } from './conteudo.js';
 const titulosDe = (topico) => POSTS.filter((p) => p.topico === topico).map((p) => p.titulo);
 
 describe('semente da base Operacional (cópia do Slab)', () => {
-  it('é da equipe do Slab da mesa', () => {
-    expect(EQUIPE).toBe("Gregori's Team");
+  it('mostra o nome que a mesa escolheu no alto da barra lateral', () => {
+    expect(EQUIPE).toBe('Operacional Mesa');
   });
 
   it('tem a raiz e os cinco tópicos, na ordem do Slab', () => {

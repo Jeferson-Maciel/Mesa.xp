@@ -618,7 +618,8 @@ de outro agente (guardada na branch `antigravity/operacional`, não revisada).
 
 ### O conteúdo
 
-`conteudo.js` é a cópia do Slab da equipe ("Gregori's Team"): a raiz **Mesa de Operações
+`conteudo.js` é a cópia do Slab da equipe (lá "Gregori's Team"; na barra lateral, a pedido da mesa,
+**Operacional Mesa**): a raiz **Mesa de Operações
 Argentum** e cinco tópicos (Padrões de Email, Disparos, Passo a Passo, Padrões de Fixing, Execução
 de Ordens), com os 34 posts na ordem do Slab. É a **semente**: o banco nasce dela
 (`supabase/operacional.sql`) e o modo local também. Depois de semeado, o banco é a fonte — o que a

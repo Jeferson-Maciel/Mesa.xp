@@ -13,7 +13,9 @@
  * os mostra como pendentes, e não se inventa texto para eles.
  */
 
-export const EQUIPE = "Gregori's Team";
+// O nome que aparece no alto da barra lateral. No Slab era "Gregori's Team"; a mesa pediu
+// "Operacional Mesa" em 30/09/2026.
+export const EQUIPE = 'Operacional Mesa';
 
 /** Tópicos na ordem do Slab. `pai` é o slug do tópico acima; o primeiro é a raiz. */
 export const TOPICOS = [

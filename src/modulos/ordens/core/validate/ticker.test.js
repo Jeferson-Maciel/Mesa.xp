@@ -117,3 +117,11 @@ describe('tickers da prateleira da XP', () => {
     expect(analisarTicker('ZZZZ99').situacao).toBe('desconhecido');
   });
 });
+
+describe('erro de digitação no ticker de um fundo da prateleira', () => {
+  it('sugere o ticker do fundo', () => {
+    const d = analisarTicker('VGRP11');
+    expect(d.situacao).toBe('parecido');
+    expect(d.sugestoes).toContain('VGPR11');
+  });
+});

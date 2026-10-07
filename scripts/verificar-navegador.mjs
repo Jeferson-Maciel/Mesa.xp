@@ -15,6 +15,9 @@
  *     <img onerror> aparece como texto, a janela do dia, o histórico e a exclusão em cascata;
  *   - Calendário no build normal: ou conecta ("ao vivo"), ou mostra o erro na tela — nunca cai calado
  *     no modo local;
+ *   - Ordens, o robô do Hub: o script do Tampermonkey nas duas abas, com as funções GM_* simuladas
+ *     entre abas, um Hub falso e a Mesa do disco — colar o pedido busca a cotação, o "Atualizar
+ *     cotações", a aba do Hub fechada (o robô abre outra) e a Mesa sem o robô;
  *   - Anotações, com o relógio controlado: lembrete amarelo, a hora chegando com a pessoa em outra
  *     aba (alerta, contador vermelho, título), print anexado, recarregar sem perder nada, marcação
  *     como texto, só link http(s), e o backup.
@@ -25,7 +28,7 @@
  * Não grava nada no banco. O teste contra o Supabase real é o scripts/verificar-supabase.mjs.
  */
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -160,6 +163,47 @@ try {
     ok(await pagina.$eval('[data-mercado="primario"]', (b) => b.classList.contains('ativo')), '"m" na aba Ordens não troca o mercado do Renda Fixa');
     await pagina.keyboard.press('m');
     ok(await pagina.$eval('[data-mercado="secundario"]', (b) => b.classList.contains('ativo')), '"m" logo depois de Alt+2 já vale na Renda Fixa');
+    await contexto.close();
+  }
+
+  titulo('Ordens: Abrir no Outlook');
+  {
+    const { pagina, contexto, erros } = await abrir();
+    // A janela do Outlook não abre aqui: o endereço e o jeito de abrir são anotados no lugar dela.
+    await pagina.evaluate(() => {
+      window.__abertas = [];
+      window.open = (endereco, _alvo, recursos) => (window.__abertas.push(endereco), (window.__recursos = recursos), {});
+    });
+    await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
+    await pagina.focus('#entrada');
+    await pagina.keyboard.press('Control+Enter');
+    await pagina.check('#formatos input[value="email"]');
+    await pagina.check('#formatos input[value="auditoria"]');
+    const abertas = () => pagina.evaluate(() => window.__abertas);
+    const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+
+    // A pessoa copiou o e-mail do cliente para o campo Para: o texto que vai no endereço não o apaga.
+    await pagina.evaluate(() => navigator.clipboard.writeText('cliente@exemplo.com'));
+    await pagina.click('.saida[data-formato="email"] [data-outlook]');
+    const [endereco] = await abertas();
+    const url = new URL(endereco);
+    ok(
+      url.origin + url.pathname === 'https://outlook.office.com/mail/deeplink/compose' && url.searchParams.get('subject') === 'Confirmação de ordem',
+      'Abrir no Outlook abre um e-mail novo no Outlook na web com o assunto "Confirmação de ordem"'
+    );
+    ok((await pagina.evaluate(() => window.__recursos)).startsWith('popup,'), 'numa janela só do e-mail, não numa aba nova');
+    const texto = await pagina.textContent('.saida[data-formato="email"] pre');
+    ok(url.searchParams.get('body') === texto.replace(/\n/g, '\r\n'), 'o corpo é o texto do e-mail à vista, com as quebras de linha');
+    ok((await areaDeTransferencia()) === 'cliente@exemplo.com', 'o texto que vai no endereço não apaga a área de transferência');
+
+    // A tabela não cabe no endereço: abre só com o assunto, e o e-mail vai copiado para colar.
+    await pagina.click('.saida[data-formato="auditoria"] [data-outlook]');
+    // A cópia vem antes da janela, e é assíncrona.
+    await pagina.waitForFunction(() => window.__abertas.length === 2, null, { timeout: 5000 });
+    const segunda = new URL((await abertas())[1]);
+    ok(segunda.searchParams.get('subject') === 'Confirmação de ordem' && !segunda.searchParams.has('body'), 'o e-mail em tabela abre só com o assunto');
+    ok((await areaDeTransferencia()).includes('PETR4\tC\tA mercado\t100'), 'e a tabela vai copiada, para colar no corpo');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }
 
@@ -532,6 +576,398 @@ try {
     ok(await semRolagemLateral(pagina), 'sem rolagem lateral');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
+  }
+
+  /* ── Ordens: o robô do Hub ───────────────────────────────────────────────────────── */
+  titulo('Ordens: o robô do Hub (Tampermonkey simulado, Hub falso)');
+  {
+    // O robô só reconhece a Mesa aberta do disco em .../mesa-xp/dist/index.html.
+    const mesaDoDisco = join(temporario, 'mesa-xp', 'dist', 'index.html');
+    mkdirSync(join(temporario, 'mesa-xp', 'dist'), { recursive: true });
+    copyFileSync(distLocal, mesaDoDisco);
+    const MESA = pathToFileURL(mesaDoDisco).href;
+    const PRATELEIRA = 'https://hub.xpi.com.br/new/fundos-de-investimento#/secundario/prateleira';
+    const API = 'https://api-advisor.xpi.com.br/investment-funds/yield-rede';
+    const LISTA = `${API}/v3/investment-funds-secondary`;
+    const PRE_CHECK = `${API}/v1/order-secondary/pre-check`;
+    const VGPR = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    const IMOV = '22222222-3333-4444-8555-666666666666';
+    const TERRAX = '11111111-2222-4333-8444-555555555555';
+    // O preço exato de cada fundo, a menos de meia casa do arredondado da prateleira.
+    const PRECOS = { [VGPR]: 7.996321, [IMOV]: 8.9961, [TERRAX]: 98.9961 };
+    const robo = readFileSync(join(raiz, 'src/modulos/ordens/platform/robo-hub.user.js'), 'utf8');
+
+    // A resposta da prateleira e a do pre-check, com números inventados — o repositório é público.
+    const fundo = (id, fundName, unityPrice, desagio, minimo) => ({
+      id,
+      fundName,
+      quotaDate: '2026-10-01T00:00:00',
+      unityPrice,
+      secondaryPurchaseDiscount: desagio,
+      treasuryMinimumPurchaseDiscount: minimo,
+      percentageComission: '1,50',
+      stockOfTreasuryQuotas: '500.000,00',
+      minimalInitialInvestment: '10,00'
+    });
+    const resposta = {
+      isMarketOpen: true,
+      data: [
+        fundo(VGPR, 'VGPR11 - Valora Imobiliário Multiestratégia Premium', '8,00', '6,00', '5,50'),
+        fundo(IMOV, 'IMOV11 - Navi Hedge Fund', '9,00', '8,75', '8,25'),
+        fundo(TERRAX, 'Riza Terrax Vintage FIAgro RL', '99,00', '2,00', '1,75')
+      ]
+    };
+    const preCheck = (id) => ({
+      isSuccess: true,
+      fund: { id, quotaValue: PRECOS[id], quotaDate: '2026-10-01T00:00:00' },
+      customer: { name: 'CLIENTE QUE NÃO PODE SAIR DO HUB', availableGuarantee: 123456.78 }
+    });
+
+    // A ficha do cliente na Posição Consolidada (customer-info), inventada, no formato do Hub de
+    // verdade: os campos dentro de `output` (conferido em 07/10; a 1.3.0 os procurava na raiz e falhou
+    // no Hub). Do que vem nela, só o nome, o e-mail e o assessor podem sair do Hub. A conta 2718281
+    // responde num formato que o robô não conhece.
+    const FICHA_API = 'https://api-advisor.xpi.com.br/advisor-customer-consolidated-portfolio/v1/api';
+    const CLIENTES = {
+      1234567: { name: 'FULANA DE TAL DA SILVA', email: 'FULANA.TAL@EXEMPLO.COM', advisorCode: 'A12345', advisorName: 'Beltrano Souza' },
+      7654321: { name: 'CICLANO DOS SANTOS', email: 'CICLANO@EXEMPLO.COM', advisorCode: 'A99999', advisorName: 'Sem Planilha' },
+      3141592: { name: 'MARIA-CLARA D\'AVILA', email: 'MARIA@EXEMPLO.COM', advisorCode: 'A12345', advisorName: 'Beltrano Souza' }
+    };
+    const ficha = (conta) => {
+      const campos = { name: 'NOME QUE NÃO PODE SAIR', ...CLIENTES[conta], xpAccount: Number(conta), cpf: '99988877766', phoneNumber: 'TELEFONE QUE NÃO PODE SAIR' };
+      return conta === '2718281' ? { resultado: campos } : { output: campos };
+    };
+    // Com true, a Posição Consolidada só pede a ficha ao abrir, não ao trocar de cliente: o caso em que
+    // o robô recarrega a página.
+    let fichaSoAoAbrir = false;
+    const ASSESSORES_CSV = [
+      'Status,Nome,Email,Líder,Time,Cluster,Código,Código em uso,Tipo Assessor,Região,Nome',
+      'TRUE,Beltrano Souza,beltrano.souza@exemplo.com.br,,,,A12345,A12345,Assessor Jr,,Beltrano Souza',
+      'TRUE,Outra Pessoa,-,,,,A23456,A23456,,,Outra Pessoa'
+    ].join('\n');
+
+    // O Tampermonkey de mentira: um armazenamento só para as abas do contexto, com aviso de mudança.
+    const GM = `(() => {
+      const cache = {};
+      let mesclado = false;
+      // Como no Tampermonkey de verdade, o que já está guardado vale desde o primeiro instante da aba.
+      const dados = () => {
+        if (!mesclado) {
+          mesclado = true;
+          const pedido = new XMLHttpRequest();
+          pedido.open('GET', 'https://gm.teste/loja', false);
+          try { pedido.send(); Object.assign(cache, JSON.parse(pedido.responseText)); } catch {}
+        }
+        return cache;
+      };
+      const ouvintes = {};
+      window.__gmMudou = (k, v) => { const antigo = dados()[k]; cache[k] = v; (ouvintes[k] || []).forEach((fn) => fn(k, antigo, v, true)); };
+      window.GM_getValue = (k, padrao) => (k in dados() && cache[k] !== null ? JSON.parse(JSON.stringify(cache[k])) : padrao);
+      window.GM_setValue = (k, v) => { dados(); cache[k] = v; window.__gm('set', k, v); };
+      window.GM_addValueChangeListener = (k, fn) => { (ouvintes[k] ||= []).push(fn); };
+      window.GM_openInTab = (url) => { window.__gm('abrir', url); };
+      window.unsafeWindow = window;
+      // O Hub como o Chrome o trata em segundo plano: escondido e sem quadro de desenho.
+      if (location.hostname === 'hub.xpi.com.br') {
+        Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => 'hidden' });
+        Object.defineProperty(Document.prototype, 'hidden', { configurable: true, get: () => true });
+        window.requestAnimationFrame = () => 0;
+      }
+    })();`;
+
+    const contexto = await navegador.newContext({
+      viewport: { width: 1400, height: 900 },
+      timezoneId: 'America/Sao_Paulo',
+      reducedMotion: 'reduce',
+      permissions: ['clipboard-read', 'clipboard-write']
+    });
+    const loja = {};
+    const pedidosAoHub = { lista: 0, preCheck: 0, ficha: 0 };
+    const novaAba = async (url) => {
+      const p = await contexto.newPage();
+      await p.addInitScript(`window.__gmFoto = ${JSON.stringify(loja)};`);
+      await p.goto(url).catch(() => {});
+      return p;
+    };
+    await contexto.exposeBinding('__gm', async (_origem, op, chave, valor) => {
+      if (op === 'set') {
+        loja[chave] = valor;
+        for (const p of contexto.pages()) p.evaluate(([k, v]) => window.__gmMudou?.(k, v), [chave, valor]).catch(() => {});
+      }
+      if (op === 'abrir') novaAba(chave);
+    });
+    await contexto.route('https://gm.teste/**', (r) =>
+      r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(loja) })
+    );
+    await contexto.addInitScript(GM);
+    await contexto.addInitScript(robo);
+    await contexto.route(`${API}/**`, (r) => {
+      const url = new URL(r.request().url());
+      const ehPreCheck = url.pathname.endsWith('/order-secondary/pre-check');
+      pedidosAoHub[ehPreCheck ? 'preCheck' : 'lista']++;
+      const corpo = ehPreCheck ? preCheck(url.searchParams.get('f')) : resposta;
+      r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(corpo) });
+    });
+    await contexto.route(`${FICHA_API}/**`, (r) => {
+      pedidosAoHub.ficha++;
+      const conta = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/customer-info$/)?.[1];
+      r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(ficha(conta)) });
+    });
+    // O Hub falso, como o de verdade:
+    //  - qualquer parâmetro no endereço trava o Mercado Secundário (sem botão, sem nada);
+    //  - a Prateleira, ao abrir, pede a lista sozinha, e o botão Atualizar aparece com ela;
+    //  - a boleta só carrega o cliente à vista, e depois de um quadro de desenho;
+    //  - com __semTrocaDireta, ir de uma boleta direto para outra não refaz o pre-check — o caso que
+    //    o robô contorna passando pela Prateleira.
+    //  - a Posição Consolidada pede a ficha do cliente do endereço (#/<conta em base64>) por XHR, ao
+    //    abrir e ao trocar de cliente — ou só ao abrir, com `fichaSoAoAbrir`.
+    // __rotas guarda só o tipo de cada rota (boleta ou Prateleira), sem a conta.
+    await contexto.route('https://hub.xpi.com.br/**', (r) =>
+      r.fulfill({
+        contentType: 'text/html',
+        body: `<!doctype html><meta charset=utf-8><title>Hub</title><body>
+          <script>
+            if (location.pathname.startsWith('/new/posicao-consolidada')) {
+              const pedirFicha = () => {
+                const x = new XMLHttpRequest();
+                x.open('GET', '${FICHA_API}/customers/' + atob(location.hash.slice(2)) + '/customer-info');
+                x.send();
+              };
+              if (!${fichaSoAoAbrir}) addEventListener('hashchange', pedirFicha);
+              pedirFicha();
+            }
+            window.__rotas = [];
+            const atualizar = () => {
+              const b = document.createElement('soma-button');
+              b.setAttribute('aria-label', 'atualizar');
+              b.textContent = 'atualizar';
+              b.addEventListener('click', () => { window.__cliques = (window.__cliques || 0) + 1; fetch('${LISTA}'); });
+              document.body.append(b);
+            };
+            if (!location.search) {
+              if (location.hash.startsWith('#/secundario/prateleira')) fetch('${LISTA}').then(atualizar);
+              else atualizar();
+            }
+            let anterior = '';
+            const rota = () => {
+              const m = location.hash.match(/^#\\/secundario\\/comprar\\/([0-9a-f-]{36})\\/(\\d+)$/);
+              const deBoleta = anterior.startsWith('#/secundario/comprar/');
+              anterior = location.hash;
+              window.__rotas.push(m ? 'boleta' : 'prateleira');
+              if (m && document.visibilityState === 'visible' && !(window.__semTrocaDireta && deBoleta)) requestAnimationFrame(() => fetch('${PRE_CHECK}?f=' + m[1]));
+            };
+            addEventListener('hashchange', rota);
+            rota();
+          </script></body>`
+      })
+    );
+
+    const minhaAba = await novaAba(PRATELEIRA);
+    await minhaAba.waitForSelector('soma-button');
+    const mesa = await novaAba(MESA);
+    const erros = [];
+    mesa.on('pageerror', (e) => erros.push(String(e)));
+    const esperarTexto = (seletor, trecho, prazo = 20_000) =>
+      mesa.waitForFunction(([sel, t]) => document.querySelector(sel)?.textContent.includes(t), [seletor, trecho], { timeout: prazo });
+    const terminarBusca = () =>
+      mesa.waitForFunction(() => !document.querySelector('#robo-status').classList.contains('buscando'), null, { timeout: 40_000 });
+    const abaDoRobo = async () => {
+      for (const p of contexto.pages()) {
+        if ((await p.evaluate(() => window.name).catch(() => '')) === 'mesa-xp-robo') return p;
+      }
+      return null;
+    };
+
+    const PEDIDO = '1234567\nCompra\nVGPR11 R$ 10.000,00\nIMOV11 R$ 10.000,00\nRiza Terrax Vintage FIAgro RL R$ 15.000,00';
+    // O cliente chega da aba de clientes do robô ao mesmo tempo que os preços.
+    const esperarCliente = (trecho) =>
+      mesa.waitForFunction((t) => document.querySelector('.linha-cliente .cliente-nome')?.textContent === t, trecho, { timeout: 40_000 });
+    const colar = async () => {
+      await mesa.fill('#entrada', PEDIDO);
+      await mesa.focus('#entrada');
+      await mesa.keyboard.press('Control+Enter');
+      await mesa.waitForFunction(() => document.querySelector('.secundario-dados')?.textContent.includes('exato'), null, { timeout: 40_000 });
+      await terminarBusca();
+      await esperarCliente('Fulana de Tal da Silva');
+    };
+    const email = () => mesa.textContent('.saida[data-formato="email"] pre');
+    const abaDeClientes = async () => {
+      for (const p of contexto.pages()) {
+        if ((await p.evaluate(() => window.name).catch(() => '')) === 'mesa-xp-clientes') return p;
+      }
+      return null;
+    };
+    const MARCAS_DO_CLIENTE = ['1234567', '7654321', '3141592', '2718281', 'NÃO PODE SAIR', 'FULANA', 'fulana', 'CICLANO', 'MARIA', '99988877766', 'TELEFONE', btoa('1234567')];
+    const nadaDoCliente = () => {
+      const chaves = Object.keys(loja).filter((k) => MARCAS_DO_CLIENTE.some((t) => JSON.stringify(loja[k]).includes(t)));
+      return chaves.length === 0;
+    };
+
+    await esperarTexto('#robo-status', 'pronto');
+    ok(true, 'a Mesa acha o robô');
+
+    // A aba do robô abre junto com a Mesa, antes de qualquer pedido, e a Prateleira dela já traz a cotação.
+    await esperarTexto('#robo-status', 'aba 🤖 do Hub aberta');
+    await esperarTexto('#estoque-status', 'captura do Hub das');
+    ok(Boolean(await abaDoRobo()) && !(await abaDoRobo()).url().includes('?'), 'a Mesa abre a aba do robô assim que abre, sem parâmetro no endereço');
+    ok(pedidosAoHub.lista === 2 && (await (await abaDoRobo()).evaluate(() => window.__cliques ?? 0)) === 0, 'a Prateleira da aba nova traz a lista sozinha, sem clique');
+
+    // A prova de controle: numa aba do Hub comum, escondida, a boleta não carrega — como no Chrome.
+    await minhaAba.evaluate((v) => { location.hash = '#/secundario/comprar/' + v + '/1234567'; }, VGPR);
+    await new Promise((r) => setTimeout(r, 800));
+    ok(pedidosAoHub.preCheck === 0, 'numa aba escondida comum, a boleta não carrega o cliente (como no Chrome)');
+    await minhaAba.evaluate(() => { location.hash = '#/secundario/prateleira'; });
+
+    // A planilha dos assessores, como o .csv baixado da aba Contatos.
+    await mesa.setInputFiles('#arquivo-assessores', { name: 'Contatos.csv', mimeType: 'text/csv', buffer: Buffer.from(ASSESSORES_CSV) });
+    await esperarTexto('#assessores-status', '1 assessor · Contatos.csv');
+    ok(true, 'a planilha dos assessores carrega pelo .csv, só com quem tem e-mail');
+
+    await (await abaDoRobo()).evaluate(() => { window.__rotas = []; });
+    await colar();
+    const robo1 = await abaDoRobo();
+    ok((await minhaAba.evaluate(() => [window.__cliques ?? 0, location.hash])).join() === '0,#/secundario/prateleira', 'o robô nunca mexe na aba da pessoa');
+    ok(
+      pedidosAoHub.preCheck === 2 && pedidosAoHub.lista === 2,
+      'colar o pedido traz o preço exato dos 2 fundos em que ele muda as cotas — o Riza Terrax, que daria as mesmas, fica sem boleta —, e a cotação da abertura serve'
+    );
+    ok((await robo1.evaluate(() => window.__rotas.join())) === 'boleta,boleta,prateleira', 'o robô vai de uma boleta direto para a outra e volta à Prateleira uma vez só, no fim');
+    ok((await robo1.title()).startsWith('🤖'), 'a aba do robô diz no título que é dele');
+    ok(!JSON.stringify(loja).includes('NÃO PODE SAIR') && !JSON.stringify(loja).includes('1234567'), 'nada do cliente sai do Hub, e a conta não fica guardada');
+    await mesa.check('#formatos input[value="email"]');
+    // Com o PU da prateleira seriam 1.302 VGPR11 e 1.192 IMOV11; com o exato, 1.303 e 1.193.
+    ok(
+      (await email()).includes('Ativo: VGPR11;\nQuantidade: 1303;') && (await email()).includes('Ativo: IMOV11;\nQuantidade: 1193;'),
+      'o e-mail sai com as cotas do preço exato'
+    );
+    ok(!(await mesa.textContent('.secundario-fundo')).includes('≈'), 'com o preço exato, os valores saem sem o "≈"');
+
+    // O cliente: a ficha no Hub, numa aba de clientes do robô, e o assessor pela planilha.
+    const clientes1 = await abaDeClientes();
+    ok(
+      Boolean(clientes1) && clientes1 !== (await abaDoRobo()) && !clientes1.url().includes('?') && (await clientes1.title()).startsWith('🤖 Clientes'),
+      'o cliente vem de uma aba de clientes do robô, separada da Prateleira e sem parâmetro no endereço'
+    );
+    const linhaCliente = await mesa.textContent('.linha-cliente');
+    ok(
+      linhaCliente.includes('fulana.tal@exemplo.com') && linhaCliente.includes('Beltrano Souza') && linhaCliente.includes('A12345') && linhaCliente.includes('beltrano.souza@exemplo.com.br'),
+      'o cartão mostra o cliente, o e-mail dele e o assessor que vai em cópia, achado pelo código'
+    );
+    ok((await email()).startsWith('Prezado(a) Fulana de Tal da Silva,\n'), 'o e-mail sai com o nome completo do cliente, com as maiúsculas arrumadas');
+    ok(nadaDoCliente(), 'nada do cliente fica no armazenamento do robô: nem a conta, nem o nome, nem o e-mail, nem o CPF');
+    ok(!linhaCliente.includes('99988877766') && !linhaCliente.includes('TELEFONE'), 'da ficha só saem o nome, o e-mail e o assessor');
+
+    await mesa.evaluate(() => {
+      window.__abertas = [];
+      window.open = (endereco) => (window.__abertas.push(endereco), {});
+    });
+    await mesa.click('.saida[data-formato="email"] [data-outlook]');
+    // O Outlook na web só lê a cópia dentro de um mailto: no `to` (conferido no Outlook da mesa).
+    const outlook = new URL(new URL((await mesa.evaluate(() => window.__abertas))[0]).searchParams.get('to'));
+    ok(
+      outlook.protocol === 'mailto:' &&
+        decodeURIComponent(outlook.pathname) === 'fulana.tal@exemplo.com' &&
+        outlook.searchParams.get('cc') === 'beltrano.souza@exemplo.com.br' &&
+        outlook.searchParams.get('body').startsWith('Prezado(a) Fulana de Tal da Silva,'),
+      'Abrir no Outlook vai para o cliente, com o assessor em cópia (num mailto: dentro do to) e o nome no corpo'
+    );
+
+    // A conta corrigida no cartão: enquanto se digita, o nome do cliente anterior sai do e-mail; ao
+    // sair do campo, o robô troca de cliente na mesma aba.
+    const fichasAntes = pedidosAoHub.ficha;
+    await mesa.fill('.campo-conta', '7654321');
+    ok((await email()).startsWith('Prezado(a) Cliente,\n'), 'com a conta mudada, o nome do cliente anterior sai do e-mail na hora');
+    await mesa.press('.campo-conta', 'Tab');
+    await esperarCliente('Ciclano dos Santos');
+    ok(
+      pedidosAoHub.ficha === fichasAntes + 1 && (await abaDeClientes()) === clientes1 && (await mesa.textContent('.linha-cliente')).includes('fora da planilha'),
+      'outra conta: a mesma aba troca de cliente, e o assessor fora da planilha fica sem cópia, com o motivo à vista'
+    );
+
+    // Se trocar de cliente não fizer o Hub pedir a ficha, o robô recarrega a aba de clientes uma vez.
+    fichaSoAoAbrir = true;
+    await clientes1.reload();
+    await mesa.fill('.campo-conta', '3141592');
+    await mesa.press('.campo-conta', 'Tab');
+    await esperarCliente("Maria-Clara D'Avila");
+    ok(true, 'se trocar de cliente não traz a ficha, o robô recarrega a aba e traz o cliente do mesmo jeito');
+    fichaSoAoAbrir = false;
+    await clientes1.reload();
+
+    // A ficha num formato que o robô não conhece: o aviso diz que é o robô, sem recarregar à toa.
+    const fichasAntesDoFormato = pedidosAoHub.ficha;
+    await mesa.fill('.campo-conta', '2718281');
+    await mesa.press('.campo-conta', 'Tab');
+    await mesa.waitForFunction(() => document.querySelector('.linha-cliente.falhou')?.textContent.includes('atualizado'), null, { timeout: 40_000 });
+    ok(
+      pedidosAoHub.ficha === fichasAntesDoFormato + 1 && (await email()).startsWith('Prezado(a) Cliente,\n'),
+      'a ficha num formato desconhecido avisa que o robô precisa ser atualizado, sem recarregar, e o e-mail sai com "Cliente"'
+    );
+    ok(nadaDoCliente(), 'e nada do cliente fica guardado depois das trocas');
+
+    // O relatório de tempos: a Mesa e o robô numa linha do tempo, e nada do cliente.
+    await mesa.waitForSelector('#btn-copiar-tempos:not([hidden])', { timeout: 10_000 });
+    await mesa.click('#btn-copiar-tempos');
+    const tempos = await mesa.evaluate(() => navigator.clipboard.readText());
+    ok(
+      [
+        'Tempos do robô do Hub',
+        'Preço exato de VGPR11:',
+        'Preço exato de IMOV11:',
+        'Preço exato de Riza Terrax Vintage FIAgro RL: dispensado',
+        'Robô: abriu a boleta de IMOV11, direto da anterior',
+        'pre-check'
+      ].every((t) => tempos.includes(t)),
+      '"Copiar tempos" entrega o resumo e a linha do tempo da Mesa e do robô'
+    );
+    ok(!tempos.includes('1234567') && !/\d{5,}/.test(tempos), 'e o relatório não leva a conta nem número longo nenhum');
+
+    await mesa.click('#btn-atualizar-cotacoes');
+    await terminarBusca();
+    ok(
+      pedidosAoHub.lista === 3 && pedidosAoHub.preCheck === 2 && (await robo1.evaluate(() => window.__cliques ?? 0)) === 1,
+      '"Atualizar cotações" clica em Atualizar, e o preço exato do dia não é buscado de novo'
+    );
+
+    // Se ir direto de uma boleta para a outra não disparar o pre-check no Hub de verdade, o robô passa
+    // pela Prateleira e traz o preço do mesmo jeito.
+    await robo1.evaluate(() => { window.__semTrocaDireta = true; window.__rotas = []; });
+    await mesa.evaluate(() => localStorage.removeItem('ordens_secundario_cotas'));
+    await mesa.reload();
+    await esperarTexto('#robo-status', 'aba 🤖 do Hub aberta');
+    await colar();
+    await mesa.check('#formatos input[value="email"]');
+    ok(
+      pedidosAoHub.preCheck === 4 &&
+        (await robo1.evaluate(() => window.__rotas.join())) === 'boleta,boleta,prateleira,boleta,prateleira' &&
+        (await email()).includes('Ativo: IMOV11;\nQuantidade: 1193;'),
+      'se a troca direta de boleta não traz o pre-check, o robô passa pela Prateleira e traz o preço do mesmo jeito'
+    );
+
+    await robo1.close();
+    await mesa.click('#btn-atualizar-cotacoes');
+    await terminarBusca();
+    const robo2 = await abaDoRobo();
+    ok(
+      pedidosAoHub.lista === 4 && Boolean(robo2) && (await robo2.evaluate(() => window.__cliques ?? 0)) === 0,
+      'com a aba do robô fechada, ele abre outra e traz a cotação da lista que a Prateleira pede ao abrir, sem clicar'
+    );
+
+    // A aba aberta pelas versões 1.1.0 e 1.1.1, com a marca no endereço, recarrega limpa e segue do robô.
+    const antiga = await novaAba('https://hub.xpi.com.br/new/fundos-de-investimento?mesaxp=robo#/secundario/prateleira');
+    await antiga.waitForURL((u) => !u.search, { timeout: 10_000 });
+    ok((await antiga.evaluate(() => window.name)) === 'mesa-xp-robo' && (await antiga.evaluate(() => location.hash)) === '#/secundario/prateleira', 'a aba antiga, com a marca no endereço, recarrega limpa e segue do robô');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+
+    const semRobo = await abrir();
+    await new Promise((r) => setTimeout(r, 300));
+    ok((await semRobo.pagina.textContent('#robo-status')) === 'não instalado', 'sem o robô, a Mesa diz que ele não está');
+    ok(await semRobo.pagina.evaluate(() => document.querySelector('#secundario-manual').open), 'e deixa aberto o carregamento à mão');
+    ok(await semRobo.pagina.isHidden('#btn-atualizar-cotacoes'), 'e esconde o "Atualizar cotações"');
+    await semRobo.pagina.click('#btn-copiar-robo');
+    ok((await semRobo.pagina.evaluate(() => navigator.clipboard.readText())).startsWith('// ==UserScript=='), '"Copiar robô" copia o script do Tampermonkey');
+    await semRobo.contexto.close();
   }
 
   /* ── Operacional no build normal ────────────────────────────────────────────────── */

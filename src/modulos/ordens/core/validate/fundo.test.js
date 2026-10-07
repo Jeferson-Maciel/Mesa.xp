@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { procurarFundo } from './fundo.js';
+import { TOTAL_DE_FUNDOS, fundoPeloTicker, procurarFundo } from './fundo.js';
 
 describe('nomes reais do grupo', () => {
   it('reconhece o BGR exatamente como foi escrito no WhatsApp', () => {
@@ -85,12 +85,47 @@ describe('quando o texto não bate com a prateleira', () => {
   });
 });
 
-describe('quantidade mínima', () => {
-  it('vem junto do fundo encontrado, como número', () => {
-    expect(procurarFundo('BGR Galpões Logísticos I Feeder FII').fundo.qtdMinima).toBe(1000);
+describe('aplicação mínima', () => {
+  it('vem junto do fundo encontrado, como número de reais', () => {
+    expect(procurarFundo('BGR Galpões Logísticos I Feeder FII').fundo.aplicacaoMinima).toBe(1000);
   });
 
   it('lê o separador de milhar corretamente', () => {
-    expect(procurarFundo('XP CDI 99 FOF Private Jun/27 FII RL').fundo.qtdMinima).toBe(2500000);
+    expect(procurarFundo('XP CDI 99 FOF Private Jun/27 FII RL').fundo.aplicacaoMinima).toBe(2500000);
+  });
+});
+
+// Os 32 tickers da prateleira de 06/10/2026 (a lista colada do Hub). Nenhum está na lista da B3 do
+// sistema; a mesa decidiu que, escritos sozinhos, são o fundo — compra pela boleta do secundário.
+const TICKERS_DA_PRATELEIRA = 'AZQA11 TGRI VGIE11 XPHF11 TGRE11 AVBI11 KJNT11 BTLP11 MARE11 CYHF11 MCCE11 AUGM11 NFIP11 VGPR11 CPAC11 IDZA11 XPAG11 XPHB11 PIER11 AZPR11 RBRJ11 VICA11 JGFA11 AZQI11 CPHF11 JGPT11 IMOV11 RZDS11 JGPI11 MRFA11 PAAG11 TGRI11';
+
+describe('fundoPeloTicker', () => {
+  it('acha o fundo pelo ticker, e só pelo ticker', () => {
+    expect(fundoPeloTicker('VGPR11')).toMatchObject({
+      situacao: 'exato',
+      fundo: { nome: 'Valora Imobiliário Multiestratégia Premium', ticker: 'VGPR11' }
+    });
+    expect(fundoPeloTicker(' vgpr11 ').fundo.ticker).toBe('VGPR11');
+    expect(fundoPeloTicker('PETR4')).toBeNull();
+    expect(fundoPeloTicker('Valora')).toBeNull();
+  });
+
+  it('conhece os 32 tickers da prateleira de 06/10', () => {
+    for (const t of TICKERS_DA_PRATELEIRA.split(' ')) expect(fundoPeloTicker(t), t).not.toBeNull();
+  });
+});
+
+describe('a prateleira de 06/10/2026', () => {
+  it('tem os 150 fundos, com os quatro XP CDI CRA Set/27 que faltavam', () => {
+    expect(TOTAL_DE_FUNDOS).toBe(150);
+    for (const nome of ['XP CDI 97 CRA Private Set/27 FIAGRO RL', 'XP CDI 96 CRA Unique Set/27 FIAGRO RL', 'XP CDI 95 CRA Set/27 FIAGRO RL', 'XP CDI 94 CRA Set/27 FIAGRO RL']) {
+      expect(procurarFundo(nome).situacao, nome).toBe('exato');
+    }
+  });
+
+  it('a aplicação mínima é a da lista colada', () => {
+    expect(procurarFundo('XP SS 1 FIC FIDC RL-NP').fundo.aplicacaoMinima).toBe(100380);
+    expect(procurarFundo('XP Special Opportunities FIP Multi - Classe A').fundo.aplicacaoMinima).toBe(25859);
+    expect(fundoPeloTicker('IDZA11').fundo.aplicacaoMinima).toBe(10000);
   });
 });

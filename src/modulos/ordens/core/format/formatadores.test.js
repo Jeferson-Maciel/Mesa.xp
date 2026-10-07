@@ -77,6 +77,29 @@ describe('formatarEmail — ordem', () => {
   });
 });
 
+// O nome vem do Hub pelo robô, já arrumado (core/cliente); sem ele, fica o "Cliente" de sempre.
+describe('a saudação com o nome do cliente', () => {
+  const comCliente = solicitacao({ cliente: { nome: 'Ana Paula da Silva', email: 'ana@exemplo.com', assessor: {} } });
+
+  it('vai nos dois e-mails', () => {
+    expect(formatarEmail(comCliente).split('\n')[0]).toBe('Prezado(a) Ana Paula da Silva,');
+    expect(formatarAuditoria(comCliente).split('\n')[0]).toBe('Prezado(a) Ana Paula da Silva,');
+    expect(formatarAuditoriaHtml(comCliente)).toContain('<div>Prezado(a) Ana Paula da Silva,<br>');
+  });
+
+  it('o resto do e-mail não muda', () => {
+    expect(formatarEmail(comCliente).split('\n').slice(1)).toEqual(formatarEmail(solicitacao()).split('\n').slice(1));
+  });
+
+  it('sem o nome, fica "Cliente"', () => {
+    expect(formatarEmail(solicitacao({ cliente: { nome: null } })).split('\n')[0]).toBe('Prezado(a) Cliente,');
+  });
+
+  it('no HTML, o nome é escapado', () => {
+    expect(formatarAuditoriaHtml(solicitacao({ cliente: { nome: 'Ana <b>' } }))).toContain('Prezado(a) Ana &lt;b&gt;,');
+  });
+});
+
 describe('formatarAuditoria — texto', () => {
   // O exemplo que o operador trouxe, reproduzido caractere a caractere: o e-mail da ordem com a
   // tabela no lugar dos blocos de ativo. Desde 30/09 a tabela não tem Estratégia nem Cliente.
@@ -438,5 +461,25 @@ describe('TSV cola corretamente em planilha', () => {
       const esperado = linhas[0].split('\t').length;
       for (const linha of linhas) expect(linha.split('\t')).toHaveLength(esperado);
     }
+  });
+});
+
+describe('formatarEmail — fundo do secundário', () => {
+  const fundo = (secundario) =>
+    solicitacao({
+      ordens: [ordem({ ativo: 'Riza Terrax Vintage FIAgro RL', quantidade: null, financeiro: 16000, secundario })]
+    });
+
+  // O e-mail de fundo leva a quantidade (decisão do operador em 05/10/2026), sem separador de
+  // milhar, como na bolsa. A conversão já foi feita e mostrada no cartão.
+  it('pedido em R$ convertido sai em cotas', () => {
+    const email = formatarEmail(fundo({ situacao: 'pronto', porValor: true, cotas: 1803 }));
+    expect(email).toContain('Ativo: Riza Terrax Vintage FIAgro RL;\nQuantidade: 1803;\nPreço: A mercado\nOperação: Compra');
+    expect(email).not.toContain('Valor:');
+  });
+
+  it('sem conversão, o pedido em R$ sai como saía', () => {
+    expect(formatarEmail(fundo({ situacao: 'sem-planilha' }))).toContain('Valor: R$ 16.000,00;');
+    expect(formatarEmail(fundo(null))).toContain('Valor: R$ 16.000,00;');
   });
 });

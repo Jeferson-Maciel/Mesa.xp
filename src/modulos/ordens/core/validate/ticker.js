@@ -77,8 +77,11 @@ const distancia = (a, b) => {
   return linhas[a.length][b.length];
 };
 
+// Os tickers da prateleira entram na comparação: `VGRP11` digitado errado sugere o `VGPR11`.
+const CANDIDATOS = [...new Set([...TODOS_OS_TICKERS, ...NOME_NA_PRATELEIRA.keys()])];
+
 const parecidos = (ticker) =>
-  TODOS_OS_TICKERS.filter((t) => t.length === ticker.length && distancia(t, ticker) === 1);
+  CANDIDATOS.filter((t) => t.length === ticker.length && distancia(t, ticker) === 1);
 
 /**
  * @typedef {'conhecido'|'variante'|'parecido'|'desconhecido'} Situacao

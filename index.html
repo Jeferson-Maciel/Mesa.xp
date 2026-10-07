@@ -101,6 +101,39 @@
               <span class="presets-label">Exemplos</span>
               <div class="presets-buttons" id="presets"></div>
             </div>
+
+            <div class="secundario-painel">
+              <span class="presets-label">Secundário</span>
+              <div class="estado-linha" id="estado-cotacao" data-estado="vazio">
+                <span class="estado-nome">Cotação</span>
+                <span id="estoque-status" class="meta-counter">nenhum arquivo carregado</span>
+                <button class="preset-btn" id="btn-atualizar-cotacoes" hidden title="Pede ao robô uma cotação nova da Prateleira do Hub.">Atualizar cotações</button>
+              </div>
+              <div class="estado-linha" id="estado-robo" data-estado="vazio" title="O robô do Hub roda no Tampermonkey: quando a Mesa pede, ele atualiza a Prateleira na aba do Hub e traz as cotações e o preço exato da cota.">
+                <span class="estado-nome">Robô</span>
+                <span id="robo-status" class="meta-counter">não instalado</span>
+                <button class="preset-btn" id="btn-copiar-tempos" hidden title="Copia quanto levou cada passo da última busca no Hub, para achar onde vão os segundos. Não leva nada do cliente.">Copiar tempos</button>
+                <button class="preset-btn" id="btn-copiar-robo" title="Copia o script do robô para colar no Tampermonkey: + (novo script), colar e salvar.">Copiar robô</button>
+              </div>
+              <details class="secundario-manual" id="secundario-manual">
+                <summary>Sem o robô: carregar os fundos à mão</summary>
+                <div class="secundario-manual-acoes">
+                  <button class="preset-btn" id="btn-estoque" title="O arquivo que o favorito do Hub baixa (.json, com o ROA de cada fundo) ou a exportação &quot;Todos os fundos&quot; (.xlsx). Também dá para arrastar o arquivo para cá.">Carregar fundos</button>
+                  <a class="preset-btn favorito-hub" id="favorito-hub" title="Favorito do Hub: arraste para a barra de favoritos (Ctrl+Shift+B mostra a barra). No Hub, abra Fundos › Mercado Secundário › Prateleira e clique nele: baixa os fundos com o ROA adicional de cada um, para carregar aqui.">📥 Fundos → Mesa</a>
+                </div>
+                <input type="file" id="arquivo-estoque" accept=".json,.xlsx,.xls" hidden />
+              </details>
+            </div>
+
+            <div class="secundario-painel">
+              <span class="presets-label">Assessores</span>
+              <div class="estado-linha" id="estado-assessores" data-estado="vazio" title="O robô traz da ficha do Hub o código do assessor do cliente; esta planilha dá o e-mail dele, que vai em cópia no Abrir no Outlook.">
+                <span class="estado-nome">Planilha</span>
+                <span id="assessores-status" class="meta-counter">não carregada</span>
+                <button class="preset-btn" id="btn-assessores" title="A planilha dos assessores baixada do Google (Arquivo › Fazer download), em .xlsx ou o .csv da aba Contatos. Também dá para arrastar o arquivo para cá.">Carregar assessores</button>
+              </div>
+              <input type="file" id="arquivo-assessores" accept=".xlsx,.xls,.csv" hidden />
+            </div>
           </section>
 
           <section class="panel" id="painel-formatos">

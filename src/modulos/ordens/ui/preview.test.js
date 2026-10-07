@@ -240,6 +240,16 @@ describe('aplicarEdicao', () => {
     aplicarEdicao(s, 'hora-inicial', '');
     expect(s.horario).toBeNull();
   });
+
+  // O ROA do secundário vale para o e-mail inteiro: é escolhido nos botões de copiar, ou no
+  // conserto do bloqueio sem teto.
+  it('escolhe o ROA zerado ou o máximo para a solicitação inteira', () => {
+    const s = solicitacao();
+    aplicarEdicao(s, 'roa-zerado', '');
+    expect(s.semRoa).toBe(true);
+    aplicarEdicao(s, 'roa-maximo', '');
+    expect(s.semRoa).toBe(false);
+  });
 });
 
 describe('caminho completo — do texto colado à saída na tela', () => {
@@ -433,5 +443,19 @@ describe('botão + (acrescentar ativo)', () => {
     const s = solicitacao();
     aplicarEdicao(s, 'ativo', '', 0);
     expect(s.ordens[0]).toMatchObject({ ativo: '', ticker: null, fundo: null });
+  });
+});
+
+describe('fundo da prateleira digitado pelo ticker no cartão', () => {
+  it('corrigir o ativo para VGPR11 faz dele o fundo', () => {
+    const s = solicitacao();
+    aplicarEdicao(s, 'ativo', 'vgpr11', 0);
+    expect(s.ordens[0]).toMatchObject({ ativo: 'VGPR11', ticker: null });
+    expect(s.ordens[0].fundo.fundo.nome).toBe('Valora Imobiliário Multiestratégia Premium');
+  });
+
+  it('mostra o nome do fundo ao pousar o mouse na linha', () => {
+    const { solicitacoes } = parseSolicitacoes('1234567\nCompra\nVGPR11 R$ 10.000,00');
+    expect(renderCartao(solicitacoes[0], 0, ['email'], new Set())).toContain('Valora Imobiliário Multiestratégia Premium');
   });
 });

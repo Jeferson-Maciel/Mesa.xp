@@ -27,6 +27,11 @@ Aguardo confirmação para realizar a[s] ordem[ns].
 Att,
 ```
 
+- **Saudação com o nome do cliente** (decidido com o operador em 07/10/2026): quando o robô trouxe
+  o cliente da ficha do Hub, a primeira linha é `Prezado(a) [NOME COMPLETO],`, com o nome arrumado —
+  `ANA PAULA DA SILVA` vira `Ana Paula da Silva` (partículas minúsculas no meio, sem pôr acento que
+  o Hub não mandou). Sem o cliente, `Prezado(a) Cliente,`. Vale também para o formato 2. O nome
+  digitado no pedido nunca entra.
 - **Pluralização**: com um ativo, `a ordem abaixo` / `realizar a ordem.`; com dois ou mais,
   `as ordens abaixo` / `realizar as ordens.`
 - **Bloco do ativo**: os quatro campos ficam em linhas consecutivas, **sem linha em branco entre
@@ -34,6 +39,20 @@ Att,
 - **Quantidade ou Valor, nunca os dois**: numa ordem por financeiro, a segunda linha é
   `Valor: R$ [VALOR];` em lugar de `Quantidade: [QUANTIDADE];`.
 - `Preço` e `Operação` não levam ponto-e-vírgula; `Ativo` e `Quantidade`/`Valor` levam.
+- **Fundo cetipado comprado no secundário** (decidido com o operador em 05/10/2026): o pedido em R$
+  vira cotas pelos fundos do dia, e o bloco leva `Quantidade: [COTAS];` no lugar de `Valor:` —
+  inteiro, sem separador de milhar, como na bolsa. Sem os fundos carregados, ou com o fundo fora
+  deles, o operador confirma e o bloco sai com `Valor: R$ X.XXX,XX;`, como antes.
+- As cotas dependem do ROA adicional, e o e-mail de um pedido em R$ tem **dois botões de copiar**
+  (06/10/2026): **Copiar · ROA máximo** e **Copiar · ROA zerado**. O texto é o mesmo; muda só o
+  número de `Quantidade:` de cada fundo.
+
+  ```
+  Ativo: Riza Terrax Vintage FIAgro RL;
+  Quantidade: 162;
+  Preço: A mercado
+  Operação: Compra
+  ```
 
 ## 2. Auditoria por E-mail (na tela, "E-mail em tabela")
 
@@ -94,6 +113,35 @@ Att,
   colunas, é o que cola onde HTML não entra.
 - **Sem fundo cetipado.** A coluna `Ativo` é de código, e fundo cetipado não tem. Bloqueia, **sem**
   botão de confirmar, e o caminho é a Ordem por e-mail.
+
+### Abrir no Outlook (os formatos 1 e 2)
+
+Ao lado do Copiar, os dois e-mails têm **Abrir no Outlook** (pedido do operador em 07/10/2026): um
+e-mail novo no Outlook na web (`outlook.office.com/mail/deeplink/compose`), numa janela só dele, com
+o assunto
+
+```
+Confirmação de ordem
+```
+
+- **Para e Cc** (07/10/2026, robô 1.3.x): o e-mail do cliente, da ficha do Hub, vai no Para; o do
+  assessor responsável, achado na planilha dos assessores pelo código, em cópia. O Outlook na web
+  ignora o `cc` solto no endereço (conferido no Outlook da mesa), por isso, com o cliente, tudo vai
+  num `mailto:` dentro do `to`:
+
+  ```
+  compose?to=mailto%3A<cliente>%3Fcc%3D<assessor>%26subject%3D<assunto>%26body%3D<texto>
+  ```
+
+  O texto fica codificado duas vezes. Sem o e-mail do cliente, vai `compose?subject=…&body=…`, sem
+  cópia. O que não houver fica de fora, e o aviso diz o quê.
+- **Formato 1:** o corpo é o texto acima, o mesmo do Copiar, com as quebras de linha em `\r\n`.
+  A área de transferência não é tocada. Com o fundo do secundário, vai o cenário à vista (o último
+  ROA escolhido).
+- **Formato 2:** o endereço só leva texto puro, e a tabela não iria em grade. O e-mail abre só com
+  o assunto, e o conteúdo vai copiado como no Copiar (HTML e texto com TAB) para colar no corpo.
+- **Texto que não cabe no endereço** (mais de 7.000 caracteres, já codificado; dez ativos dão uns
+  2.900 com o cliente e o assessor): abre sem o corpo, e o texto vai copiado.
 
 ## 3. Lote Simples (TSV)
 

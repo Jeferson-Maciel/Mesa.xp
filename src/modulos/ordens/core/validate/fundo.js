@@ -14,8 +14,11 @@ import { FUNDOS_XP } from './fundosXP.js';
  * continua sendo do operador.
  */
 
-/** Tira acento, caixa e pontuação, preservando os números e as palavras que distinguem. */
-const normalizar = (texto) =>
+/**
+ * Tira acento, caixa e pontuação, preservando os números e as palavras que distinguem. A planilha
+ * do secundário usa a mesma chave para achar a linha do fundo (`core/secundario/estoque.js`).
+ */
+export const normalizar = (texto) =>
   String(texto ?? '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -23,7 +26,7 @@ const normalizar = (texto) =>
     .replace(/[^a-z0-9/]+/g, ' ')
     .trim();
 
-const lerQtdMinima = (texto) => {
+const lerAplicacaoMinima = (texto) => {
   const n = parseInt(String(texto ?? '').replace(/\./g, ''), 10);
   return Number.isFinite(n) ? n : null;
 };
@@ -31,7 +34,7 @@ const lerQtdMinima = (texto) => {
 const CATALOGO = FUNDOS_XP.map((f) => ({
   nome: f.nome,
   ticker: f.ticker,
-  qtdMinima: lerQtdMinima(f.qtdMinima),
+  aplicacaoMinima: lerAplicacaoMinima(f.aplicacaoMinima),
   chave: normalizar(f.nome),
   chaveTicker: f.ticker ? normalizar(f.ticker) : null
 }));
@@ -51,8 +54,8 @@ const publico = ({ chave, chaveTicker, ...resto }) => resto;
  *
  * @param {string} texto
  * @returns {{consulta: string, situacao: SituacaoDoFundo,
- *            fundo: {nome: string, ticker: string|null, qtdMinima: number|null}|null,
- *            candidatos: Array<{nome: string, ticker: string|null, qtdMinima: number|null}>}}
+ *            fundo: {nome: string, ticker: string|null, aplicacaoMinima: number|null}|null,
+ *            candidatos: Array<{nome: string, ticker: string|null, aplicacaoMinima: number|null}>}}
  */
 export const procurarFundo = (texto) => {
   const consulta = normalizar(texto);
@@ -94,6 +97,19 @@ export const procurarFundo = (texto) => {
   const candidatos = pontuados.filter((p) => p.acertos === melhor).map((p) => publico(p.fundo));
 
   return { consulta, situacao: 'parcial', fundo: null, candidatos };
+};
+
+/**
+ * O fundo da prateleira com este ticker, como `procurarFundo` o devolveria — ou null.
+ *
+ * Decisão da mesa em 06/10/2026: o ticker de um fundo da prateleira (`VGPR11`, `XPHF11`), escrito
+ * sozinho, é o fundo, comprado pela boleta do secundário — não papel de bolsa. Só a igualdade com o
+ * ticker conta: um trecho de nome nunca chega aqui.
+ */
+export const fundoPeloTicker = (texto) => {
+  const consulta = normalizar(texto);
+  const achado = consulta ? CATALOGO.filter((f) => f.chaveTicker === consulta) : [];
+  return achado.length === 1 ? { consulta, situacao: 'exato', fundo: publico(achado[0]), candidatos: [] } : null;
 };
 
 export const TOTAL_DE_FUNDOS = CATALOGO.length;

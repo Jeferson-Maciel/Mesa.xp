@@ -1,6 +1,7 @@
 import { analisarTicker, temFormatoDeTicker } from '../core/validate/ticker.js';
-import { procurarFundo } from '../core/validate/fundo.js';
+import { fundoPeloTicker, procurarFundo } from '../core/validate/fundo.js';
 import { formatarFinanceiro, lerFinanceiro } from '../core/util/dinheiro.js';
+import { renderCliente } from './cliente.js';
 import { esc, renderSaidas } from './saidas.js';
 
 /**
@@ -124,17 +125,24 @@ const segmentado = (campo, opcoes, atual) => `
  * texto de onde ela foi lida. Num sistema que existe para não adivinhar, poder ver a origem de
  * cada campo vale mais que qualquer enfeite.
  */
-const origemDaLinha = (ordem) =>
-  [ordem.ticker?.nome, ordem.linha ? 'Lido de: ' + ordem.linha : null].filter(Boolean).join('\n');
+const origemDaLinha = (ordem) => {
+  // O fundo escrito pelo ticker (`VGPR11`) mostra o nome; o escrito pelo nome já o tem à vista.
+  const nomeDoFundo = ordem.fundo?.fundo?.nome;
+  const nome = ordem.ticker?.nome ?? (nomeDoFundo && nomeDoFundo !== ordem.ativo ? nomeDoFundo : null);
+  return [nome, ordem.linha ? 'Lido de: ' + ordem.linha : null].filter(Boolean).join('\n');
+};
 
 // As células continuam células de tabela — é o que mantém a borda da linha inteira e todos os
 // controles na mesma altura; o arranjo lado a lado fica num <div> dentro delas (ordens.css).
+// O campo do ativo cresce com o ticker até 16 letras: um nome de fundo maior rola dentro dele, e
+// por extenso fica no bloco Secundário e na dica da linha — senão a tabela empurra o Preço para
+// fora da tela.
 const linha = (ordem, i) => `
   <tr data-ordem="${i}" title="${esc(origemDaLinha(ordem))}">
     <td class="col-ativo">
       <div class="linha-campos">
         <input class="campo campo-ativo" value="${esc(ordem.ativo)}"
-               size="${Math.min(Math.max(String(ordem.ativo ?? '').length, 8), 30)}" />
+               size="${Math.min(Math.max(String(ordem.ativo ?? '').length, 8), 16)}" />
         ${selo(ordem)}
       </div>
       ${candidatosDeFundo(ordem)}
@@ -242,6 +250,7 @@ export const renderCartao = (solicitacao, indice, formatos, confirmados) => `
       </h2>
       ${faixaDeResumo(solicitacao)}
     </div>
+    <div class="area-cliente">${renderCliente(solicitacao.cliente ?? null)}</div>
 
     <div class="table-container">
       <table class="preview">
@@ -285,6 +294,13 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
     return;
   }
 
+  // O ROA do secundário vale para o e-mail inteiro: o máximo é o padrão, e o zerado passa o deságio
+  // inteiro para o cliente. Vem dos botões de copiar e do conserto do bloqueio sem teto.
+  if (campo === 'roa-zerado' || campo === 'roa-maximo') {
+    solicitacao.semRoa = campo === 'roa-zerado';
+    return;
+  }
+
   // O botão +. A linha nasce em branco — nem a operação da cesta ela herda — e segura a saída até
   // ter ativo e valor.
   if (campo === 'adicionar-ordem') {
@@ -313,9 +329,10 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
         ordem.ticker = null;
         ordem.fundo = null;
       } else if (temFormatoDeTicker(texto)) {
+        // O ticker de um fundo da prateleira é o fundo (decisão da mesa, 06/10/2026).
         ordem.ativo = texto.toUpperCase();
-        ordem.ticker = analisarTicker(ordem.ativo);
-        ordem.fundo = null;
+        ordem.fundo = fundoPeloTicker(ordem.ativo);
+        ordem.ticker = ordem.fundo ? null : analisarTicker(ordem.ativo);
       } else {
         const busca = procurarFundo(texto);
         ordem.ativo = busca.fundo?.nome ?? texto;

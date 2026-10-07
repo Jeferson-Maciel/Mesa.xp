@@ -274,9 +274,9 @@ describe('fundos cetipados — identificados pelo nome', () => {
     expect(s.ordens[0].ativo).toBe('Riza Malls Feeder FII RL');
   });
 
-  it('carrega a quantidade mínima junto, para o validador avisar', () => {
+  it('carrega a aplicação mínima junto, para o validador avisar', () => {
     const s = uma('80000004\nCOMPRA\nRiza Malls - 10 cotas');
-    expect(s.ordens[0].fundo.fundo.qtdMinima).toBe(1000);
+    expect(s.ordens[0].fundo.fundo.aplicacaoMinima).toBe(1000);
   });
 
   it('vira ordem mesmo com nome ambíguo, para o operador escolher no preview', () => {
@@ -725,5 +725,33 @@ describe('via email num pedido com fundo', () => {
   it('"auditar" pedido com todas as letras continua marcando a tabela', () => {
     const s = uma('80000007\nAuditar via e-mail\nC - Riza Malls - R$ 16.000,00');
     expect(s.saidas.auditoria).toBe(true);
+  });
+});
+
+// Decisão da mesa em 06/10/2026: o ticker de um fundo da prateleira, escrito sozinho, é o fundo —
+// compra pela boleta do secundário, não papel de bolsa.
+describe('fundo da prateleira escrito pelo ticker', () => {
+  it('VGPR11 é o fundo, e o ticker fica como foi escrito', () => {
+    const o = uma('1234567\nCompra\nVGPR11 R$ 10.000,00').ordens[0];
+    expect(o).toMatchObject({ ativo: 'VGPR11', ticker: null, financeiro: 10000, operacao: 'C' });
+    expect(o.fundo).toMatchObject({ situacao: 'exato', fundo: { nome: 'Valora Imobiliário Multiestratégia Premium' } });
+  });
+
+  it('em minúsculas, com traço e com o nome atrás, também', () => {
+    for (const linha of ['vgpr11 - 10.000,00', 'VGPR11 - Valora R$ 10.000,00']) {
+      const o = uma('1234567\nCompra\n' + linha).ordens[0];
+      expect(o.fundo?.fundo?.ticker, linha).toBe('VGPR11');
+      expect(o.financeiro, linha).toBe(10000);
+    }
+  });
+
+  it('o ticker de quatro letras do TG Renda Imobiliária também', () => {
+    expect(uma('1234567\nCompra\nTGRI R$ 5.000,00').ordens[0].fundo?.fundo?.ticker).toBe('TGRI');
+  });
+
+  it('papel de bolsa continua papel de bolsa', () => {
+    const o = uma('1234567\nCompra\nPETR4 100').ordens[0];
+    expect(o.fundo).toBeNull();
+    expect(o.ticker.ticker).toBe('PETR4');
   });
 });

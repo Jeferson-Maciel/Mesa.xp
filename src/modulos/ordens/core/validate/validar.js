@@ -1,3 +1,6 @@
+import { LIMITE_DA_COTACAO_MIN } from '../secundario/secundario.js';
+import { formatarFinanceiro, formatarPercentual } from '../util/dinheiro.js';
+
 /**
  * Terceira etapa do pipeline: a comporta entre o que foi interpretado e o que pode ser gerado.
  *
@@ -161,15 +164,22 @@ export const validar = (solicitacao, formato) => {
     }
 
     // O TSV identifica o ativo por código, e fundo cetipado não tem. Não é limitação do
-    // sistema: essas ordens não são executadas em bolsa. Nenhum dos dois é confirmável, porque
-    // confirmar poria o nome por extenso numa coluna de código.
+    // sistema: essas ordens não são executadas em bolsa. Pelo nome, nenhum dos dois é
+    // confirmável, porque confirmar poria o nome por extenso numa coluna de código. Escrito pelo
+    // ticker (`VGPR11`), o código cabe na coluna: o padrão é a boleta do secundário, e confirmar é
+    // a saída para quando a mesa compra o fundo em bolsa.
+    const peloTicker = Boolean(o.fundo?.fundo?.ticker) && o.ativo === o.fundo.fundo.ticker;
+    const emBolsa =
+      `${o.ativo} é fundo da prateleira, comprado pela boleta do secundário — use o e-mail. ` +
+      'Se a ordem é em bolsa, confirme.';
+
     if (o.fundo && (formato === 'lote' || formato === 'twap')) {
       diagnosticos.push(
         bloqueio(
           'fundo-fora-do-lote',
-          `${o.ativo} é fundo cetipado e não vai para lote — use o e-mail.`,
+          peloTicker ? emBolsa : `${o.ativo} é fundo cetipado e não vai para lote — use o e-mail.`,
           i,
-          false
+          peloTicker
         )
       );
     }
@@ -180,20 +190,127 @@ export const validar = (solicitacao, formato) => {
       diagnosticos.push(
         bloqueio(
           'fundo-na-auditoria',
-          `${o.ativo} é fundo cetipado e não entra no e-mail em tabela — use a Ordem por e-mail.`,
+          peloTicker
+            ? emBolsa
+            : `${o.ativo} é fundo cetipado e não entra no e-mail em tabela — use a Ordem por e-mail.`,
           i,
-          false
+          peloTicker
         )
       );
     }
 
-    const minimo = o.fundo?.fundo?.qtdMinima;
-    if (minimo && o.quantidade !== null && o.quantidade !== undefined && o.quantidade < minimo) {
+    const porFinanceiro = o.financeiro !== null && o.financeiro !== undefined;
+
+    // ── Secundário ─────────────────────────────────────────────────────────────────────
+    // Compra de fundo cetipado: a planilha do dia converte o pedido em R$ em cotas
+    // (`core/secundario`). `o.secundario` chega calculado pela tela; aqui só se julga.
+    const sec = o.secundario;
+
+    if (sec && formato === 'email' && porFinanceiro) {
+      const pedido = formatarFinanceiro(o.financeiro);
+
+      // Os dois primeiros confirmam: sem a planilha, o e-mail sai em R$, como saía antes dela.
+      if (sec.situacao === 'sem-planilha') {
+        diagnosticos.push(
+          bloqueio(
+            'secundario-sem-planilha',
+            `${o.ativo}: carregue os fundos do secundário (favorito do Hub ou planilha) para converter ` +
+              `${pedido} em cotas — ou confirme para mandar o valor em R$.`,
+            i
+          )
+        );
+      }
+
+      if (sec.situacao === 'fora-da-planilha') {
+        diagnosticos.push(
+          bloqueio(
+            'secundario-fora-da-planilha',
+            `${o.ativo} não está nos fundos do secundário carregados (sem estoque, ou arquivo ` +
+              'antigo). Confirme para mandar o valor em R$.',
+            i
+          )
+        );
+      }
+
+      // Confirmar não diz qual é o teto. As saídas são trazê-lo (favorito do Hub ou anotação) ou
+      // ir de ROA zerado, que não precisa dele: o deságio inteiro vai para o cliente.
+      if (sec.situacao === 'sem-teto') {
+        diagnosticos.push({
+          ...bloqueio(
+            'secundario-sem-teto',
+            `${o.ativo}: falta o ROA adicional máximo do fundo. Carregue os fundos pelo favorito do ` +
+              'Hub, que já traz o ROA, anote o fim da barra na boleta, ou use o ROA zerado.',
+            i,
+            false
+          ),
+          acao: { campo: 'roa-zerado', rotulo: 'Usar ROA zerado' }
+        });
+      }
+
+      if (sec.situacao === 'pronto' && sec.cotas === 0) {
+        diagnosticos.push(
+          bloqueio(
+            'secundario-sem-cota',
+            `${o.ativo}: ${pedido} não compra nem uma cota (PU ${formatarFinanceiro(sec.fundo.pu)}).`,
+            i,
+            false
+          )
+        );
+      }
+    }
+
+    // Corretagem 0,00 na captura é um modelo de boleta que ainda não foi conferido (os XP CDI
+    // Private, os FIPs). Se a boleta cobrar a corretagem de sempre, as cotas passam do pedido.
+    if (sec?.situacao === 'pronto' && formato === 'email' && porFinanceiro && sec.fundo.corretagem === 0) {
+      diagnosticos.push(
+        bloqueio(
+          'secundario-sem-corretagem',
+          `${o.ativo}: a captura do Hub traz corretagem 0,00% para este fundo, um tipo de boleta ` +
+            'ainda não conferido. Confira na boleta a corretagem e o deságio, e confirme.',
+          i
+        )
+      );
+    }
+
+    if (sec?.situacao === 'pronto' && formato === 'email' && sec.cotas > 0) {
+      const { estoque } = sec.fundo;
+      if (estoque !== null && sec.cotas > estoque) {
+        diagnosticos.push(
+          bloqueio(
+            'secundario-sem-estoque',
+            `${o.ativo}: ${sec.cotas.toLocaleString('pt-BR')} cotas passam do estoque da planilha ` +
+              `(${estoque.toLocaleString('pt-BR')}). Confirme se o estoque mudou.`,
+            i
+          )
+        );
+      }
+    }
+
+    // O teto anotado foi visto num dia, com um deságio. Se o deságio mudou, o teto pode ter mudado
+    // junto. O do Hub veio do deságio da mesma captura; e o ROA zerado não usa teto nenhum.
+    const anotado = sec?.situacao === 'pronto' && !sec.semRoa && sec.teto && !sec.teto.doHub;
+    if (anotado && sec.teto.desagio !== sec.fundo.desagio) {
+      diagnosticos.push(
+        aviso(
+          'secundario-teto-antigo',
+          `${o.ativo}: o ROA máximo de ${formatarPercentual(sec.teto.teto)} foi anotado com deságio ` +
+            `de ${formatarPercentual(sec.teto.desagio)}; hoje o deságio é ` +
+            `${formatarPercentual(sec.fundo.desagio)}. Confira na boleta.`,
+          i
+        )
+      );
+    }
+
+    // A aplicação mínima é em reais (o Hub a rotula "Qtd. mínima"). Com a planilha, compara-se o
+    // total que o cliente paga; sem ela, só dá para comparar um pedido em R$.
+    const minimo = sec?.fundo?.aplicacaoMinima ?? o.fundo?.fundo?.aplicacaoMinima;
+    const aplicado = sec?.conta?.total ?? (porFinanceiro ? o.financeiro : null);
+    if (o.operacao === 'C' && minimo && aplicado !== null && aplicado < minimo) {
       diagnosticos.push(
         aviso(
           'abaixo-do-minimo',
-          `${o.ativo}: ${o.quantidade} cotas ficam abaixo do mínimo de ${minimo} da última ` +
-            'listagem. Confira se o mínimo mudou.',
+          `${o.ativo}: ${formatarFinanceiro(aplicado)} fica abaixo da aplicação mínima de ` +
+            `${formatarFinanceiro(minimo)}. Confira se o mínimo mudou.`,
           i
         )
       );
@@ -201,8 +318,6 @@ export const validar = (solicitacao, formato) => {
 
     // Sem coluna de financeiro não há onde pôr o valor, e confirmar escrevia `null` em
     // Qtd. Total. Por isso não é confirmável: a saída é trocar de formato.
-    const porFinanceiro = o.financeiro !== null && o.financeiro !== undefined;
-
     if (formato === 'lote' && porFinanceiro) {
       diagnosticos.push(
         bloqueio(
@@ -248,6 +363,40 @@ export const validar = (solicitacao, formato) => {
         )
       );
     }
+  }
+
+  // PU, deságio e estoque mudam todo dia: uma vez por solicitação basta para lembrar.
+  const daPlanilha = ordens.find((o) => o.secundario?.planilha)?.secundario.planilha;
+  if (daPlanilha && !daPlanilha.deHoje) {
+    const dia = new Date(daPlanilha.exportadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    diagnosticos.push(
+      aviso(
+        'secundario-planilha-antiga',
+        `Os fundos do secundário carregados são de ${dia}: PU, deságio, ROA e estoque mudam todo dia. ` +
+          'Carregue os de hoje.'
+      )
+    );
+  }
+
+  // A cotação de um pedido em R$ vale por 10 minutos: o deságio muda ao longo do dia, e as cotas
+  // de uma cotação velha podem passar do valor pedido. Uma vez por solicitação; o conserto pede ao
+  // robô do Hub uma cotação nova.
+  const velha = ordens.find(
+    (o) =>
+      o.secundario?.situacao === 'pronto' && o.secundario.porValor && o.secundario.planilha.minutos > LIMITE_DA_COTACAO_MIN
+  );
+  if (velha && formato === 'email') {
+    const { exportadaEm, minutos } = velha.secundario.planilha;
+    const hora = new Date(exportadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const idade = minutos < 120 ? `há ${minutos} min` : `há ${Math.floor(minutos / 60)} h`;
+    diagnosticos.push({
+      ...bloqueio(
+        'secundario-cotacao-velha',
+        `A cotação dos fundos é das ${hora} (${idade}): o deságio pode ter mudado, e as cotas, passado ` +
+          'do valor pedido. Atualize as cotações, ou confirme para usar esta.'
+      ),
+      acao: { campo: 'atualizar-cotacoes', rotulo: 'Atualizar cotações' }
+    });
   }
 
   if (formato === 'twap' && !horario) {

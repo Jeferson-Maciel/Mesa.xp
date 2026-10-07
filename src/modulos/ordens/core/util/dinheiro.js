@@ -50,3 +50,25 @@ export const formatarFinanceiro = (valor) => {
   if (typeof valor !== 'number' || !Number.isFinite(valor)) return '';
   return formatador.format(valor).replace(/\u00a0/g, ' ');
 };
+
+/**
+ * Percentual como o Hub mostra: `6,75%`, sempre com duas casas.
+ *
+ * @param {number|null|undefined} valor  em pontos percentuais (6.75)
+ */
+export const formatarPercentual = (valor) => {
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return '';
+  return valor.toFixed(2).replace('.', ',') + '%';
+};
+
+/**
+ * Lê um percentual digitado: `0,50`, `0.5`, `0,5%`. Só aceita número não negativo — é para o teto
+ * do ROA, que vai de zero para cima.
+ *
+ * @returns {number|null}
+ */
+export const lerPercentual = (texto) => {
+  const limpo = String(texto ?? '').replace('%', '').trim().replace(',', '.');
+  if (!/^\d+(\.\d+)?$/.test(limpo)) return null;
+  return Number(limpo);
+};

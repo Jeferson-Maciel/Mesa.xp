@@ -17,6 +17,11 @@ Nasceu da fusão de três repositórios — `Ordens.XP` (a base), `RendaFixaDisp
 `Calendario.Mesa` — sem funcionalidade nova; o Operacional e as Anotações vieram depois, a pedido da mesa. Sugestões
 vão para [`docs/ROADMAP.md`](docs/ROADMAP.md), não para o código.
 
+**Onde paramos** — o que funciona, o que foi testado no Hub de verdade, o que está no ar e o
+que falta — está em [`docs/CONTEXTO.md`](docs/CONTEXTO.md). Leia antes de começar e atualize no
+fim da sessão. O [`AGENTS.md`](AGENTS.md) resume este arquivo para outros agentes; este continua
+sendo a fonte.
+
 É uma ferramenta de expediente, aberta o dia todo: alinhada, objetiva e sem enfeite. Isso vale para
 a tela e para o código.
 
@@ -36,7 +41,7 @@ src/modulos/anotacoes/    anotações de cada um, com lembretes (no navegador)
 src/vendor/           SheetJS 0.20.1 vendorizado, com a licença
 supabase/schema.sql   o banco do Calendário
 supabase/operacional.sql  o banco do Operacional (gerado: npm run sql:operacional)
-docs/                 formatos de saída do Ordens e o roadmap
+docs/                 formatos de saída do Ordens, o roadmap e o contexto da última sessão
 scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda Fixa), verificar no navegador
 ```
 
@@ -244,8 +249,8 @@ usuário, ou eu o inventei?*
 Use estes termos no código, nos testes e nas conversas — eles são os mesmos que o usuário usa.
 
 - **Conta** — código numérico da conta XP (5 a 8 dígitos). É o único valor aceito na coluna/campo
-  `Cliente`. Nome de pessoa nunca entra na saída, mesmo quando digitado (`80000005 - Fulana`
-  → `80000005`).
+  `Cliente`. Nome digitado nunca entra na saída (`80000005 - Fulana` → `80000005`); o nome da
+  ficha do Hub entra só na saudação do e-mail (ver "O cliente e o assessor").
 - **Quantidade** — número inteiro de ativos. Sem separador de milhar, sem `R$`.
 - **Financeiro** — valor em reais a ser executado. Sempre formatado `R$ X.XXX,XX`. Chega com `R$`,
   mas também sem ele, e estas formas contam como financeiro (decidido com o operador): centavos
@@ -302,9 +307,259 @@ oferecidos no preview — sem esses botões o bloqueio seria um beco sem saída.
 
 A prateleira não tem fonte pública para baixar. A CVM publica o cadastro de todos os fundos do
 Brasil, mas ninguém publica o que a XP distribui, e não dá para inferir pelo administrador nem
-pelo gestor. A lista vem copiada do portal e `npm run fundos:update -- arquivo.txt` regenera o
-módulo. Guardamos só nome, ticker e quantidade mínima: preço e disponibilidade mudam todo dia, e
-guardá-los seria carregar dado vencido dentro de um sistema cuja regra é não inventar dado.
+pelo gestor. `npm run fundos:update -- arquivo.json` regenera o módulo com o arquivo do favorito
+do Hub (ver "Fundos no secundário"); a listagem copiada do portal, num `.txt`, também serve — a
+página inteira, inclusive, que o menu e os "Destaques" do topo são pulados. Em 06/10/2026 a lista
+passou a 150 fundos, 32 com ticker. Guardamos só nome, ticker e aplicação mínima: preço e
+disponibilidade mudam todo dia, e guardá-los seria carregar dado vencido dentro de um sistema cuja
+regra é não inventar dado.
+
+**O ticker de um fundo da prateleira, escrito sozinho, é o fundo** (decisão da mesa em
+06/10/2026): `VGPR11 R$ 10.000,00` é compra pela boleta do secundário, como se tivesse vindo o
+nome. `fundoPeloTicker` só aceita a igualdade com o ticker, e o ativo fica como foi escrito —
+`Ativo: VGPR11;` no e-mail, o nome por extenso na dica da linha. Nenhum dos 32 tickers está na
+lista da B3 do sistema, mas eles são negociados em bolsa: no lote, no TWAP e na tabela, o bloqueio
+de fundo escrito pelo ticker é **confirmável**, porque o código cabe na coluna `Ativo`. Erro de
+digitação num deles (`VGRP11`) sugere o ticker do fundo.
+
+A **aplicação mínima é em reais** (`aplicacaoMinima`). O Hub rotula a coluna "Qtd. mínima", mas a
+exportação a chama `minimalInitialInvestment`, e o operador confirmou em 05/10: no XP Private
+Equity II ela é 25.000 com PU de R$ 1.072 — em cotas seriam R$ 26 milhões. O aviso compara reais
+com reais: o total da boleta, ou o pedido em R$; ordem por cotas sem planilha não é comparada.
+
+### Fundos no secundário
+
+A compra de fundo cetipado passa pela boleta do secundário da XP. Código em
+`core/secundario/`: `estoque.js` lê os fundos, `boleta.js` faz as contas, `secundario.js` liga as
+duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a API da prateleira:
+
+- **A fonte é a captura do favorito do Hub** (`mercado-secundario-DD-MM-AAAA-HHhMM.json`). O
+  operador arrasta o botão **📥 Fundos → Mesa** do painel para a barra de favoritos e o clica na
+  Prateleira do Mercado Secundário. Ele escuta o `fetch` do app, clica em Atualizar e baixa a
+  resposta de `.../investment-funds-secondary` inteira, com `capturadaEm`. Não é robô: quem clica é
+  o operador, e o favorito **não lê token nem cabeçalho, não chama a API por conta própria e não
+  manda nada para fora** — a API recusa chamada sem a chave do app (401), e é assim que deve
+  ficar. Fica burro de propósito (`platform/favorito-hub.js`): favorito arrastado não se atualiza,
+  então toda a leitura mora em `estoque.js`, que muda com o build. O endereço `javascript:` é
+  montado em `platform/favoritoDoHub.js` e posto no botão por código — a marcação estática não
+  aponta para nada (`vite.config.test.js`). O texto do botão vira o nome do favorito, e o Chrome
+  não dá ícone a favorito `javascript:`: o 📥 do nome é o ícone dele na barra. É a exceção à regra
+  dos ícones em máscara SVG.
+- **A exportação "Todos os fundos" (.xlsx) continua aceita** — é um recorte da mesma resposta,
+  com os mesmos nomes de campo —, mas sem `treasuryMinimumPurchaseDiscount` e `percentageComission`. Os
+  números vêm como texto pt-BR e o PU com duas casas, nos dois; os fundos ficam no `localStorage`
+  com a hora da captura (ou a data do arquivo), e o aviso `secundario-planilha-antiga` diz quando
+  não são do dia — o deságio muda ao longo do próprio dia (XPHF11: 5,75% numa exportação, 5,50% na
+  boleta horas depois).
+- **A barra da boleta divide o deságio.** `secondaryPurchaseDiscount` é o **deságio máximo** da
+  boleta: com o ROA zerado, vai todo para o cliente. `treasuryMinimumPurchaseDiscount` é o
+  **deságio mínimo** do cliente, o que sobra para ele com a barra no fim. O **ROA máximo** é a
+  diferença. Conferido em quatro boletas: Riza (2,50 / 1,50 / ROA 1%), XPHF11 (5,50 / 5,00 / 0,5%),
+  CPHF11 (6,75 / 6,25 / 0,5%) e IMOV11 (8,75 / 8,25 / 0,5%).
+- **`treasuryMinimumBuyCost` não é o ROA**, apesar de bater no IMOV11 (0,50). No Riza ele vem 0,00
+  com a barra indo até 1% na boleta; em fundos de deságio zero (MARE11, TGRI11) vem 0,50 sem barra
+  nenhuma; em 58 dos 150 fundos de 06/10 ele diverge do deságio menos o mínimo. Em 06/10 de manhã o
+  sistema chegou a ler o deságio da prateleira como o do cliente e esse campo como o ROA, por um
+  "8,25" anotado de uma captura que era o deságio mínimo: daria cotas a mais, acima do pedido. A
+  captura real das 12:09 desfez o engano no mesmo dia, antes de qualquer uso.
+- **Fundo sem corretagem é outro tipo de boleta, ainda não conferido.** Na captura de 06/10, 44
+  fundos vêm com `percentageComission` 0,00: os XP CDI Private (deságio zero) e 15 FIPs e fundos
+  fechados com deságio de 5% a 15% e mínimo 0,00, em que a conta daria ROA de 15%. Por isso a
+  captura só dá o teto de fundo com corretagem — ou sem deságio a dividir, quando o teto é zero —,
+  e o pedido em R$ num fundo sem corretagem segura com `secundario-sem-corretagem` (confirmável):
+  se a boleta cobrar 1,5% nele, as cotas passam do pedido. Uma boleta de cada tipo, conferida,
+  tira as duas travas.
+- **A conta da boleta**, conferida em três boletas reais (Riza Renda Imobiliária, XPHF11 e CPHF11,
+  em `boleta.test.js`, com os números da própria boleta): desconto do cliente = deságio máximo −
+  ROA; posição = cotas × PU × (1 − desconto); corretagem = % da posição (`percentageComission`, ou
+  1,5% sem ela); total = posição + corretagem; remuneração = posição × (corretagem + ROA).
+  Arredonda-se só na exibição — o total do CPHF11 só bate assim. Deságio negativo é ágio: o cliente
+  paga acima do PU.
+- **O robô do Hub** (06/10/2026, a pedido da mesa: os notebooks são pessoais, sem conta de
+  desenvolvedor do Chrome). Um script do Tampermonkey, `platform/robo-hub.user.js`, roda em duas
+  abas do mesmo Chrome — a da Mesa e a do Hub na Prateleira — e elas conversam pelo armazenamento
+  dele. **Ao analisar um pedido com compra de fundo**, se a cotação tem mais de 2 minutos, a Mesa
+  pede uma nova: o robô clica em Atualizar na aba do Hub, guarda a resposta que o próprio Hub
+  recebe e a devolve à Mesa, que recalcula as cotas (1 a 2 segundos). Se a Prateleira acabou de
+  pedir a lista sozinha — ela pede ao abrir —, o robô espera essa e não clica (1.2.0). Toda captura
+  vale, inclusive a de quem atualiza a Prateleira à mão. Regras do robô:
+  - trabalha só numa **aba dele**, que ele mesmo abre, lembrada no `window.name` (título "🤖
+    Robô"). A aba em que a pessoa trabalha nunca muda de página; se a pessoa passar a usar a aba do
+    robô noutra página, ele desiste dela e a Mesa abre outra;
+  - **nada de parâmetro no endereço do Hub.** Qualquer um (`?mesaxp=robo`, `?teste=1`) trava o
+    módulo do Mercado Secundário: a página fica em branco, só com o cabeçalho, até com F5, e a
+    boleta nunca faz o pre-check. Foi o que derrubou o piloto da 1.1.0 e da 1.1.1, que marcavam a
+    aba assim (conferido no Hub em 06/10: com o parâmetro, ~3.900 elementos e sem botão Atualizar;
+    sem ele, ~17.300 e com o botão, mesmo escondida). Desde a 1.1.2 a Mesa deixa um bilhete
+    (`abaPedida`) antes de abrir a aba, e a primeira aba do Hub que nasce em segundo plano nos 30 s
+    seguintes fica com ele; a aba antiga com a marca recarrega limpa. O Hub falso do `verificar`
+    trava com parâmetro no endereço, para isso não voltar;
+  - **a aba dele abre junto com a Mesa** (1.2.0), em segundo plano, se não houver uma viva: abrir o
+    Hub do zero leva uns 7 s, que assim não caem na primeira colagem — e a Prateleira dela já traz a
+    cotação. Se a última aba aberta nunca deu sinal (Hub deslogado), a Mesa recarregada espera 10
+    minutos antes de abrir outra;
+  - a aba do robô avisa que pegou o pedido (`atendendo`); sem o aviso em 3 s — aba fechada, posta
+    para dormir pelo Chrome —, a Mesa abre outra em segundo plano. Uma aba viva avisa em menos de
+    1 s; ocupada desenhando a Prateleira, levou até 3 s, e por isso não é menos. Se a última que
+    abriu nunca deu sinal (Hub deslogado), espera um minuto antes de abrir mais uma;
+  - uma tarefa por vez, numa fila;
+  - **a aba do robô age como à vista** (1.1.1). O Chrome não desenha aba em segundo plano: diz que
+    ela está escondida e não roda os quadros de desenho (`requestAnimationFrame`), e a boleta pode
+    depender disso — no piloto, a falta do pre-check foi atribuída a isso antes de se achar o
+    parâmetro no endereço, então não se sabe se esta parte é necessária; ela fica por segurança, e
+    a Prateleira monta inteira com ela. Só na aba do robô e antes de o Hub carregar,
+    `document.visibilityState`/`hidden` respondem "à vista", o `visibilitychange` não chega ao
+    Hub, e cada quadro pedido com a aba escondida roda num relógio comum (o Chrome os segura em um
+    por segundo: a boleta anda e a máquina não gasta). O `verificar` imita a aba escondida e tem a
+    prova de controle: numa aba do Hub comum, a boleta falsa não carrega;
+  - a falha diz o motivo no aviso (`sem-boleta`: a boleta não carregou — a conta é de um cliente
+    seu?), e o e-mail segue certo, pela conta arredondada. Robô de outra versão não é chamado para o
+    preço exato: o painel já pede a cópia nova;
+  - **mede onde vão os segundos** (1.1.3). A aba do robô anota cada passo e cada chamada da API de
+    fundos do Hub com a hora (`registro` no Tampermonkey, os 300 últimos; número longo, como a
+    conta num caminho, vira `<n>`), e a Mesa anota os dela. Ao fim de uma rodada — da colagem ao
+    último preço exato —, a Mesa pede o registro ao robô e o botão **Copiar tempos** entrega uma
+    linha do tempo só, com o resumo no topo (`ui/tempos.js`). Nada do cliente entra. O registro
+    fica na aba e é gravado de uma vez, no fim de cada tarefa e antes de cada entrega à Mesa (1.2.0).
+    A primeira medição no Hub de verdade (06/10, 6 fundos inéditos, 76,5 s) mostrou que o Hub responde
+    rápido e que o tempo ia em trocar de tela na aba escondida: **voltar à Prateleira entre uma
+    boleta e outra** levava 3,4 a 4 s de desenho, mais 2 a 3 s da lista que ela baixa de novo, e a
+    boleta seguinte disputava a aba com essa lista. Foi isso que a 1.2.0 tirou (ver o preço exato);
+  - não lê senha, token nem cabeçalho, não chama a API por conta própria (um teste confere o
+    texto do script) e não manda nada para fora do Chrome;
+  - fica burro: a leitura mora em `estoque.js`, e a Mesa só conversa com ele por `postMessage`
+    (`platform/roboHub.js`: 30 s para a cotação, e até 40 s sem notícia nos preços exatos);
+  - a Mesa o reconhece aberta do disco em `…/mesa-xp/dist/index.html` e em `localhost`; o endereço
+    do Netlify entra no `@match` e em `MESAS_NO_AR` quando for usado.
+  A instalação é colar o script no Tampermonkey: o botão **Copiar robô** do painel o copia, e some
+  quando a versão instalada é a que a Mesa espera.
+- **O preço exato da cota** (robô 1.1.0, 06/10/2026). A prateleira manda o PU arredondado em duas
+  casas ("8,34"), e a conta conservadora perde umas cotas por isso (VGPR11, R$ 40.000: 5.080 em vez
+  de 5.085). O preço que a boleta usa vem no `pre-check` dela (`fund.quotaValue`: 8,337589), e o
+  pre-check só sai com um cliente escolhido. O robô abre a boleta pela rota do próprio Hub,
+  `#/secundario/comprar/<fundo>/<conta>` — que já carrega o cliente, sem digitar nem clicar nada —,
+  lê do pre-check **só** `id`, `quotaValue` e `quotaDate` do fundo. A conta usada é a do
+  próprio pedido, e não fica guardada. O preço vale pelo dia da cota
+  (`quotaDate`, que a prateleira também traz): a Mesa o guarda (`ordens_secundario_cotas`) e só
+  pede de novo quando a cota muda. Toda boleta que a pessoa abre no Hub também deixa o preço do
+  fundo guardado. Com ele, a conta é a da boleta, centavo por centavo (conferida contra a boleta
+  real do VGPR11 em `secundario.test.js`), e os valores do cartão saem sem o "≈". Só pedido em R$
+  busca o preço; sem ele, segue a conta conservadora, que nunca passa do pedido. Desde a 1.2.0:
+  - **só onde o preço muda as cotas** (`precoExatoMuda`). O de verdade está a menos de meia casa
+    do arredondado; se as duas pontas dão as mesmas cotas, nos dois cenários do e-mail (o ROA pode
+    ser trocado na hora de copiar), a boleta é dispensada. Na ordem real de 6 fundos de 06/10, 3
+    não precisavam; PU alto (R$ 99) quase nunca precisa;
+  - **os fundos de uma vez** (`pedirCotas`): o robô vai de uma boleta **direto para a próxima** e
+    volta à Prateleira uma vez só, no fim; cada preço segue para a Mesa assim que o pre-check chega
+    (`cotas` no Tampermonkey, regravado a cada boleta, com `fim` na última). No Hub de verdade a
+    troca direta dispara o pre-check: no piloto de 06/10, 6 fundos inéditos saíram em 9,7 s (eram
+    76,5 s na 1.1.3), de 0,9 a 1,9 s por fundo — 3,8 s no único em que o próprio Hub demorou a
+    responder. Se a troca direta não disparar o pre-check em 8 s, a aba passa pela
+    Prateleira entre as boletas dali em diante, esperando o Hub ver a troca de tela: duas mudanças
+    de endereço no mesmo instante ele veria como uma só. Saindo de uma boleta que não carregou, a
+    troca direta não é posta à prova;
+  - a Mesa espera até 40 s sem notícia do robô antes de dar os que faltam como sem resposta.
+- **A cotação vale 10 minutos** para o e-mail de um pedido em R$ (`LIMITE_DA_COTACAO_MIN`): o
+  deságio muda ao longo do dia, e as cotas de uma cotação velha podem passar do valor pedido.
+  Passou disso, `secundario-cotacao-velha` segura o e-mail (confirmável), com o conserto
+  **Atualizar cotações**. A conta e os bloqueios são refeitos na hora de copiar, porque a página
+  fica aberta o dia todo.
+- **Dois cenários, escolhidos na hora de copiar** (pedido do operador em 06/10). O cartão mostra
+  o **ROA máximo** (o padrão) e o **ROA zerado** numa tabelinha, uma linha cada, com as colunas
+  alinhadas — desconto do cliente, cotas, quanto ele paga e quanto fica para o escritório —, para
+  comparar de relance; numa largura estreita (`@container`), cada número leva o nome da coluna em
+  cima. O e-mail de um pedido em R$ ganha dois botões,
+  **Copiar · ROA máximo** e **Copiar · ROA zerado**. A escolha vale para a solicitação inteira
+  (`solicitacao.semRoa`), refaz a área antes de copiar e deixa à vista o texto copiado, com o
+  cenário marcado "no e-mail". Pedido por cotas tem um botão só: o ROA não muda o e-mail. Isso
+  substituiu o "Sem ROA" por ordem de 05/10.
+- **O Secundário no painel da solicitação** são duas linhas de estado, **Cotação** e **Robô**, cada
+  uma com um ponto de cor: verde pronto (o verde do "ao vivo"), âmbar pedindo atenção (cotação com
+  mais de 10 minutos, robô de outra versão), a cor da aba enquanto busca e apagado quando não há.
+  O carregamento à mão — **Carregar fundos** e o favorito 📥 — fica recolhido em "Sem o robô",
+  aberto sozinho quando o robô não está instalado.
+- **A tabela do cartão cabe inteira, até o Preço, de 1280px para cima** (revisão de 06/10; antes
+  ela media 820px num espaço de 782px num notebook de 1366px, e o Preço ficava atrás de uma rolagem
+  lateral). Para isso: a coluna da solicitação vai de 360 a 460px (`clamp(360px, 29vw, 460px)`),
+  a folga entre as colunas da tabela é menor, o campo do ativo cresce até 16 letras (o nome longo
+  de fundo rola dentro dele, e por extenso fica no bloco Secundário e na dica da linha), e o selo
+  (AÇÃO, FUNDO) desce para baixo do ativo só quando falta espaço. Ao mexer em coluna ou campo da
+  tabela, meça de novo em 1280 e 1366px.
+- **O teto vem da captura** e vale mais que qualquer anotação, por ser o daquela hora; no cartão
+  aparece como texto ("ROA até 0,50% do Hub"). Com a planilha, que não traz o mínimo, ele é
+  **anotado por fundo** no cartão, pelo fim da barra na boleta, e guardado com o deságio do dia
+  (`secundario-teto-antigo` avisa quando o deságio mudou). Sem teto, `secundario-sem-teto` segura o
+  ROA máximo sem confirmação e oferece **Usar ROA zerado**, que não precisa dele. A regra "teto por
+  classe" (FOF 2%, FII 2,5%) que apareceu numa conversa com outra IA é inventada — não a use.
+- **Pedido em R$ vira cotas**: a maior quantidade cujo total, com corretagem e ROA, cabe no valor
+  pedido — calculada com o PU **mais alto** que o arredondamento da planilha permite (PU + meia
+  unidade da última casa). No CPHF11, R$ 16.000 dariam 1.804 cotas pelo PU da planilha, que no Hub
+  custam R$ 16.000,00; a conta dá 1.803. Com PU muito baixo a margem pesa (R$ 0,25 ± 0,005 é 2%).
+- É a **exceção à invariante 2**, pedida pelo operador: o e-mail de fundo leva a quantidade. Ela não
+  adivinha — sai da captura (ou da planilha e do teto anotado) — e fica à vista no cartão antes da
+  saída. Sem os fundos carregados, ou com o fundo fora deles, o bloqueio é confirmável e o e-mail
+  sai em R$, como antes.
+- **Fora da captura:** o incentivo do *Estoque Clientes* (0,50% em cetipados, 0,25% no Portfolio
+  Renda+, segundo o aviso da boleta) não vem na resposta, e o peer to peer não é tratado.
+- Só vale para **compra de fundo da prateleira**, reconhecido pelo nome ou pelo ticker
+  (`VGPR11`, `XPHF11`); venda não passa pela boleta.
+
+### O cliente e o assessor (robô 1.3.0)
+
+Pedido do operador em 07/10/2026: o Abrir no Outlook já vai **para o cliente**, com o **assessor
+responsável em cópia** e o **nome do cliente na saudação**. Código em `core/cliente/`,
+`ui/cliente.js` e `platform/assessores.js`.
+
+- **O cliente vem da ficha do Hub, pelo robô.** A busca do topo do Hub leva à Posição Consolidada,
+  `/new/posicao-consolidada/#/<conta em base64>`, e a tela pede `.../customers/<conta>/customer-info`
+  por **XHR**, em texto. Descoberto no Hub de verdade em 07/10, lendo só os nomes dos campos: a
+  resposta é `{ output: { … } }`, e dentro de `output` vêm `name` (MAIÚSCULAS, sem acento), `email`
+  (MAIÚSCULAS), `advisorCode` (`A51847`), `advisorName` e `xpAccount`. Vem também CPF, telefone e
+  patrimônio, que **nunca saem do Hub**. A 1.3.0 procurava os campos na raiz da resposta (tinham sido
+  vistos nas propriedades da tela, não na resposta) e falhou no primeiro teste no Hub; a 1.3.1 lê
+  `output` e, se a ficha vier num formato que ele não conhece, avisa "o robô precisa ser
+  atualizado" em vez de recarregar à toa. O formato da resposta foi conferido abrindo a ficha num
+  `iframe` com o observador instalado antes do app carregar, sem chamar a API.
+- **Sair da ficha leva ao Dashboard**: `#/` sozinho recarrega o Hub na página inicial. O robô só
+  troca de uma ficha para outra.
+- **Uma segunda aba do robô, a de clientes** (título "🤖 Clientes"). A Posição Consolidada é outro
+  módulo do Hub: ir e voltar da Prateleira recarregaria a página inteira a cada cliente e tiraria a
+  Prateleira de prontidão para a cotação. Na aba de clientes, trocar de cliente é trocar o fim do
+  endereço. Cada papel tem o nome de janela (`mesa-xp-robo`, `mesa-xp-clientes`), o bilhete
+  (`abaPedida`, `abaPedidaClientes`) e a marca de atendimento (`atendendo`, `atendendoClientes`)
+  dele; a aba pega o bilhete do papel do módulo em que nasce. A aba de clientes abre na primeira
+  busca, já na ficha pedida.
+- **Recarregar, uma vez por pedido**, quando a ficha pedida já está na tela (ir para o mesmo
+  endereço não faz o Hub pedi-la de novo) e quando a troca de endereço não trouxe a ficha em 10 s.
+  Não se sabe ainda se o Hub de verdade pede a ficha ao trocar só o fim do endereço; o `verificar`
+  cobre os dois casos.
+- **Minimização.** O robô lê só `name`, `email`, `advisorCode`, `advisorName`, e só se `xpAccount`
+  bater com a conta do endereço da chamada; o gancho no XHR só existe na aba de clientes. O pedido
+  (`pedidoCliente`, com a conta) sai do Tampermonkey no fim da busca, e o resultado (`cliente`) assim
+  que a Mesa o recebe. Na Mesa, o cliente fica **só na memória da página** (`estado.clientes`):
+  nada vai para o `localStorage`, o histórico ou arquivo. O `verificar` confere que nem a conta, nem
+  o nome, nem o e-mail, nem o CPF ficam no armazenamento do robô. O endereço do Outlook leva o
+  e-mail e o nome do cliente, e por isso fica no histórico do navegador de quem abriu.
+- **O assessor vem da planilha dos assessores**, carregada à mão (Carregar assessores, ou arrastar
+  o arquivo): a aba Contatos baixada do Google, em `.xlsx` (todas as abas; vale a primeira com Nome,
+  Email e código, a Contatos antes) ou `.csv` (lido como UTF-8). Fica no `localStorage`
+  (`ordens_assessores`); não é dado de cliente, mas **nunca vai para o repositório**, que é público.
+  Ela tem dois códigos ("Código" e "Código em uso"), um segundo "Nome" à direita, e-mails "-" e
+  linhas que não são pessoas: só fica linha com e-mail válido.
+- **Achar o assessor nunca é palpite:** pelo código (`advisorCode` em qualquer das duas colunas);
+  sem ele na planilha, pelo nome escrito igual, sem acento e maiúscula (o cartão marca "achado pelo
+  nome"). Dois e-mails para o mesmo assessor: vale o único entre os ativos (Status); sem isso, fica
+  sem cópia. O que falta aparece em âmbar no cartão e no aviso do Outlook.
+- **O nome na saudação** (`nomeProprio`): cada palavra com a inicial maiúscula, partículas (da, de,
+  dos, e…) minúsculas no meio, numeral romano inteiro. O acento que o Hub não mandou não é posto.
+  Vale para os dois e-mails e para o Copiar — o que se vê é o que vai. É a exceção à regra de nome
+  nunca entrar na saída: o nome digitado no pedido continua fora; o da ficha do Hub entra na
+  saudação, e só nela.
+- **A linha do cliente no cartão**, logo abaixo da conta, é também conferência: um dígito trocado
+  na conta mostra outro nome. O cliente é refeito a cada render pela conta do campo — **o nome de
+  um cliente nunca fica no e-mail de outra conta**: enquanto a conta é editada, a saudação volta a
+  "Cliente", e o robô busca a conta nova ao sair do campo. Uma conta por vez, numa fila; a que já
+  veio na página não é pedida de novo.
 
 ### A entrada real
 
@@ -337,7 +592,8 @@ casar de cima para baixo daria a cada fundo o valor do vizinho — erro que conf
 Cada uma vale um teste. Violá-las é um bug de negócio, não de estilo.
 
 1. `Cliente` é sempre a conta numérica.
-2. Quantidade nunca vira financeiro, financeiro nunca vira quantidade.
+2. Quantidade nunca vira financeiro, financeiro nunca vira quantidade. Exceção única: compra de
+   fundo no secundário, convertida pela planilha do dia (ver "Fundos no secundário").
 3. `Compra` → `C`, `Venda` → `V`.
 4. Preço informado é preservado literalmente; ausente é `A mercado`.
 5. Ticker suspeito de erro de digitação gera **aviso pedindo confirmação** — a correção automática
@@ -360,7 +616,8 @@ exceções são os bloqueios que confirmar não resolve:
   preview;
 - **ordem que não cabe no formato** — financeiro no Lote Simples, fundo cetipado no lote, no TWAP
   ou na auditoria. Não há o que atestar: a coluna não existe, e confirmar escrevia `null` em
-  `Qtd. Total`. A saída é outro formato, marcado a um clique.
+  `Qtd. Total`. A saída é outro formato, marcado a um clique. A exceção é o fundo escrito pelo
+  ticker: o código cabe na coluna, e confirmar é dizer que a ordem é em bolsa.
 
 A comporta (`gerar`, em `ui/saidas.js`) só aceita confirmação de bloqueio confirmável — ela não
 depende de o botão estar escondido.
@@ -377,6 +634,26 @@ O Lote Simples em TSV, colado na planilha da XP, continua sem financeiro. "Tabel
 simples**: borda fina em todas as células e nada mais — sem cor, sem negrito, sem fonte declarada.
 Ele cola no Outlook na web, que dá ao que chega sem fonte a fonte da mensagem; a primeira versão
 declarava Aptos e pintava o cabeçalho de cinza, e foi recusada por destoar do resto do e-mail.
+
+**Abrir no Outlook** (07/10/2026, pedido do operador) fica ao lado do Copiar nos dois e-mails e abre
+um e-mail novo no Outlook na web, com o assunto **Confirmação de ordem** (`platform/outlook.js`) e,
+com o robô e a planilha dos assessores, o cliente no Para e o assessor em cópia (ver "O cliente e o
+assessor"). É o endereço de compor do Outlook na web, não um `mailto:` solto: este abriria o programa
+de e-mail padrão do Windows, e o operador usa o Outlook na web. Conferido no Outlook da mesa em 07/10:
+
+- **O `cc` solto no endereço é ignorado** — Para, assunto e texto entram, a cópia não. Com o cliente,
+  tudo vai num `mailto:` inteiro dentro do `to` (`compose?to=mailto%3A…%3Fcc%3D…`), como o Chrome e
+  o Edge entregam os links de e-mail ao Outlook na web; aí a cópia entra. Sem o e-mail do cliente,
+  vai o endereço simples, só com assunto e texto.
+- As quebras de linha (`\r\n`) chegam.
+- **Abre numa janela só do e-mail** (`popup`, 980×860, no meio da Mesa), uma por clique, como o
+  "abrir em nova janela" do Outlook. A página não consegue usar a aba do Outlook que a pessoa já tem
+  aberta: o navegador só deixa reaproveitar uma janela aberta pela própria página.
+
+O texto vai no endereço e a área de transferência não é tocada, porque ela pode estar guardando algo
+que a pessoa vai colar. A tabela não vai no endereço, que só leva texto puro: o E-mail em tabela abre
+sem o corpo e vai copiado, para colar. O mesmo vale para o texto acima de 7.000 caracteres
+codificados. Abrir conta no histórico como copiar.
 
 Os textos e cabeçalhos exatos das 4 saídas estão em [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md).
 Leia esse arquivo antes de alterar qualquer formatter ou template — ele é a fonte da verdade dos
@@ -398,11 +675,15 @@ texto colado → limparEntrada → parseSolicitacoes → Solicitacao[] → valid
     quantidade × financeiro
   - `validate/ticker.js` — reconhece o ticker contra `validate/tickersB3.js` e levanta suspeita
   - `validate/validar.js` — produz bloqueios e avisos
+  - `secundario/` — a planilha do secundário, as contas da boleta e a conversão de R$ em cotas;
+    a tela grava o resultado em `ordem.secundario` antes de validar e formatar
   - `format/formatadores.js` — escreve o e-mail e os dois TSVs
 - `src/modulos/ordens/ui/` — render e edição. `preview.js` monta o cartão e aplica as edições; `saidas.js` decide
   entre mostrar a saída ou o bloqueio.
-- `src/modulos/ordens/platform/` — adaptadores de browser (clipboard, histórico), isolados para o core não
-  depender deles.
+  - `cliente/` — o nome para a saudação, a planilha dos assessores e o assessor de cada cliente
+- `src/modulos/ordens/platform/` — adaptadores de browser (clipboard, Outlook, histórico, os fundos do
+  secundário e os tetos de ROA, o favorito do Hub, o robô do Hub e a ponte com ele), isolados para
+  o core não depender deles.
 - `src/modulos/ordens/index.js` — só estado de tela, eventos e render. Nenhum julgamento de negócio mora aqui.
 
 `validate/tickersB3.js` é **gerado**, com 1.624 tickers da B3 por classe. Ele existe para uma
@@ -822,10 +1103,13 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 758 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 939 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
-- Ordens: o core é testado direto; a UI não é. Os 449 testes do Ordens original continuam aqui.
+- Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).
+  O favorito do Hub roda, pelo `javascript:` decodificado, numa página do Hub de mentira (`node:vm`).
+  A ponte com o robô do Hub é testada com uma janela de mentira; o robô mesmo, no `verificar`.
+  Os 449 testes do Ordens original continuam aqui.
 - Renda Fixa: goldens contra o motor original, histórico, render (escape), SheetJS vendorizado.
 - Calendário: contrato do repositório nos dois adaptadores, datas, configuração, render (escape).
 - Dados: a configuração do banco e o Realtime, que só diz "ao vivo" depois do aviso do banco.
@@ -857,7 +1141,8 @@ Não declare pronto sem:
 2. `npm run verificar` (`scripts/verificar-navegador.mjs`; na primeira vez,
    `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as cinco
    abas, os dois temas, a largura de ~360px sem rolagem horizontal, o console, o CSS que vaza entre
-   abas, o texto do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
+   abas, o robô do Hub (o script de verdade, com o Tampermonkey simulado e um Hub falso), o texto
+   do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
    `<img onerror>` como texto) e o Operacional em modo local (copiar e colar igual ao Slab, editar,
    criar, excluir, buscar e o conflito de duas abas) e as Anotações com o relógio controlado (o
    lembrete amarelo, a hora chegando com a pessoa no Ordens — alerta, contador, título —, o print,

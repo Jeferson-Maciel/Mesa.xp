@@ -1,7 +1,7 @@
 # Mesa XP
 
-As ferramentas da mesa num link só: **Ordens**, **Renda Fixa**, **Calendário** e **Operacional**,
-em abas, com o mesmo visual e o mesmo tema claro/escuro — cada aba com a sua cor.
+As ferramentas da mesa num link só: **Ordens**, **Renda Fixa**, **Calendário**, **Operacional** e
+**Anotações**, em abas, com o mesmo visual e o mesmo tema claro/escuro — cada aba com a sua cor.
 
 | Aba | Para quê | Atalho |
 | --- | --- | --- |
@@ -33,6 +33,26 @@ carimbo e tudo —, confere o que o sistema entendeu, e copia a saída pronta.
 | **Lote TWAP** | colar na planilha de TWAP | TSV |
 
 Os TSVs usam TAB real e colam direto em Excel e Planilhas Google, uma coluna por campo.
+
+Os dois e-mails têm, ao lado do Copiar, **Abrir no Outlook**: abre um e-mail novo do Outlook na web
+numa janela só dele, com o assunto **Confirmação de ordem**. Na Ordem por e-mail o texto já vai no
+corpo, e a área de transferência fica como estava. No E-mail em tabela, o endereço não comporta a
+tabela: o e-mail vai copiado, e você o cola no corpo com Ctrl+V. Se o navegador bloquear a janela,
+permita janelas pop-up para a Mesa (o ícone na ponta da barra de endereço).
+
+Com o robô do Hub (versão 1.3.1) e a planilha dos assessores, o e-mail já sai **para o cliente**,
+com o **assessor responsável em cópia** e o **nome do cliente na saudação** ("Prezado(a) Ana Paula
+da Silva,"):
+
+1. **Uma vez, e quando a planilha mudar:** no Google, abra a planilha dos assessores, **Arquivo ›
+   Fazer download › Microsoft Excel (.xlsx)** (ou o .csv da aba Contatos), e na Mesa clique em
+   **Carregar assessores** — ou arraste o arquivo para a aba Ordens. Ela fica no navegador.
+2. Ao analisar um pedido, o robô abre a ficha do cliente no Hub numa aba dele ("🤖 Clientes") e traz
+   só o nome, o e-mail e o assessor. Eles aparecem no cartão, abaixo da conta: confira o nome.
+3. **Abrir no Outlook** vai com o Para e o Cc preenchidos. O que faltar (cliente sem e-mail no Hub,
+   assessor fora da planilha) aparece em âmbar no cartão e no aviso.
+
+O cliente não é guardado: fica só na tela, e uma conta corrigida busca o cliente de novo.
 A especificação literal de cada formato está em [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md).
 
 ### O princípio
@@ -52,9 +72,68 @@ trocar para o formato que comporta a ordem.
 Estes casos continuam sendo feitos à mão, e o sistema os lista com o motivo em vez de tentar
 adivinhar: ordem sem quantidade nem valor (`V - HGCR11 (Total)`) e Push, que é do Hub.
 
-Fundos cetipados (sem ticker, identificados pelo nome) **são atendidos**, pelo mesmo modelo de
-e-mail das ações, inclusive com o valor na linha de baixo do nome. Lote, TWAP e o E-mail em tabela
-não: a coluna `Ativo` precisa de um código.
+Fundos cetipados **são atendidos**, pelo mesmo modelo de e-mail das ações, inclusive com o valor
+na linha de baixo do nome. Eles são reconhecidos pelo nome ou, os que têm, pelo ticker escrito
+sozinho (`VGPR11`, `XPHF11`): o ticker de um fundo da prateleira é o fundo, comprado pela boleta do
+secundário. Lote, TWAP e o E-mail em tabela não: a coluna `Ativo` precisa de um código — com o
+ticker, dá para confirmar quando a ordem é em bolsa.
+
+### Fundos no secundário
+
+A compra de fundo cetipado passa pela boleta do secundário da XP, que divide o deságio entre o
+cliente e o escritório (ROA adicional) e cobra a corretagem por cima. Com os fundos do dia
+carregados, o pedido em R$ vira **cotas**, e o e-mail leva a quantidade:
+
+1. **Uma vez só:** arraste o botão **📥 Fundos → Mesa** (em "Secundário", no painel da solicitação)
+   para a barra de favoritos do Chrome. `Ctrl+Shift+B` mostra a barra. O 📥 é o ícone dele na
+   barra.
+2. No Hub, abra **Fundos › Mercado Secundário › Prateleira** e clique no favorito. Ele atualiza a
+   prateleira e baixa um `mercado-secundario-DD-MM-AAAA-HHhMM.json` com todos os fundos — e com o
+   **ROA adicional de cada um**, que a exportação do Hub não traz.
+3. Arraste o arquivo para a aba Ordens, ou use **Carregar fundos**. Ele fica no navegador até você
+   carregar outro, e o sistema avisa quando ele não é do dia.
+4. Cada compra de fundo ganha, no cartão, a conta da boleta nos dois cenários, lado a lado:
+   **ROA máximo** (o escritório fica com a barra toda) e **ROA zerado** (o deságio inteiro vai para
+   o cliente) — desconto do cliente, cotas, quanto o cliente paga e quanto fica para o escritório.
+5. No e-mail, **Copiar · ROA máximo** ou **Copiar · ROA zerado**: o texto copiado já sai com as
+   cotas daquele cenário, e é ele que fica à vista. A escolha vale para todos os fundos do pedido.
+6. As cotas são as que cabem no valor pedido com tudo dentro — corretagem e ROA —, e a conta usa o
+   PU mais alto que o arredondamento permite. O cliente nunca paga mais que o pedido; às vezes
+   sobra uma cota.
+
+**Com o robô do Hub, nem o favorito precisa.** Com ele instalado, ao colar um pedido com compra de
+fundo a Mesa busca sozinha a cotação do momento na aba do Hub, e o e-mail já sai com as cotas
+atualizadas. Para instalar, uma vez por computador:
+
+1. Instale o **Tampermonkey** pela loja do Chrome.
+2. Em `chrome://extensions`, abra os **Detalhes** do Tampermonkey e ligue **Permitir scripts de
+   usuário** e, para a Mesa aberta do disco, **Permitir acesso aos URLs de arquivo**.
+3. Na Mesa, clique em **Copiar robô**. No Tampermonkey, **Criar novo script**, apague o modelo, cole
+   e salve (`Ctrl+S`). Recarregue a Mesa: no painel, em "Secundário", o Robô passa a dizer "pronto", com o
+   ponto verde.
+4. Esteja logado no Hub. Ao abrir a Mesa, o robô abre uma **aba só dele** (título "🤖 Robô"), em
+   segundo plano, e trabalha só nela: a aba em que você trabalha nunca muda de página. Na primeira
+   busca de cliente ele abre uma segunda, "🤖 Clientes", na Posição Consolidada.
+5. Em Configurações › Desempenho, ponha `hub.xpi.com.br` em **Sempre manter estes sites ativos**,
+   para o Chrome não pôr a aba para dormir.
+
+Para um pedido em R$, o robô também traz o **preço exato da cota**, o mesmo da boleta: ele abre as
+boletas dos fundos para a conta do pedido na aba dele, uma atrás da outra, lê o preço e volta, sem
+preencher nada. Com ele, as cotas são as da boleta, e os valores do cartão saem sem o "≈". Isso é
+feito uma vez por fundo por dia, e só quando o preço exato muda as cotas — com PU alto, quase nunca
+muda. O botão **Copiar tempos** do painel copia quanto levou cada passo da última busca, sem nada do
+cliente, para achar onde vão os segundos.
+
+A cotação vale 10 minutos para o e-mail de um pedido em R$; passou disso, a Mesa pede para
+atualizar (**Atualizar cotações**) ou confirmar.
+
+O favorito não lê senha nem token e não manda nada para lugar nenhum: ele só guarda a resposta que
+o próprio Hub recebeu ao atualizar a prateleira, num arquivo na sua pasta de downloads.
+
+A exportação "Todos os fundos" (.xlsx) continua servindo, mas sem o ROA: com ela, na primeira vez
+de cada fundo, arraste a barra de ROA da boleta até o fim e anote o número em **ROA máx.**
+
+Os valores em R$ do cartão levam "≈": o Hub manda o PU com duas casas, e calcula com mais.
 
 ### Cole direto do WhatsApp
 
@@ -323,7 +402,7 @@ presença do antigo ficaram para trás, e o Calendário começou do zero.
 ### Segurança — pendência
 
 **Calendário e Operacional ainda não têm login**, e as políticas do banco liberam leitura e escrita
-para quem tem a chave anon — que vai no próprio site e está neste repositório público. Qualquer
+para quem tem a chave anon — que vai no próprio site e no código. Qualquer
 pessoa com o link pode ver e alterar os registros do Calendário (nomes e motivos de ausência, às
 vezes de saúde) e os procedimentos do Operacional; no Calendário, também apagar. Trate o link como
 interno e evite detalhe de saúde no motivo. No Operacional nada é apagado de verdade: cada versão de
@@ -406,7 +485,12 @@ configurado para reduzir movimento.
 
 ## Como rodar
 
+Clone na pasta `mesa-xp`: o robô do Hub reconhece a Mesa aberta do disco pelo caminho
+`…/mesa-xp/dist/index.html`, e o nome padrão do clone (`Mesa.xp`) o deixaria de fora.
+
 ```bash
+git clone https://github.com/Jeferson-Maciel/Mesa.xp.git mesa-xp
+cd mesa-xp
 npm install
 npm run dev      # servidor local de desenvolvimento
 npm test         # testes
@@ -435,6 +519,12 @@ redirecionamento de todas as rotas para o `index.html`. Qualquer host de estáti
 - **Ordens e Renda Fixa** rodam inteiros no navegador: nenhum dado de cliente nem planilha sai da
   máquina. Não há backend, telemetria nem chamada de rede nessas abas; os históricos ficam no
   `localStorage` do navegador.
+- **O robô do Hub** (opcional, no Tampermonkey) conversa só dentro do Chrome, entre a aba da Mesa
+  e as abas dele no Hub. Para o preço exato, ele abre a boleta com a conta do pedido no endereço da
+  aba do Hub — o mesmo que abrir a boleta à mão. Da ficha do cliente, traz só o nome, o e-mail e o
+  assessor, e nada disso fica guardado: nem no Tampermonkey depois da busca, nem na Mesa fora da
+  tela. Não lê senha nem token.
+- **A planilha dos assessores** fica no navegador de quem a carregou e nunca vai para o repositório.
 - **Calendário** e **Operacional** gravam no Supabase — veja a pendência de segurança acima.
 - **Anotações** ficam no navegador de quem usa (IndexedDB), com os prints: não vão para servidor
   nenhum, justamente porque costumam ter dado de cliente.
@@ -446,7 +536,9 @@ index.html                 a casca: topo, abas e as cinco seções
 src/main.js                liga tema, abas e o início de cada ferramenta
 src/shell/                 rotas e atalhos das abas
 src/ui/                    tema, avisos, escape de HTML, tokens e componentes compartilhados
-src/modulos/ordens/        parsing, validação e formatação (core/), preview e saídas (ui/), histórico
+src/modulos/ordens/        o pedido: leitura, validação, secundário, cliente e formatação (core/), cartão
+                           e saídas (ui/), robô do Hub, Outlook, área de transferência e histórico
+                           (platform/)
 src/modulos/rendafixa/     motor, leitura da planilha, histórico, tela; fixtures/ e golden/ dos testes
 src/modulos/calendario/    repositório e adaptadores (Supabase e local), datas, tela
 src/modulos/operacional/   base de conhecimento: a cópia do Slab, repositório e adaptadores, tela
@@ -455,16 +547,19 @@ src/dados/                 a conexão única com o Supabase e a configuração
 src/vendor/                SheetJS 0.20.1 (licença Apache 2.0)
 supabase/schema.sql        tabelas, políticas e Realtime do Calendário
 supabase/operacional.sql   tabelas, histórico, políticas, Realtime e a base inicial do Operacional
-docs/                      formatos de saída do Ordens; roadmap e sugestões
+docs/                      formatos de saída do Ordens; roadmap e sugestões; contexto da última sessão
+AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 758 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 939 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 
-Convenções e regras de negócio para quem (ou o que) for mexer no código: [`CLAUDE.md`](CLAUDE.md).
-Defeitos conhecidos, sugestões e próximos passos: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Convenções e regras de negócio para quem (ou o que) for mexer no código: [`CLAUDE.md`](CLAUDE.md),
+e o resumo para outros agentes em [`AGENTS.md`](AGENTS.md). Onde o trabalho parou — o que funciona,
+o que foi testado no Hub de verdade e o que falta: [`docs/CONTEXTO.md`](docs/CONTEXTO.md). Defeitos
+conhecidos, sugestões e próximos passos: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Tecnologias
 

@@ -14,8 +14,9 @@
   padding: 0 var(--esp-5);
   display: grid;
   /* minmax(0, 1fr) e não 1fr: o mínimo automático de 1fr deixaria a tabela larga do preview
-     empurrar a coluna para além da tela, em vez de rolar dentro do .table-container. */
-  grid-template-columns: 460px minmax(0, 1fr);
+     empurrar a coluna para além da tela, em vez de rolar dentro do .table-container. A coluna da
+     solicitação encolhe um pouco num notebook (1280–1366px), para a tabela caber inteira. */
+  grid-template-columns: clamp(360px, 29vw, 460px) minmax(0, 1fr);
   gap: var(--esp-5);
   align-items: start;
 }
@@ -435,6 +436,25 @@ table.preview td:last-child {
   text-align: right;
 }
 
+/* A tabela inteira cabe num notebook de 1366px, até o Preço: folga menor entre as colunas (a das
+   pontas fica), e o nome longo de fundo rola dentro do campo (preview.js). Antes, ela media 820px
+   num espaço de 782px, e o Preço ficava escondido atrás de uma rolagem lateral. */
+table.preview th,
+table.preview td {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+table.preview th:first-child,
+table.preview td:first-child {
+  padding-left: 0.85rem;
+}
+
+table.preview th:last-child,
+table.preview td:last-child {
+  padding-right: 0.85rem;
+}
+
 /* ── Alinhamento das linhas do preview ─────────────────────────────────────────────────
    Toda célula é célula de tabela de verdade — um `display: flex` direto no <td> tirava a célula da
    linha: a borda de baixo dela ficava mais alta que a das vizinhas (a "linha quebrada") e o
@@ -454,9 +474,14 @@ table.preview tbody td {
   white-space: nowrap;
 }
 
-/* O selo da classe (AÇÃO, ETF, SUSPEITO…) vai ao lado do ticker, e não embaixo dele. */
+/* O selo da classe (AÇÃO, ETF, SUSPEITO…) vai ao lado do ticker, e não embaixo dele — salvo
+   quando a tabela não cabe: aí ele desce, e o Preço continua à vista. */
 .linha-campos .selo {
   margin-left: 0;
+}
+
+.col-ativo .linha-campos {
+  flex-wrap: wrap;
 }
 
 table.preview .campo {
@@ -522,6 +547,65 @@ table.preview .btn-remover {
   border-color: var(--acento-borda);
   color: var(--texto-forte);
   font-weight: 700;
+}
+
+/* ── O cliente da conta ─────────────────────────────────────────────────────────────── */
+
+/* O que o robô trouxe da ficha do Hub: quem é o cliente e quem vai em cópia. Fica logo abaixo da
+   conta, que é o que ela confere — um dígito trocado mostra outro nome. O que falta vai em âmbar. */
+.area-cliente:empty {
+  display: none;
+}
+
+.linha-cliente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1) var(--esp-5);
+  margin-bottom: var(--esp-3);
+  font-size: 0.8rem;
+}
+
+.cliente-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--esp-2);
+  min-width: 0;
+}
+
+.cliente-rotulo {
+  color: var(--texto-fraco);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cliente-nome {
+  color: var(--texto-forte);
+  font-weight: 650;
+}
+
+.cliente-email {
+  color: var(--texto);
+  overflow-wrap: anywhere;
+}
+
+.cliente-codigo {
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+.cliente-falta {
+  color: var(--atencao);
+}
+
+.cliente-nota {
+  padding: 0 0.4rem;
+  border: 1px solid var(--atencao-borda);
+  border-radius: var(--r-pilula);
+  color: var(--atencao);
+  font-size: 0.66rem;
 }
 
 /* ── Selo de classificação do ticker ────────────────────────────────────────────────── */
@@ -763,7 +847,11 @@ table.preview .btn-remover {
   text-transform: uppercase;
 }
 
+/* O título e os botões de copiar dividem a linha; sem espaço (o celular, os dois botões do fundo),
+   os botões descem para a linha de baixo em vez de cobrir o título. */
 .saida .panel-header-row {
+  flex-wrap: wrap;
+  row-gap: var(--esp-2);
   margin-bottom: var(--esp-3);
 }
 
@@ -790,6 +878,19 @@ table.preview .btn-remover {
   background: currentColor;
   -webkit-mask: var(--i-copiar) center / contain no-repeat;
   mask: var(--i-copiar) center / contain no-repeat;
+}
+
+/* Copiar e Abrir no Outlook dividem o canto do título; o do Outlook leva o envelope. */
+.acoes-saida {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--esp-2);
+}
+
+.saida .btn-outlook:not(.copiado)::before {
+  -webkit-mask-image: var(--i-envelope);
+  mask-image: var(--i-envelope);
 }
 
 .output-box {
@@ -871,6 +972,21 @@ table.preview .btn-remover {
 
 .acoes-alerta .btn-confirmar {
   margin-left: 0;
+}
+
+/* Num quadro estreito (o celular), os botões descem para baixo do texto — antes, espremiam o texto
+   numa coluna de uma palavra e empurravam a página para fora da tela. */
+.saida .alert {
+  flex-wrap: wrap;
+}
+
+.saida .alert > span:first-child {
+  flex: 1 1 11rem;
+}
+
+.saida .acoes-alerta {
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .confirmado {
@@ -1171,4 +1287,375 @@ table.preview .btn-remover {
 .col-ativo {
   white-space: normal;
   max-width: 36rem;
+}
+
+/* ── Secundário ─────────────────────────────────────────────────────────────────────── */
+/* A planilha do dia, no painel da solicitação, e o bloco do cartão com a conta de cada compra de
+   fundo. O traço lilás é o mesmo do selo "Fundo": diz de que ordens o bloco fala. */
+
+/* O Secundário no painel: duas linhas de estado — a cotação e o robô —, cada uma com o ponto que
+   diz de relance se está tudo certo: verde pronto (o verde do "ao vivo" do Calendário), âmbar
+   pedindo atenção (cotação velha, robô de outra versão), a cor da aba enquanto busca e apagado
+   quando não há. O carregamento à mão fica recolhido embaixo. */
+.secundario-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  margin-top: var(--esp-3);
+}
+
+/* Ponto, nome, texto e botões em colunas: o texto longo quebra dentro da coluna dele, sem descer
+   para baixo do ponto. */
+.estado-linha {
+  display: grid;
+  grid-template-columns: 7px 3.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-1) var(--esp-2);
+}
+
+.estado-linha > .preset-btn + .preset-btn {
+  grid-column: 4;
+}
+
+.estado-linha::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--texto-fraco);
+  opacity: 0.55;
+  transition: background-color var(--t-medio) var(--curva);
+}
+
+.estado-linha[data-estado='pronto']::before {
+  background: var(--positivo);
+  opacity: 1;
+}
+
+.estado-linha[data-estado='atencao']::before {
+  background: var(--atencao);
+  opacity: 1;
+}
+
+.estado-linha[data-estado='buscando']::before {
+  background: var(--acento);
+  opacity: 1;
+}
+
+.estado-nome {
+  color: var(--texto-forte);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.estado-linha .meta-counter {
+  text-align: left;
+}
+
+.secundario-manual {
+  font-size: 0.75rem;
+}
+
+.secundario-manual summary {
+  width: fit-content;
+  color: var(--texto-fraco);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.secundario-manual summary::-webkit-details-marker {
+  display: none;
+}
+
+.secundario-manual summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--esp-2);
+  transition: transform var(--t-medio) var(--curva);
+}
+
+.secundario-manual[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.secundario-manual summary:hover {
+  color: var(--texto);
+}
+
+.secundario-manual-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  margin-top: var(--esp-2);
+}
+
+/* O favorito só serve arrastado para a barra de favoritos: o cursor diz isso antes do título. O
+   texto do botão vira o nome do favorito, e o 📥 é o ícone dele na barra — o Chrome não dá ícone
+   próprio a favorito `javascript:`. Por isso aqui o ícone é emoji no texto, e não máscara SVG. */
+.favorito-hub {
+  cursor: grab;
+  text-decoration: none;
+}
+
+.meta-counter.antiga,
+.secundario-falta {
+  color: var(--atencao);
+}
+
+#painel-entrada.arrastando {
+  border-color: var(--acento-borda);
+  box-shadow: var(--foco);
+}
+
+.secundario {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-4);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--classe-cetipado);
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+}
+
+.secundario-cabeca {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-3);
+}
+
+.secundario-titulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-fraco);
+}
+
+.secundario-fundo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.secundario-fundo + .secundario-fundo {
+  padding-top: var(--esp-3);
+  border-top: 1px solid var(--borda);
+}
+
+.secundario-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--esp-1) var(--esp-3);
+}
+
+.secundario-nome {
+  color: var(--texto-forte);
+  font-weight: 600;
+}
+
+.secundario-pedido {
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Os números do fundo na mesma fonte do resto do bloco, com algarismos de largura fixa. */
+.secundario-dados {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-4);
+  color: var(--texto);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.secundario-teto {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-1);
+  font-family: var(--fonte);
+  font-weight: 600;
+}
+
+.secundario-teto .campo {
+  width: 4.2rem;
+  padding: 0.22rem 0.45rem;
+  text-align: right;
+}
+
+.secundario-conta {
+  color: var(--texto);
+}
+
+/* Os cenários da boleta numa tabelinha: o nome do cenário e quatro números, alinhados à direita e
+   com algarismos de largura fixa — cotas embaixo de cotas, valor embaixo de valor, para comparar
+   de relance. As linhas são `display: contents`: as células caem direto na grade e as colunas
+   alinham entre as linhas. A que vai no e-mail sobe um tom, ganha o traço da cor da aba e o selo
+   "no e-mail" — o mesmo anel do segmentado escolhido, sem par de cor novo. */
+.secundario-cenarios {
+  display: grid;
+  grid-template-columns: repeat(5, max-content);
+  justify-content: start;
+}
+
+.secundario-cabecalho,
+.secundario-cenario {
+  display: contents;
+}
+
+.secundario-th,
+.secundario-rotulo,
+.secundario-num,
+.secundario-largo {
+  padding: 0.34rem 0.85rem;
+}
+
+.secundario-th {
+  padding-bottom: 0.15rem;
+  color: var(--texto-fraco);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.secundario-th:first-child {
+  text-align: left;
+}
+
+.secundario-rotulo {
+  border-left: 2px solid transparent;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+  color: var(--texto-forte);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.secundario-num {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.secundario-num strong {
+  color: var(--texto-forte);
+}
+
+.secundario-taxa {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+.secundario-largo {
+  grid-column: 2 / -1;
+}
+
+.secundario-cenario.escolhido > * {
+  background: var(--superficie);
+}
+
+.secundario-cenario.escolhido > .secundario-rotulo {
+  border-left-color: var(--acento);
+}
+
+.secundario-cenario.escolhido > :last-child {
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.secundario-no-email {
+  margin-left: var(--esp-1);
+  padding: 0 0.45rem;
+  border: 1px solid var(--acento-borda);
+  border-radius: var(--r-pilula);
+  color: var(--texto);
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+/* Estreito (o celular, a janela partida ao meio): o cabeçalho some, o nome do cenário ocupa a
+   linha, e cada número leva o nome da coluna em cima, dois por linha. */
+@container (max-width: 40rem) {
+  .secundario-cenarios {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .secundario-cabecalho {
+    display: none;
+  }
+
+  .secundario-rotulo,
+  .secundario-largo {
+    grid-column: 1 / -1;
+  }
+
+  .secundario-num {
+    text-align: left;
+  }
+
+  .secundario-num::before {
+    content: attr(data-coluna);
+    display: block;
+    color: var(--texto-fraco);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .secundario-cenario.escolhido > *,
+  .secundario-cenario.escolhido > :last-child {
+    border-radius: 0;
+  }
+}
+
+/* O robô do Hub buscando a cotação: um anel pequeno girando ao lado do texto, só enquanto dura a
+   busca — é dado que está chegando, não enfeite. Sem movimento, fica só o texto. */
+.meta-counter.buscando {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.meta-counter.buscando::before {
+  content: '';
+  width: 0.7em;
+  height: 0.7em;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar-busca 0.9s linear infinite;
+}
+
+@keyframes girar-busca {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meta-counter.buscando::before {
+    animation: none;
+  }
+}
+
+/* Copiar o e-mail de fundo com o ROA máximo ou com o zerado: o escolhido leva o anel da aba. */
+.copiar-roa {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--esp-2);
+}
+
+.copy-btn.escolhido:not(.copiado) {
+  border-color: var(--acento-borda);
+  box-shadow: inset 0 0 0 1px var(--acento-borda);
 }

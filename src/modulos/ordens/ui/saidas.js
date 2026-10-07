@@ -7,6 +7,7 @@ import {
 } from '../core/format/formatadores.js';
 import { esc } from '../core/util/html.js';
 import { validar } from '../core/validate/validar.js';
+import { renderSecundario } from './secundario.js';
 
 export { esc };
 
@@ -90,13 +91,52 @@ const renderDiagnostico = (d, confirmado) => {
   return `<div class="alert ${classe}"><span>${esc(d.mensagem)}</span>${marca}${botoes}</div>`;
 };
 
+/**
+ * Fundo pedido em R$ no secundário: o ROA muda as cotas do e-mail. A escolha é feita na hora de
+ * copiar, com um botão por cenário, e vale para a solicitação inteira; o texto à vista é sempre o
+ * do cenário escolhido, que é o último copiado. Sem teto, o máximo não tem conta e também conta
+ * como diferente: o botão leva ao bloqueio que explica o que falta.
+ */
+const roaMudaOEmail = (solicitacao) =>
+  (solicitacao.ordens ?? []).some((o) => {
+    const cenarios = o.secundario?.cenarios;
+    return cenarios && o.secundario.porValor && cenarios.maximo?.cotas !== cenarios.zerado.cotas;
+  });
+
+const botoesDeCopiar = (formato, solicitacao) => {
+  if (formato !== 'email' || !roaMudaOEmail(solicitacao)) {
+    return `<button class="copy-btn" data-copiar="${formato}">Copiar</button>`;
+  }
+
+  const zerado = solicitacao.semRoa === true;
+  const botao = (roa, rotulo, escolhido) =>
+    `<button class="copy-btn${escolhido ? ' escolhido' : ''}" data-copiar="${formato}" data-roa="${roa}" aria-pressed="${escolhido}">Copiar · ${rotulo}</button>`;
+
+  return `<div class="copiar-roa" role="group" aria-label="Copiar com qual ROA adicional">${botao('maximo', 'ROA máximo', !zerado)}${botao('zerado', 'ROA zerado', zerado)}</div>`;
+};
+
+/**
+ * Os dois e-mails abrem também no Outlook na web, com o assunto da confirmação. O texto vai no
+ * endereço; a tabela não cabe nele e vai copiada, para colar no corpo. No fundo do secundário, vai
+ * o cenário à vista, o do último ROA escolhido.
+ */
+const DICAS_DO_OUTLOOK = {
+  email: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem” e este texto',
+  auditoria: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem”, e copia este e-mail para colar no corpo (Ctrl+V)'
+};
+
+const botaoDoOutlook = (formato) =>
+  DICAS_DO_OUTLOOK[formato]
+    ? `<button class="copy-btn btn-outlook" data-outlook="${formato}" title="${DICAS_DO_OUTLOOK[formato]}">Abrir no Outlook</button>`
+    : '';
+
 // O HTML vem do formatador, que já escapou cada valor digitado. Mostrá-lo montado deixa o operador
 // conferir a grade como ela vai chegar no e-mail.
-const renderSaida = (formato, { texto, html }) => `
+const renderSaida = (formato, { texto, html }, solicitacao) => `
   <div class="saida" data-formato="${formato}">
     <div class="panel-header-row">
       <h3 class="panel-title">${ROTULOS[formato]}</h3>
-      <button class="copy-btn" data-copiar="${formato}">Copiar</button>
+      <div class="acoes-saida">${botoesDeCopiar(formato, solicitacao)}${botaoDoOutlook(formato)}</div>
     </div>
     ${
       html
@@ -121,8 +161,12 @@ const renderBloqueado = (formato, pendentes, confirmados) => `
  * @returns {string} HTML da área de diagnósticos e saídas
  */
 export const renderSaidas = (solicitacao, formatos, confirmados) => {
+  // O bloco do secundário vem antes das saídas e não depende do formato: é a conta que o e-mail
+  // vai usar, e mora aqui porque esta área é refeita a cada tecla no cartão.
+  const secundario = renderSecundario(solicitacao);
+
   if (formatos.length === 0) {
-    return '<div class="empty-state pequeno"><p>Escolha um formato de saída acima.</p></div>';
+    return secundario + '<div class="empty-state pequeno"><p>Escolha um formato de saída acima.</p></div>';
   }
 
   // Os avisos não dependem do formato escolhido, então são mostrados uma vez só.
@@ -133,8 +177,8 @@ export const renderSaidas = (solicitacao, formatos, confirmados) => {
 
     if (pendentes.length > 0) return renderBloqueado(formato, pendentes, confirmados);
 
-    return renderSaida(formato, saidaDe(solicitacao, formato));
+    return renderSaida(formato, saidaDe(solicitacao, formato), solicitacao);
   });
 
-  return avisos.map((d) => renderDiagnostico(d, false)).join('') + blocos.join('');
+  return secundario + avisos.map((d) => renderDiagnostico(d, false)).join('') + blocos.join('');
 };

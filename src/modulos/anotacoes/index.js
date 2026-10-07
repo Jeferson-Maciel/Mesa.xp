@@ -1196,7 +1196,7 @@ const MARCACAO = `
     </div>
 
     <form class="an-rapida" data-an="form-rapida" autocomplete="off">
-      <input data-an="rapida" placeholder="Anotar rápido… ex.: ligar pro cliente amanhã 10h #retorno" aria-label="Anotar rápido" maxlength="200" />
+      <input data-an="rapida" placeholder="Anotar rápido… ex.: ligar amanhã 10h #retorno" aria-label="Anotar rápido" maxlength="200" />
       <div class="an-rapida-lido" data-an="rapida-lido" aria-live="polite"></div>
     </form>
 

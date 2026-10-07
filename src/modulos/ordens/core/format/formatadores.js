@@ -25,13 +25,27 @@ const precoDe = (ordem) => ordem.preco ?? 'A mercado';
 const porFinanceiro = (ordem) => ordem.financeiro !== null && ordem.financeiro !== undefined;
 
 /**
+ * Fundo cetipado pedido em R$, já convertido em cotas pela planilha do secundário: o e-mail de fundo
+ * leva a quantidade (decisão do operador, 05/10/2026). A conversão foi feita e mostrada no cartão
+ * antes daqui (`core/secundario`); este formatador só a escreve.
+ */
+const cotasDoSecundario = (ordem) => {
+  const sec = ordem.secundario;
+  return sec?.situacao === 'pronto' && sec.porValor && sec.cotas > 0 ? sec.cotas : null;
+};
+
+/**
  * Corpo de um ativo no e-mail: quatro linhas consecutivas, sem linha em branco entre elas.
  * A segunda linha é `Quantidade` ou `Valor`, nunca as duas (invariante 2).
  */
 const blocoDeAtivo = (ordem) => {
-  const valor = porFinanceiro(ordem)
-    ? 'Valor: ' + formatarFinanceiro(ordem.financeiro) + ';'
-    : 'Quantidade: ' + ordem.quantidade + ';';
+  const cotas = cotasDoSecundario(ordem);
+  const valor =
+    cotas !== null
+      ? 'Quantidade: ' + cotas + ';'
+      : porFinanceiro(ordem)
+        ? 'Valor: ' + formatarFinanceiro(ordem.financeiro) + ';'
+        : 'Quantidade: ' + ordem.quantidade + ';';
 
   return [
     'Ativo: ' + ordem.ativo + ';',
@@ -44,13 +58,16 @@ const blocoDeAtivo = (ordem) => {
 /**
  * O que vem antes e depois do corpo, igual nos dois e-mails. A ordem e a auditoria diferem só
  * no corpo: blocos de texto numa, a tabela do Lote Simples na outra.
+ *
+ * A saudação leva o nome completo do cliente quando o robô o trouxe do Hub (`solicitacao.cliente`,
+ * já com as maiúsculas arrumadas — decidido com o operador em 07/10/2026); sem ele, "Cliente".
  */
 const molduraDoEmail = (solicitacao) => {
   const varias = solicitacao.ordens.length > 1;
 
   return {
     abertura: [
-      'Prezado(a) Cliente,',
+      `Prezado(a) ${solicitacao.cliente?.nome || 'Cliente'},`,
       '',
       'Conforme conversado, gostaria de realizar ' +
         (varias ? 'as ordens abaixo' : 'a ordem abaixo') +

@@ -123,6 +123,62 @@ amarelo/vermelho com alerta na tela. Ficou para depois:
 
 ---
 
+## Secundário — o que ficou em aberto (05/10/2026)
+
+A compra de fundo no secundário entrou com a conta da boleta, a planilha do dia e o teto de ROA
+anotado por fundo (ver "Fundos no secundário" no `CLAUDE.md`). Ficou em aberto:
+
+1. ~~**A regra do teto do ROA.**~~ Resolvido em 06/10: não há regra a descobrir. O teto vem por
+   fundo na API da prateleira, como deságio menos deságio mínimo do cliente
+   (`treasuryMinimumPurchaseDiscount`), e o favorito do Hub o traz. A anotação à mão ficou só para
+   quem carrega a planilha exportada. **Falta conferir numa boleta** dois casos que a captura de
+   06/10 traz e nenhuma boleta mostrou ainda — os 44 fundos com `percentageComission` 0,00: os
+   XP CDI Private (deságio zero) e os FIPs e fundos fechados com deságio de 5% a 15% e mínimo
+   0,00. Até lá, a captura não dá o teto deles (fica por anotar, ou ROA zerado) e o pedido em R$
+   segura com `secundario-sem-corretagem`. Uma boleta de um XP CDI Private e uma de um FIP, com
+   a barra do ROA no fim, decidem.
+2. **Teto compartilhado.** Com a captura do Hub, perdeu a urgência: cada um captura o seu. Ainda
+   vale para a planilha exportada, quando houver login (fase 2).
+3. **Ágio.** Seis fundos vêm com deságio negativo (Root Capital, Artesanal, Occam…), e a lista do Hub
+   mostra o número sem o sinal. Falta ver numa boleta se há ROA neles; hoje o teto é pedido como em
+   qualquer outro.
+4. **A planilha como prateleira.** ~~Quatro fundos da planilha de 05/10 (os `XP CDI 9x CRA Set/27
+   FIAGRO RL`) não estavam na prateleira de 22/09.~~ A lista foi regenerada em 06/10 com os 150
+   fundos. A captura carregada poderia alimentar também o reconhecimento por nome, e a lista se
+   atualizaria sozinha; até lá, `npm run fundos:update -- captura.json`.
+5. **PU muito baixo.** Com PU de R$ 0,25 (XP SS 1 FIC FIDC), a margem do arredondamento é 2% do
+   valor, e o cliente pode ficar bem abaixo do pedido. Se incomodar, um campo para digitar o PU que
+   a boleta mostra resolve.
+6. ~~**Fundo listado pelo ticker.**~~ Decidido em 06/10: o ticker de um fundo da prateleira,
+   escrito sozinho, é o fundo (boleta do secundário). No lote e no TWAP o bloqueio é confirmável,
+   para quando a mesa comprar em bolsa.
+7. **Aplicação bloqueada.** A captura traz `canApply` e `isInvestmentBlocked`. Na de 06/10, 12
+   fundos vêm com `canApply` falso — 11 deles sem estoque, que o bloqueio de estoque já segura; o
+   outro é o XP SS 1 FIC FIDC. `isInvestmentBlocked` vem verdadeiro até no XPHF11, que se compra
+   normalmente: não é trava do secundário. Um aviso pelo `canApply` precisa de uma boleta que
+   mostre o que ele significa.
+8. **Histórico do ROA.** Guardar as capturas do dia mostraria quando o ROA de um fundo muda, e
+   permitiria avisar quando um fundo passa a ter ROA adicional. Depende de onde guardar (fase 2).
+9. **Estoque Clientes.** O incentivo extra (0,50% cetipados, 0,25% Portfolio Renda+) não vem na
+   resposta da API, e o peer to peer segue fora de escopo.
+10. **O favorito velho.** Quem arrastou o favorito fica com aquela versão. Ele foi feito burro de
+    propósito (só baixa a resposta), mas se o Hub mudar o botão Atualizar ou o endereço da API,
+    cada colega precisa arrastar o novo. Uma extensão do Chrome se atualizaria sozinha — e
+    precisaria passar pelo compliance.
+11. **O robô do Hub para os colegas.** No Hub de verdade, em 06/10, a 1.2.0 trouxe a cotação em
+    3,4 s e o preço exato de 6 fundos inéditos em 9,7 s (eram 76,5 s): ver `docs/CONTEXTO.md`.
+    Falta o endereço do Netlify no `@match` e em `MESAS_NO_AR`, e o script publicado no Netlify,
+    para o Tampermonkey de cada um se atualizar sozinho. A resposta do pre-check também traz
+    `checks` e `customer` — garantia, perfil do cliente —, que poderiam virar avisos no cartão
+    antes do e-mail. Se um dia precisar de mais velocidade, a "Lista de Fundos" (coluna Valor da
+    Cota) como fonte do preço sem cliente.
+12. **Atualizar a lista ao voltar para a Mesa** (proposto em 06/10, sem resposta do usuário). Se a
+    lista tem mais de 2 minutos quando a pessoa volta para a aba da Mesa, o robô atualiza na hora,
+    e a colagem não espera os 3,4 s da cotação. O Hub só é chamado nesse momento, com a mesma
+    chamada do botão Atualizar.
+
+---
+
 ## Ordens — levantamento anterior à fusão
 
 O que segue é o roadmap do Assistente de Ordens, de 22/09 a 28/09/2026, mantido como estava. Os
@@ -272,7 +328,7 @@ relógio.
 
 | | Funcionalidade | Custo |
 | --- | --- | --- |
-| F1 | **Nome do cliente visível no preview, nunca na saída.** Hoje `80000005 - Fulana` guarda só o código e joga o nome fora no parse. A regra é certa para a saída, mas tira de você a única pista humana de que é o cliente certo — um dígito trocado na conta produz uma ordem perfeitamente válida para a pessoa errada. Mostrar o nome ao lado do campo, como etiqueta que nunca entra no e-mail nem no TSV, é conferência de graça. | baixo |
+| F1 | **Nome do cliente visível no preview, nunca na saída.** *Feito de outro jeito em 07/10: o robô traz o nome da ficha do Hub, e ele aparece no cartão, abaixo da conta — e, por decisão do operador, também na saudação do e-mail. O nome digitado continua fora.* Hoje `80000005 - Fulana` guarda só o código e joga o nome fora no parse. A regra é certa para a saída, mas tira de você a única pista humana de que é o cliente certo — um dígito trocado na conta produz uma ordem perfeitamente válida para a pessoa errada. Mostrar o nome ao lado do campo, como etiqueta que nunca entra no e-mail nem no TSV, é conferência de graça. | baixo |
 | F2 | **Conta conferida contra o histórico.** O sistema já viu todas as contas que você usou. Conta que nunca apareceu antes pede confirmação — a mesma lógica da lista da B3, aplicada ao campo mais crítico de todos. | médio |
 | F3 | **Aviso de repetição no dia.** Mesma conta e mesmo ativo já processados hoje disparam alerta de possível envio duplicado. O grupo é corrido e a mesma ordem passar duas vezes é um erro plausível. | baixo |
 | F4 | **Conferência do que sobrou.** Depois de gerar, mostrar o texto colado com as partes que viraram ordem marcadas; o que ficar sem marcação é o que o sistema ignorou. É a defesa geral contra a classe de defeito da primeira seção — não depende de prever cada jeito de escrever. | médio |
@@ -286,7 +342,7 @@ relógio.
 | F7 | **Acrescentar linha no preview.** Feito em 28/09: botão + no cartão, linha em branco. | feito |
 | F8 | **Desfazer.** `Ctrl+Z` depois de remover uma linha por engano. | baixo |
 | F9 | **Baixar o lote como arquivo,** além de copiar. Evita o Ctrl+V e não corre risco de a área de transferência ser sobrescrita no meio do caminho. | baixo |
-| F10 | **Abrir o e-mail já preenchido** por `mailto:`. Ressalva real: `mailto:` tem limite de tamanho e perde formatação, então serve para ordens curtas e o botão de copiar continua sendo o caminho principal. | baixo |
+| F10 | **Abrir o e-mail já preenchido.** Feito em 07/10: **Abrir no Outlook**, pelo endereço de compor do Outlook na web (não `mailto:`, que abriria o programa padrão do Windows), com o assunto "Confirmação de ordem". A tabela não cabe no endereço e vai copiada. | feito |
 | F11 | **Copiar tudo** quando o bloco tem várias contas. | baixo |
 
 #### Ajuste ao fluxo real do grupo
@@ -304,6 +360,7 @@ relógio.
 | F15 | **Print / imagem.** O pedido original dizia "por texto, print ou lista" e hoje só o texto é atendido. Dá para fazer OCR no navegador, mas **não recomendo fazer direto**: OCR troca dígito, e um `8` lido como `3` num número de conta é exatamente o desastre que este sistema existe para evitar. Se entrar, que entre como sugestão que **obriga** conferência campo a campo, nunca preenchendo sozinho. | alto |
 | F16 | **Cestas favoritas.** Modelos para as combinações que se repetem. Só vale depois de alguns dias de uso mostrarem quais se repetem. | médio |
 | F23 | **Reconhecimento de fundo cetipado pelo nome.** Construído — ver abaixo. Falta só decidir se entra no fluxo de geração. | feito |
+| F24 | **Fundos no secundário.** A planilha do dia converte o pedido em R$ em cotas, com corretagem e ROA. Construído em 05/10 — ver "Secundário — o que ficou em aberto". | feito |
 
 #### F23 — fundos cetipados pelo nome
 

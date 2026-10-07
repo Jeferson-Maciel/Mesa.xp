@@ -1,6 +1,6 @@
 import { limparEntrada } from '../texto/limparEntrada.js';
 import { analisarTicker, temFormatoDeTicker } from '../validate/ticker.js';
-import { procurarFundo } from '../validate/fundo.js';
+import { fundoPeloTicker, procurarFundo } from '../validate/fundo.js';
 import { lerPreco, lerValor } from './valores.js';
 
 /**
@@ -437,7 +437,10 @@ export const parseSolicitacoes = (texto) => {
         continue;
       }
 
-      const fundo = ticker ? null : procurarFundo(nomeDoFundo);
+      // O ticker de um fundo da prateleira (`VGPR11`) é o fundo, e não papel de bolsa: decisão da
+      // mesa em 06/10/2026. O ativo fica como foi escrito; o nome vem junto no fundo.
+      const fundoDoTicker = ticker ? fundoPeloTicker(ticker) : null;
+      const fundo = fundoDoTicker ?? (ticker ? null : procurarFundo(nomeDoFundo));
       if (fundo && fundo.situacao === 'nenhum') {
         bloco.descartadas.push({
           linha,
@@ -454,7 +457,7 @@ export const parseSolicitacoes = (texto) => {
         // Nome ambíguo fica como foi digitado: promovê-lo a um da prateleira seria escolher
         // pelo operador justamente onde ele precisa escolher.
         ativo: ticker ?? fundo.fundo?.nome ?? nomeDoFundo,
-        ticker: ticker ? analisarTicker(ticker) : null,
+        ticker: ticker && !fundoDoTicker ? analisarTicker(ticker) : null,
         fundo,
         operacao: propria.size > 0 ? unica(propria) : operacaoDaSecao(cabecalhos, posicao),
         quantidade,

@@ -9,7 +9,11 @@
 
 export const ASSUNTO = 'Confirmação de ordem';
 
-const COMPOR = 'https://outlook.office.com/mail/deeplink/compose';
+// O endereço novo do Outlook do Microsoft 365. A Microsoft está mudando as contas de
+// outlook.office.com para ele aos poucos, e quem já mudou é redirecionado — e no redirecionamento o
+// pedido de compor se perde: abre a caixa de entrada vazia (um colega, em 07/10/2026). O endereço
+// novo funciona nas contas que já mudaram e nas que ainda não (conferido nas duas em 07/10).
+const COMPOR = 'https://outlook.cloud.microsoft/mail/deeplink/compose';
 
 // Endereço longo demais pode ser recusado no caminho até o Outlook. Acima deste tamanho o corpo
 // fica de fora e vai pela área de transferência. Um e-mail com dez ativos fica perto de 2.900 com

@@ -188,7 +188,7 @@ try {
     const [endereco] = await abertas();
     const url = new URL(endereco);
     ok(
-      url.origin + url.pathname === 'https://outlook.office.com/mail/deeplink/compose' && url.searchParams.get('subject') === 'Confirmação de ordem',
+      url.origin + url.pathname === 'https://outlook.cloud.microsoft/mail/deeplink/compose' && url.searchParams.get('subject') === 'Confirmação de ordem',
       'Abrir no Outlook abre um e-mail novo no Outlook na web com o assunto "Confirmação de ordem"'
     );
     ok((await pagina.evaluate(() => window.__recursos)).startsWith('popup,'), 'numa janela só do e-mail, não numa aba nova');

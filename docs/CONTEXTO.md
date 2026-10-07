@@ -67,7 +67,7 @@ A pedido do usuário: ao lado do Copiar dos dois e-mails do Ordens, **Abrir no O
 e-mail novo no Outlook na web, com o assunto **Confirmação de ordem**. Regras no `CLAUDE.md`, logo
 antes do link para os formatos de saída; o literal está em `docs/FORMATOS-DE-SAIDA.md`.
 
-- É o endereço de compor do Outlook na web (`outlook.office.com/mail/deeplink/compose`), não um
+- É o endereço de compor do Outlook na web (`outlook.cloud.microsoft/mail/deeplink/compose`), não um
   `mailto:` solto: o `CLAUDE.md` registra que o operador cola no Outlook na web.
 - A Ordem por e-mail vai inteira no endereço, e a área de transferência não é tocada. O E-mail em
   tabela abre sem o corpo e vai copiado, porque o endereço só leva texto puro.
@@ -82,6 +82,10 @@ antes do link para os formatos de saída; o literal está em `docs/FORMATOS-DE-S
   Falta saber se o Outlook guardou algum desses dois como rascunho ("teste Mesa A" e "teste Mesa
   B"); o usuário foi avisado para apagar. Falta também medir o limite real de tamanho: os 7.000
   caracteres foram escolhidos sem medir, e dez ativos dão ~2.900.
+- **Endereço `outlook.cloud.microsoft`** (07/10, fim da tarde): a conta de um colega já foi migrada
+  pela Microsoft para o endereço novo do Microsoft 365, e o `outlook.office.com` dele redirecionava
+  para a caixa de entrada, sem o e-mail (no Firefox e nos dois formatos de link). O endereço novo
+  foi testado na conta do usuário (Para, Cc, assunto e texto entram); falta a confirmação do colega.
 - **Abre numa janela só do e-mail** (escolha do usuário em 07/10), uma por clique. Reaproveitar a
   aba do Outlook que a pessoa já tem aberta não é possível a partir da página.
 - Arquivos: `platform/outlook.js` (+ teste), `ui/saidas.js`, `index.js`, `ordens.css`, o ícone

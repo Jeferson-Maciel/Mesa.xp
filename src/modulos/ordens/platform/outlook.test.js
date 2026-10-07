@@ -22,7 +22,7 @@ const lerEndereco = (endereco) => {
 describe('enderecoDoEmail', () => {
   it('abre um e-mail novo no Outlook na web com o assunto da confirmação', () => {
     const { base, para, assunto, corpo } = lerEndereco(enderecoDoEmail());
-    expect(base).toBe('https://outlook.office.com/mail/deeplink/compose');
+    expect(base).toBe('https://outlook.cloud.microsoft/mail/deeplink/compose');
     expect(para).toBeNull();
     expect(assunto).toBe('Confirmação de ordem');
     expect(corpo).toBeNull();
@@ -58,7 +58,7 @@ describe('enderecoDoEmail', () => {
 
   it('é o formato que funcionou no Outlook da mesa', () => {
     expect(enderecoDoEmail({ assunto: 'teste Mesa B', corpo: 'linha 1\nlinha 2', para: 'teste.para@example.com', cc: 'teste.cc@example.com' })).toBe(
-      'https://outlook.office.com/mail/deeplink/compose?to=mailto%3Ateste.para%40example.com%3Fcc%3Dteste.cc%2540example.com%26subject%3Dteste%2520Mesa%2520B%26body%3Dlinha%25201%250D%250Alinha%25202'
+      'https://outlook.cloud.microsoft/mail/deeplink/compose?to=mailto%3Ateste.para%40example.com%3Fcc%3Dteste.cc%2540example.com%26subject%3Dteste%2520Mesa%2520B%26body%3Dlinha%25201%250D%250Alinha%25202'
     );
   });
 

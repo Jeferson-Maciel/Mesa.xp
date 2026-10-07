@@ -652,6 +652,10 @@ de e-mail padrão do Windows, e o operador usa o Outlook na web. Conferido no Ou
   o Edge entregam os links de e-mail ao Outlook na web; aí a cópia entra. Sem o e-mail do cliente,
   vai o endereço simples, só com assunto e texto.
 - As quebras de linha (`\r\n`) chegam.
+- **O endereço é `outlook.cloud.microsoft`**, o novo do Microsoft 365. A Microsoft está mudando as
+  contas de `outlook.office.com` para ele aos poucos; na conta que já mudou, o endereço antigo
+  redireciona e perde o pedido de compor — abre a caixa de entrada vazia (um colega, em 07/10). O
+  novo funcionou nas duas contas (a que já mudou e a que não). Não é coisa do navegador.
 - **Abre numa janela só do e-mail** (`popup`, 980×860, no meio da Mesa), uma por clique, como o
   "abrir em nova janela" do Outlook. A página não consegue usar a aba do Outlook que a pessoa já tem
   aberta: o navegador só deixa reaproveitar uma janela aberta pela própria página.

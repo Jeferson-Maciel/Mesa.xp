@@ -117,7 +117,7 @@ Att,
 ### Abrir no Outlook (os formatos 1 e 2)
 
 Ao lado do Copiar, os dois e-mails têm **Abrir no Outlook** (pedido do operador em 07/10/2026): um
-e-mail novo no Outlook na web (`outlook.office.com/mail/deeplink/compose`), numa janela só dele, com
+e-mail novo no Outlook na web (`outlook.cloud.microsoft/mail/deeplink/compose`), numa janela só dele, com
 o assunto
 
 ```

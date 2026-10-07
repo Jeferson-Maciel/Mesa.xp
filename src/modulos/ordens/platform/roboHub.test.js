@@ -176,7 +176,17 @@ describe('o preço exato das cotas, pelas boletas', () => {
     const vistas = [];
     robo.aoReceberCota((c) => vistas.push(c));
     entregar({ origem: 'robo-hub', tipo: 'cota', id: null, fundoId: FUNDO, valor: 8.337589, dataDaCota: '2026-10-01' });
-    expect(vistas).toEqual([{ fundoId: FUNDO, valor: 8.337589, dataDaCota: '2026-10-01' }]);
+    expect(vistas).toEqual([{ fundoId: FUNDO, valor: 8.337589, dataDaCota: '2026-10-01', em: expect.any(Number) }]);
+  });
+
+  // O preço vale poucos minutos: o que veio de uma boleta aberta mais cedo conta da hora dela.
+  it('o preço de uma boleta aberta mais cedo chega com a hora em que foi lido', async () => {
+    const { janela, entregar } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    const vistas = [];
+    robo.aoReceberCota((c) => vistas.push(c));
+    entregar({ origem: 'robo-hub', tipo: 'cota', id: null, fundoId: FUNDO, valor: 8.337589, dataDaCota: '2026-10-01', em: 1_790_000_000_000 });
+    expect(vistas[0].em).toBe(1_790_000_000_000);
   });
 
   it('não manda ao robô conta ou fundo que não tenham a forma certa', async () => {

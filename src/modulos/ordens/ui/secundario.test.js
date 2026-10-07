@@ -104,7 +104,7 @@ describe('renderSecundario', () => {
 
   it('com o preço exato da cota, mostra o PU inteiro e tira o "≈" dos valores', () => {
     const exato = { ...doHub(), fundos: [{ ...doHub().fundos[0], id: 'f1', dataDaCota: '2026-10-01' }] };
-    const cotas = { f1: { valor: 98.932175, dataDaCota: '2026-10-01' } };
+    const cotas = { f1: { valor: 98.932175, dataDaCota: '2026-10-01', em: hoje.getTime() - 60 * 1000 } };
     const html = cartao({}, { estoque: exato, tetos: {}, cotas });
     expect(html).toContain('PU R$ 98,932175 exato');
     expect(linhaDe(html, 'maximo')).toMatch(/^ROA máximo no e-mail 1,75% 162 R\$ /);

@@ -441,10 +441,14 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
   pre-check só sai com um cliente escolhido. O robô abre a boleta pela rota do próprio Hub,
   `#/secundario/comprar/<fundo>/<conta>` — que já carrega o cliente, sem digitar nem clicar nada —,
   lê do pre-check **só** `id`, `quotaValue` e `quotaDate` do fundo. A conta usada é a do
-  próprio pedido, e não fica guardada. O preço vale pelo dia da cota
-  (`quotaDate`, que a prateleira também traz): a Mesa o guarda (`ordens_secundario_cotas`) e só
-  pede de novo quando a cota muda. Toda boleta que a pessoa abre no Hub também deixa o preço do
-  fundo guardado. Com ele, a conta é a da boleta, centavo por centavo (conferida contra a boleta
+  próprio pedido, e não fica guardada. A Mesa guarda o preço com a hora da leitura
+  (`ordens_secundario_cotas`), e ele vale (`precoExatoValido`): pelo mesmo dia de cota
+  (`quotaDate`, que a prateleira também traz); enquanto arredondar para o PU que a Prateleira manda
+  agora; e por **no máximo 10 minutos**, como a cotação. Até 07/10 valia o dia inteiro, mas **o PU
+  muda ao longo do dia** (o operador, em 07/10), e um preço exato velho, sem a margem do
+  arredondamento, podia dar cotas acima do pedido. Fora da validade, a conta volta à conservadora e
+  o robô busca de novo na próxima colagem. Toda boleta que a pessoa abre no Hub também deixa o preço
+  do fundo guardado, com a hora dela. Com ele, a conta é a da boleta, centavo por centavo (conferida contra a boleta
   real do VGPR11 em `secundario.test.js`), e os valores do cartão saem sem o "≈". Só pedido em R$
   busca o preço; sem ele, segue a conta conservadora, que nunca passa do pedido. Desde a 1.2.0:
   - **só onde o preço muda as cotas** (`precoExatoMuda`). O de verdade está a menos de meia casa
@@ -1105,7 +1109,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 940 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 945 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

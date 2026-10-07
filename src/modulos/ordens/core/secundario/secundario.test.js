@@ -192,7 +192,7 @@ describe('com os fundos do favorito do Hub', () => {
       ...doHub(),
       fundos: [{ id: 'ce52be97-05e7-40d9-887a-215d7711bfc7', dataDaCota: '2026-10-01', nome: 'Valora Imobiliário Multiestratégia Premium', ticker: 'VGPR11', pu: 8.34, casasDoPu: 2, desagio: 7.75, desagioMinimo: 7.05, corretagem: 1.5, estoque: 2233152.58, aplicacaoMinima: 10, ...extra }]
     });
-    const cotas = { 'ce52be97-05e7-40d9-887a-215d7711bfc7': { valor: 8.337589, dataDaCota: '2026-10-01' } };
+    const cotas = { 'ce52be97-05e7-40d9-887a-215d7711bfc7': { valor: 8.337589, dataDaCota: '2026-10-01', em: hoje.getTime() - 60 * 1000 } };
     const ordem = (extra) => compra({ ativo: 'VGPR11', fundo: procurarFundo('VGPR11'), ...extra });
     const centavos = (n) => Math.round(n * 100) / 100;
 
@@ -215,6 +215,31 @@ describe('com os fundos do favorito do Hub', () => {
       const sec = secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr({ dataDaCota: '2026-10-02' }), tetos: {}, hoje, cotas });
       expect(sec).toMatchObject({ puExato: false, pu: 8.34, cotas: 5080 });
     });
+
+    // A cota é calculada uma vez por dia, mas isso não foi visto no Hub: se ela mudar no meio do dia,
+    // o PU arredondado da Prateleira muda junto, e o preço guardado deixa de arredondar para ele.
+    it('no mesmo dia de cota, preço exato que não arredonda mais para o PU da Prateleira não vale', () => {
+      const sec = secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr({ pu: 8.36 }), tetos: {}, hoje, cotas });
+      expect(sec).toMatchObject({ puExato: false, pu: 8.36, precoExatoMuda: true });
+    });
+
+    it('enquanto arredonda para o PU da Prateleira, o preço guardado serve, sem boleta', () => {
+      const sec = secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr({ pu: 8.34 }), tetos: {}, hoje, cotas });
+      expect(sec).toMatchObject({ puExato: true, precoExatoMuda: false });
+    });
+
+    // O PU muda ao longo do dia (o operador, em 07/10): o preço exato vale 10 minutos, como a cotação.
+    it('com mais de 10 minutos, o preço exato não vale mais, e a boleta é pedida de novo', () => {
+      const velho = (minutos) => ({ 'ce52be97-05e7-40d9-887a-215d7711bfc7': { ...Object.values(cotas)[0], em: hoje.getTime() - minutos * 60 * 1000 } });
+      expect(secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr(), tetos: {}, hoje, cotas: velho(10) }).puExato).toBe(true);
+      const sec = secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr(), tetos: {}, hoje, cotas: velho(11) });
+      expect(sec).toMatchObject({ puExato: false, pu: 8.34, cotas: 5080, precoExatoMuda: true });
+    });
+
+    it('preço guardado sem a hora da leitura (de antes de 07/10) não vale', () => {
+      const semHora = { 'ce52be97-05e7-40d9-887a-215d7711bfc7': { valor: 8.337589, dataDaCota: '2026-10-01' } };
+      expect(secundarioDaOrdem(ordem({ financeiro: 40000 }), { estoque: vgpr(), tetos: {}, hoje, cotas: semHora }).puExato).toBe(false);
+    });
   });
 
   // Abrir a boleta custa segundos ao robô: só vale quando o preço exato pode mudar as cotas. O PU
@@ -231,7 +256,7 @@ describe('com os fundos do favorito do Hub', () => {
       const ordem = compra({ ativo: 'VGPR11', fundo: procurarFundo('VGPR11'), financeiro: 40000 });
       expect(secundarioDaOrdem(ordem, { estoque: vgpr, tetos: {}, hoje }).precoExatoMuda).toBe(true);
 
-      const cotas = { 'ce52be97-05e7-40d9-887a-215d7711bfc7': { valor: 8.337589, dataDaCota: '2026-10-01' } };
+      const cotas = { 'ce52be97-05e7-40d9-887a-215d7711bfc7': { valor: 8.337589, dataDaCota: '2026-10-01', em: hoje.getTime() - 60 * 1000 } };
       expect(secundarioDaOrdem(ordem, { estoque: vgpr, tetos: {}, hoje, cotas }).precoExatoMuda).toBe(false);
     });
 

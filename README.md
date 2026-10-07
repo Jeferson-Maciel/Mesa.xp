@@ -119,9 +119,9 @@ atualizadas. Para instalar, uma vez por computador:
 
 Para um pedido em R$, o robô também traz o **preço exato da cota**, o mesmo da boleta: ele abre as
 boletas dos fundos para a conta do pedido na aba dele, uma atrás da outra, lê o preço e volta, sem
-preencher nada. Com ele, as cotas são as da boleta, e os valores do cartão saem sem o "≈". Isso é
-feito uma vez por fundo por dia, e só quando o preço exato muda as cotas — com PU alto, quase nunca
-muda. O botão **Copiar tempos** do painel copia quanto levou cada passo da última busca, sem nada do
+preencher nada. Com ele, as cotas são as da boleta, e os valores do cartão saem sem o "≈". O preço
+exato vale **10 minutos**, como a cotação — o PU muda ao longo do dia —, e só é buscado quando muda
+as cotas: com PU alto, quase nunca muda. O botão **Copiar tempos** do painel copia quanto levou cada passo da última busca, sem nada do
 cliente, para achar onde vão os segundos.
 
 A cotação vale 10 minutos para o e-mail de um pedido em R$; passou disso, a Mesa pede para
@@ -563,7 +563,7 @@ AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 940 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 945 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

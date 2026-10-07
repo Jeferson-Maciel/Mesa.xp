@@ -47,7 +47,8 @@ export const salvarTetos = (tetos) => escrever(CHAVE_TETOS, tetos);
 
 /**
  * O preço exato da cota de cada fundo, trazido da boleta pelo robô do Hub. Só um número por fundo,
- * com o dia da cota: vale até a cota do fundo mudar. O que tem mais de 10 dias sai ao carregar.
+ * com o dia da cota e a hora da leitura: vale por 10 minutos (ver `secundario.js`). O que tem mais de
+ * 10 dias sai ao carregar.
  *
  * @returns {import('../core/secundario/secundario.js').Cotas}
  */

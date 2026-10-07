@@ -556,14 +556,15 @@ export const iniciarOrdens = (secao) => {
     render();
   }
 
-  /** O preço exato de um fundo vale para o dia da cota: guardado, serve a qualquer pedido. */
-  function guardarCota({ fundoId, valor, dataDaCota }) {
-    estado.cotas[fundoId] = { valor, dataDaCota };
+  /** O preço exato de um fundo, com a hora em que foi lido: serve a qualquer pedido enquanto vale. */
+  function guardarCota({ fundoId, valor, dataDaCota, em = Date.now() }) {
+    estado.cotas[fundoId] = { valor, dataDaCota, em };
     guardado.salvarCotas(estado.cotas);
   }
 
   /**
-   * O preço exato da cota de cada fundo pedido em R$ que ainda não o tem para o dia — só onde ele
+   * O preço exato da cota de cada fundo pedido em R$ que não tem um válido — de até 10 minutos, do
+   * mesmo dia de cota e do mesmo PU da Prateleira (`secundario.js`) —, só onde ele
    * pode mudar as cotas, que abrir a boleta custa segundos. O robô abre as boletas uma atrás da
    * outra, na aba dele, para a conta do pedido, e traz só o preço; cada um entra no cartão assim que
    * chega (`aoReceberCota`). Sem ele, as cotas seguem pela conta conservadora, que nunca passa do
@@ -715,7 +716,7 @@ export const iniciarOrdens = (secao) => {
 
   robo.aoMudar(mostrarRobo);
   robo.aoReceberCaptura(usarCapturaDoRobo);
-  // O preço visto numa boleta que alguém abriu no Hub também fica, para o dia.
+  // O preço visto numa boleta que alguém abriu no Hub também fica, enquanto valer.
   robo.aoReceberCota((cota) => {
     guardarCota(cota);
     render();

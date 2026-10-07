@@ -21,7 +21,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (07/10, tarde): 940 testes (`npm test`), o build e 178
+- A última verificação passou inteira (07/10, tarde): 945 testes (`npm test`), o build e 178
   conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
   do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
   07/10 e passaram na seguinte. Já são três vezes: vale olhar.
@@ -147,7 +147,7 @@ Operacional. A correção está no `CLAUDE.md`, "Pendência de segurança — fa
 | Cotação, com a aba 🤖 pronta | **3,4 s**: 1,6 s do servidor da XP + 1,6 s até o cartão. Eram 9 s quando a aba não estava pronta. |
 | Preço exato | **0,9 a 1,9 s por fundo**. Chegou a 3,8 s quando o próprio Hub demorou a responder. |
 | 6 fundos inéditos | **9,7 s**. Eram 76,5 s na 1.1.3. |
-| Fundo já buscado no dia | Nada: o preço fica guardado por fundo e dia de cota. |
+| Fundo buscado há menos de 10 minutos | Nada: o preço fica guardado com a hora da leitura. Desde 07/10 vale 10 minutos (antes, o dia todo): o PU muda ao longo do dia. |
 
 - **Ir de uma boleta direto para outra dispara o pre-check no Hub de verdade.** No piloto, as 5
   trocas foram diretas, e o caminho de reserva (passar pela Prateleira) não foi usado.

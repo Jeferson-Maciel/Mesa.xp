@@ -73,8 +73,11 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     }
 
     // O preço exato de um fundo: pedido pela Mesa, ou visto numa boleta que a pessoa abriu.
+    // `em` é quando o preço foi lido: a boleta que alguém abriu mais cedo chega com a hora dela; o
+    // que o robô acaba de ler chega sem, e é de agora. O preço vale só por uns minutos (secundario.js).
     if (mensagem.tipo === 'cota' && typeof mensagem.valor === 'number') {
-      aoCotar.forEach((fn) => fn({ fundoId: mensagem.fundoId, valor: mensagem.valor, dataDaCota: mensagem.dataDaCota }));
+      const em = typeof mensagem.em === 'number' ? mensagem.em : Date.now();
+      aoCotar.forEach((fn) => fn({ fundoId: mensagem.fundoId, valor: mensagem.valor, dataDaCota: mensagem.dataDaCota, em }));
     }
 
     // Os preços de um pedido chegam um a um, e o fim diz que não vem mais nenhum.

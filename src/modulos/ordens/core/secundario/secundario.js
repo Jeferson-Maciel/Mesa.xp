@@ -36,8 +36,8 @@ import { chaveDoFundo, procurarNoEstoque } from './estoque.js';
  *
  * O preço exato da cota, por código de fundo, como a boleta do Hub o mostra (`quotaValue` do
  * pre-check). A prateleira manda o PU arredondado em duas casas (8,34 para 8,337589), e a conta
- * conservadora perde umas cotas por isso. Vale só para o dia de cota em que foi visto.
- * @typedef {Record<string, {valor: number, dataDaCota: string}>} Cotas
+ * conservadora perde umas cotas por isso. `em` é quando foi lido (ms); ver `precoExatoValido`.
+ * @typedef {Record<string, {valor: number, dataDaCota: string, em?: number}>} Cotas
  *
  * @typedef {'sem-planilha'|'fora-da-planilha'|'sem-teto'|'pronto'} SituacaoNoSecundario
  *
@@ -49,6 +49,25 @@ import { chaveDoFundo, procurarNoEstoque } from './estoque.js';
  * muda ao longo do dia, e as cotas de uma cotação velha podem passar do valor pedido.
  */
 export const LIMITE_DA_COTACAO_MIN = 10;
+
+/**
+ * Se o preço exato guardado ainda vale para o fundo, nesta cotação. O PU muda ao longo do dia
+ * (o operador, em 07/10/2026), e um preço exato velho, sem a margem do arredondamento, pode dar
+ * cotas que passam do pedido. Por isso ele vale:
+ *  - pelo mesmo dia de cota da Prateleira;
+ *  - enquanto arredonda para o PU que a Prateleira manda agora — se o PU mudou, ele não é mais o
+ *    preço de agora;
+ *  - por no máximo `LIMITE_DA_COTACAO_MIN` minutos depois de lido, como a cotação. Sem a hora
+ *    (guardado antes de 07/10), não vale.
+ * Fora disso, a conta volta à conservadora, que nunca passa do pedido, e o robô busca de novo.
+ */
+const precoExatoValido = (exato, fundo, hoje) =>
+  Boolean(exato) &&
+  Boolean(fundo.dataDaCota) &&
+  exato.dataDaCota === fundo.dataDaCota &&
+  Math.abs(exato.valor - fundo.pu) <= margemDoPu(fundo.casasDoPu) + 1e-9 &&
+  typeof exato.em === 'number' &&
+  hoje.getTime() - exato.em <= LIMITE_DA_COTACAO_MIN * 60 * 1000;
 
 const mesmoDia = (a, b) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -98,9 +117,9 @@ export const secundarioDaOrdem = (ordem, { estoque, tetos = {}, cotas = {}, hoje
   const porValor = ordem.financeiro !== null && ordem.financeiro !== undefined;
   const teto = tetoDo(fundo, tetos);
 
-  // Com o preço exato do dia, a conta é a da boleta, sem a margem do arredondamento.
+  // Com o preço exato de agora, a conta é a da boleta, sem a margem do arredondamento.
   const exato = fundo.id ? cotas[fundo.id] : null;
-  const puExato = exato && fundo.dataDaCota && exato.dataDaCota === fundo.dataDaCota ? exato.valor : null;
+  const puExato = precoExatoValido(exato, fundo, hoje) ? exato.valor : null;
   const pu = puExato ?? fundo.pu;
   const casasDoPu = puExato === null ? fundo.casasDoPu : 6;
 

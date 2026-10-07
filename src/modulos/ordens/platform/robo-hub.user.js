@@ -344,7 +344,7 @@
         }
 
         // Do pre-check sai só o preço e o dia da cota do fundo — nada do cliente. Vale também
-        // quando é a pessoa que abre a boleta: o preço fica guardado para o dia.
+        // quando é a pessoa que abre a boleta: a Mesa guarda o preço, com a hora, por uns minutos.
         if (PRE_CHECK.test(endereco)) {
           resposta
             .clone()
@@ -744,7 +744,7 @@
       entregues.quantos = nova.resultados.length;
       if (nova.fim) enviar({ tipo: 'cotas-fim', id: nova.id });
     });
-    // A boleta que a pessoa abriu para executar também deixa o preço exato do fundo para o dia.
+    // A boleta que a pessoa abriu para executar também deixa o preço exato do fundo, com a hora.
     GM_addValueChangeListener('cotaVista', (_chave, _antiga, nova) => {
       if (nova) enviar({ tipo: 'cota', id: null, fundoId: nova.fundoId, valor: nova.valor, dataDaCota: nova.dataDaCota });
     });

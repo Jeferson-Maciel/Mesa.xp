@@ -926,7 +926,7 @@ try {
     await terminarBusca();
     ok(
       pedidosAoHub.lista === 3 && pedidosAoHub.preCheck === 2 && (await robo1.evaluate(() => window.__cliques ?? 0)) === 1,
-      '"Atualizar cotações" clica em Atualizar, e o preço exato do dia não é buscado de novo'
+      '"Atualizar cotações" clica em Atualizar, e o preço exato de menos de 10 minutos não é buscado de novo'
     );
 
     // Se ir direto de uma boleta para a outra não disparar o pre-check no Hub de verdade, o robô passa

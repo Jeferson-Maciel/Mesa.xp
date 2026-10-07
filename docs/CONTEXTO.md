@@ -17,10 +17,11 @@ cada sessão.
   secundário, o robô do Hub, a medição de tempos, o **Abrir no Outlook** e o **cliente e o assessor
   no e-mail** (robô 1.3.1) — entrou num commit só, em 07/10. A branch `antigravity/operacional`, de
   outro agente, não foi revisada e fica só na cópia local.
-- A Mesa **já está no Netlify**, mas o endereço não foi registrado aqui, e o que está no ar é
-  anterior a 05/10. O usuário vai publicá-la na **Vercel** (o `vercel.json` já está pronto). Push,
-  deploy e SQL no banco só com o OK do usuário.
-- A última verificação passou inteira (07/10, tarde): 939 testes (`npm test`), o build e 178
+- A Mesa está no ar em **https://mesa-xp.vercel.app** (07/10), ligada ao GitHub: **cada envio para a
+  `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
+  usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
+  anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
+- A última verificação passou inteira (07/10, tarde): 940 testes (`npm test`), o build e 178
   conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
   do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
   07/10 e passaram na seguinte. Já são três vezes: vale olhar.
@@ -195,10 +196,10 @@ Ficou de fora, por ser conteúdo e não layout: os 15 posts do Operacional com "
 
 ## Pendências e decisões em aberto
 
-1. **Deploy** na Vercel, que o usuário vai fazer: o que está no Netlify é anterior a 05/10.
-2. **Colegas no site.** O endereço da Vercel precisa entrar no `@match` do robô e em
-   `MESAS_NO_AR` (e a `@version` sobe). Publicar o script no próprio site permitiria que o Tampermonkey de cada um se
-   atualizasse sozinho.
+1. **O robô 1.3.2 no Hub de verdade**: instalar, fechar as abas 🤖 antigas e testar pela Mesa da
+   Vercel (cliente, assessor em cópia e Outlook).
+2. **Atualização sozinha do robô.** Publicar o script no próprio site (com `@updateURL`) permitiria
+   que o Tampermonkey de cada colega se atualizasse sem colar de novo.
 3. **Proposta sem resposta:** atualizar a lista quando a pessoa volta para a aba da Mesa, se ela
    tiver mais de 2 minutos. Isso tiraria os 3,4 s da cotação da frente da colagem, e o Hub só seria
    chamado nesse momento, não a cada X minutos.

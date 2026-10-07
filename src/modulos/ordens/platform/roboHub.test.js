@@ -275,6 +275,13 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
     expect(scriptDoRobo).toContain('// @match        https://hub.xpi.com.br/*');
   });
 
+  // A Mesa publicada na Vercel: o @match faz o Tampermonkey rodar nela, e MESAS_NO_AR faz o robô
+  // reconhecê-la como a Mesa.
+  it('roda na Mesa publicada na Vercel', () => {
+    expect(scriptDoRobo).toContain('// @match        https://mesa-xp.vercel.app/*');
+    expect(scriptDoRobo).toContain("const MESAS_NO_AR = ['mesa-xp.vercel.app'];");
+  });
+
   it('não lê senha, token nem cabeçalho, e não chama a API por conta própria', () => {
     expect(scriptDoRobo).not.toMatch(/localStorage|sessionStorage|document\.cookie|authorization|headers/i);
     expect(scriptDoRobo).not.toMatch(/api-advisor\.xpi\.com\.br/);

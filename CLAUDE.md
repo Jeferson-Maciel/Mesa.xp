@@ -47,7 +47,7 @@ scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda 
 
 - **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
   desconhecido abre o Ordens. A aba é o primeiro trecho do hash, e o resto é do módulo:
-  `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no Netlify e aberto do disco (`file://`).
+  `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no site (Vercel) e aberto do disco (`file://`).
 - **Alt+1 a Alt+5** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
   aba anterior. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
 - **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras quatro só na primeira
@@ -430,8 +430,9 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     texto do script) e não manda nada para fora do Chrome;
   - fica burro: a leitura mora em `estoque.js`, e a Mesa só conversa com ele por `postMessage`
     (`platform/roboHub.js`: 30 s para a cotação, e até 40 s sem notícia nos preços exatos);
-  - a Mesa o reconhece aberta do disco em `…/mesa-xp/dist/index.html` e em `localhost`; o endereço
-    do Netlify entra no `@match` e em `MESAS_NO_AR` quando for usado.
+  - a Mesa o reconhece publicada em `https://mesa-xp.vercel.app` (desde a 1.3.2), aberta do disco
+    em `…/mesa-xp/dist/index.html` e em `localhost`; outro endereço entra no `@match` e em
+    `MESAS_NO_AR`, com a `@version` subindo.
   A instalação é colar o script no Tampermonkey: o botão **Copiar robô** do painel o copia, e some
   quando a versão instalada é a que a Mesa espera.
 - **O preço exato da cota** (robô 1.1.0, 06/10/2026). A prateleira manda o PU arredondado em duas
@@ -1003,9 +1004,9 @@ com o link. Consequências, todas explicadas na tela:
 - ninguém mais vê; também não acompanha a pessoa para outro computador. O **backup** (Exportar /
   Importar, `backup.js`) leva — um .json com as anotações e os prints em base64; importar junta,
   sem duplicar, e não troca uma anotação por uma versão mais velha dela;
-- a versão do Netlify e a aberta do disco (`file://`) são endereços diferentes para o navegador,
+- a versão do site (Vercel) e a aberta do disco (`file://`) são endereços diferentes para o navegador,
   cada uma com as suas anotações;
-- quem limpa os dados do navegador perde as anotações. No Netlify (HTTPS) a primeira gravação pede
+- quem limpa os dados do navegador perde as anotações. No site (HTTPS) a primeira gravação pede
   `navigator.storage.persist()`, que protege os dados da limpeza automática por falta de espaço.
 
 Quando a Mesa XP tiver login (fase 2), um adaptador do Supabase com política por usuário cumpre o
@@ -1104,7 +1105,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 939 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 940 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

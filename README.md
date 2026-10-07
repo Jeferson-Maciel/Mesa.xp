@@ -519,9 +519,11 @@ configurados:
   precisa de regra de rota.
 - **Netlify** (`netlify.toml`): o mesmo build, Node 22 e todas as rotas para o `index.html`.
 
-Para o robô do Hub reconhecer a Mesa publicada, o endereço do site entra no `@match` e em
-`MESAS_NO_AR`, no começo de `src/modulos/ordens/platform/robo-hub.user.js` — e a `@version` sobe,
-para o painel pedir a cópia nova. Sem isso, o robô só funciona com a Mesa aberta do disco.
+A Mesa está no ar em **https://mesa-xp.vercel.app**, publicada pela Vercel a cada envio para a
+`main` no GitHub. O robô do Hub a reconhece nesse endereço; outro endereço (outro site, um domínio
+próprio) entra no `@match` e em `MESAS_NO_AR`, no começo de
+`src/modulos/ordens/platform/robo-hub.user.js`, e a `@version` sobe, para o painel pedir a cópia
+nova.
 
 ## Privacidade
 
@@ -561,7 +563,7 @@ AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 939 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 940 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

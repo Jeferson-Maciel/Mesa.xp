@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Ferramentas da mesa XP num link só: ordens de renda variável, disparo de renda fixa e calendário de presença",
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Ferramentas da mesa XP num link só: ordens de renda variável, disparo de renda fixa, calendário de presença, base de conhecimento e anotações",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -11,13 +11,15 @@ cada sessão.
 - A Mesa XP tem 5 abas: Ordens, Renda Fixa, Calendário, Operacional e Anotações. O build é um
   arquivo só (`dist/index.html`), que roda no Netlify e aberto do disco.
 - O código está no GitHub, em [`Jeferson-Maciel/Mesa.xp`](https://github.com/Jeferson-Maciel/Mesa.xp)
-  (`origin`, branch `main`), criado pelo usuário em 07/10/2026. O trabalho de 05 a 07/10 — o
+  (`origin`, branch `main`), criado pelo usuário em 07/10/2026. **O repositório é público por
+  decisão do usuário ("por enquanto")**, avisado de que isso expõe os textos do Operacional, o robô
+  do Hub e a chave anon com o banco aberto; a recomendação de torná-lo privado continua de pé. O trabalho de 05 a 07/10 — o
   secundário, o robô do Hub, a medição de tempos, o **Abrir no Outlook** e o **cliente e o assessor
   no e-mail** (robô 1.3.1) — entrou num commit só, em 07/10. A branch `antigravity/operacional`, de
   outro agente, não foi revisada e fica só na cópia local.
 - A Mesa **já está no Netlify**, mas o endereço não foi registrado aqui, e o que está no ar é
-  anterior a 05/10: o trabalho novo só chega lá com um deploy. Push, deploy e SQL no banco só com o
-  OK do usuário.
+  anterior a 05/10. O usuário vai publicá-la na **Vercel** (o `vercel.json` já está pronto). Push,
+  deploy e SQL no banco só com o OK do usuário.
 - A última verificação passou inteira (07/10, tarde): 939 testes (`npm test`), o build e 178
   conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
   do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
@@ -193,9 +195,9 @@ Ficou de fora, por ser conteúdo e não layout: os 15 posts do Operacional com "
 
 ## Pendências e decisões em aberto
 
-1. **Deploy** no Netlify do que está no GitHub: o que está no ar é anterior a 05/10.
-2. **Colegas no Netlify.** O endereço do Netlify precisa entrar no `@match` do robô e em
-   `MESAS_NO_AR`. Publicar o script no Netlify permitiria que o Tampermonkey de cada um se
+1. **Deploy** na Vercel, que o usuário vai fazer: o que está no Netlify é anterior a 05/10.
+2. **Colegas no site.** O endereço da Vercel precisa entrar no `@match` do robô e em
+   `MESAS_NO_AR` (e a `@version` sobe). Publicar o script no próprio site permitiria que o Tampermonkey de cada um se
    atualizasse sozinho.
 3. **Proposta sem resposta:** atualizar a lista quando a pessoa volta para a aba da Mesa, se ela
    tiver mais de 2 minutos. Isso tiraria os 3,4 s da cotação da frente da colagem, e o Hub só seria

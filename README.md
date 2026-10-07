@@ -511,8 +511,17 @@ O `index.html` da raiz do projeto **não** funciona aberto com dois cliques: é 
 
 ### Deploy
 
-Netlify, já configurado em `netlify.toml`: build `npm run build`, publica `dist/`, Node 22 e
-redirecionamento de todas as rotas para o `index.html`. Qualquer host de estáticos serve igual.
+É um site estático: o build gera `dist/index.html`, e qualquer host de estáticos serve. Os dois já
+configurados:
+
+- **Vercel** (`vercel.json`): importe o repositório no painel da Vercel; ela usa `npm run build`,
+  publica `dist/` e roda Node 22 (pelo `engines` do `package.json`). As abas são por `#`, então não
+  precisa de regra de rota.
+- **Netlify** (`netlify.toml`): o mesmo build, Node 22 e todas as rotas para o `index.html`.
+
+Para o robô do Hub reconhecer a Mesa publicada, o endereço do site entra no `@match` e em
+`MESAS_NO_AR`, no começo de `src/modulos/ordens/platform/robo-hub.user.js` — e a `@version` sobe,
+para o painel pedir a cópia nova. Sem isso, o robô só funciona com a Mesa aberta do disco.
 
 ## Privacidade
 

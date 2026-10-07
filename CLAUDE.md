@@ -68,7 +68,8 @@ Um módulo exporta `iniciarX(secao)` e não conhece os outros. O que dois módul
 ## O build: um arquivo só
 
 `npm run build` gera **um único** `dist/index.html`, com JS, CSS e ícone dentro. É ele que vai
-para o Netlify e é ele que os colegas abrem com dois cliques, sem servidor. Aberto do disco
+para o site (Vercel, pelo `vercel.json`, ou Netlify, pelo `netlify.toml`) e é ele que os colegas
+abrem com dois cliques, sem servidor. Aberto do disco
 (`file://`), o navegador bloqueia `<script type="module" src>` e lê `/assets/...` como a raiz do
 drive — a tela aparece e nada funciona. Por isso:
 

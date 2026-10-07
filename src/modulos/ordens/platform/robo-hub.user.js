@@ -98,7 +98,8 @@
   const CONTA = /^\d{5,8}$/;
   const pagina = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
 
-  // Onde a Mesa XP roda. O endereço do Netlify entra aqui, e no @match lá em cima, quando for usado.
+  // Onde a Mesa XP roda publicada. O endereço do site (Vercel ou Netlify) entra aqui, e no @match lá
+  // em cima, quando for usado.
   const MESAS_NO_AR = [];
 
   const ehOHub = () => location.hostname === 'hub.xpi.com.br';

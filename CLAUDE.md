@@ -692,9 +692,21 @@ texto colado → limparEntrada → parseSolicitacoes → Solicitacao[] → valid
   o core não depender deles.
 - `src/modulos/ordens/index.js` — só estado de tela, eventos e render. Nenhum julgamento de negócio mora aqui.
 
-`validate/tickersB3.js` é **gerado**, com 1.624 tickers da B3 por classe. Ele existe para uma
-coisa só: `KCNR11` é um ticker perfeitamente bem formado, e nenhuma regra de formato revela que
-ele é `KNCR11` digitado errado. Só a comparação contra a lista revela.
+`validate/tickersB3.js` é **gerado** (`npm run tickers:update`), com os 2.695 tickers do mercado à
+vista da B3 por classe. Ele existe para uma coisa só: `KCNR11` é um ticker perfeitamente bem
+formado, e nenhuma regra de formato revela que ele é `KNCR11` digitado errado. Só a comparação
+contra a lista revela.
+
+**A fonte é o Cadastro de Instrumentos da própria B3** (`InstrumentsConsolidated`, público, em
+arquivos.b3.com.br), desde 07/10/2026. Antes era a HG Brasil, com 1.624 tickers: faltavam centenas
+de BDRs (só um de final 39, os BDRs de ETF) e os ETFs e fundos novos. Em pedidos reais, `BURA39` e
+`BIAU39` saíam como desconhecidos, e `RARA11` — um ETF — era **bloqueado** como erro de digitação de
+`RURA11`. Do cadastro entram só o mercado à vista e os finais de papel negociado: ação 3 a 8 e unit
+11 (classe Ação: `KLBN11` é ação, não FII), BDR 31 a 35 e 39, ETF e fundo 11. Direitos, recibos e as
+outras séries de fundo (12, 15…) ficam de fora: `ticker.js` os reconhece como espécie irmã do 11.
+A B3 põe FII, Fiagro, FI-Infra e FIP na mesma categoria; a classe sai do nome do fundo, por uma
+regra no gerador. Os 32 tickers da prateleira (cetipados) continuam fora: não são do mercado à
+vista.
 
 **O preview é a comporta.** Nenhuma saída é gerada direto do parser: o parser propõe, o usuário
 confere e corrige campo a campo no preview, e só então os formatters rodam sobre os dados
@@ -1109,7 +1121,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 945 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 948 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

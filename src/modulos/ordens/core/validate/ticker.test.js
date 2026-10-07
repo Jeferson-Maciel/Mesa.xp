@@ -29,6 +29,26 @@ describe('analisarTicker — reconhecidos', () => {
     expect(analisarTicker('petr4').ticker).toBe('PETR4');
   });
 
+  // Pedidos reais de 07/10/2026, com a lista antiga (HG Brasil, 1.624 tickers): BURA39 e BIAU39 —
+  // BDRs de ETF, final 39 — eram desconhecidos, e RARA11, um ETF, era bloqueado como erro de
+  // digitação de RURA11. A lista da B3 conhece todos, com a classe certa.
+  it('reconhece os BDRs de ETF (final 39) e os ETFs novos, sem suspeita falsa', () => {
+    expect(analisarTicker('BURA39')).toMatchObject({ situacao: 'conhecido', classe: 'bdr' });
+    expect(analisarTicker('BIAU39')).toMatchObject({ situacao: 'conhecido', classe: 'bdr' });
+    expect(analisarTicker('RARA11')).toMatchObject({ situacao: 'conhecido', classe: 'etf', sugestoes: [] });
+  });
+
+  it('units de ações (final 11) são ação, não FII', () => {
+    expect(analisarTicker('KLBN11')).toMatchObject({ situacao: 'conhecido', classe: 'acao' });
+    expect(analisarTicker('BRBI11')).toMatchObject({ situacao: 'conhecido', classe: 'acao' });
+  });
+
+  it('o resto do pedido de venda de 07/10 também é reconhecido', () => {
+    for (const t of ['BABA34', 'EQTL3', 'INTB3', 'POMO4', 'RAPT4', 'RDOR3', 'RECV3', 'VALE3']) {
+      expect(analisarTicker(t).situacao).toBe('conhecido');
+    }
+  });
+
   it('reconhece os tickers dos pedidos reais do grupo', () => {
     for (const t of ['HGCR11', 'HGLG11', 'HGRE11', 'HGRU11', 'PCIP11', 'RZTR11', 'VGIP11', 'VRTA11']) {
       expect(analisarTicker(t).situacao).toBe('conhecido');

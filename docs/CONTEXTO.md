@@ -21,7 +21,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (07/10, tarde): 945 testes (`npm test`), o build e 178
+- A última verificação passou inteira (07/10, tarde): 948 testes (`npm test`), o build e 178
   conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
   do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
   07/10 e passaram na seguinte. Já são três vezes: vale olhar.

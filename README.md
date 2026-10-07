@@ -59,7 +59,8 @@ A especificação literal de cada formato está em [`docs/FORMATOS-DE-SAIDA.md`]
 
 O sistema **não adivinha**. Preço não informado sai como `A mercado`; qualquer outro dado crítico
 que falte bloqueia a geração e mostra o que falta. Ticker parecido com erro de digitação pede
-confirmação, nunca corrige sozinho — a lista das 1.624 ações, FIIs, BDRs e ETFs da B3 está embutida
+confirmação, nunca corrige sozinho — a lista dos 2.695 papéis à vista da B3 (ações, units, FIIs,
+Fiagros, BDRs e ETFs), tirada do cadastro oficial da própria B3, está embutida
 justamente para pegar um `KCNR11` no lugar de `KNCR11`. Ativo repetido não é somado sozinho.
 
 Antes de gerar qualquer saída, um preview mostra o que foi interpretado, campo a campo, para você
@@ -563,7 +564,7 @@ AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 945 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 948 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

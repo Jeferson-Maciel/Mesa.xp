@@ -9,34 +9,15 @@ import { acharAssessor, codigoDoAssessor, emailValido } from './assessores.js';
  * patrimônio.
  */
 
-// Partículas ficam em minúscula no meio do nome: "Ana Paula da Silva", não "Da Silva".
-const PARTICULAS = new Set(['da', 'das', 'de', 'do', 'dos', 'e', 'di', 'du', 'del', 'della', 'van', 'von', 'y']);
-
-const maiuscula = (palavra) => palavra.charAt(0).toLocaleUpperCase('pt-BR') + palavra.slice(1);
-
 /**
- * O Hub manda o nome em maiúsculas ("ANA PAULA DA SILVA"). Para a saudação, cada palavra com a
- * inicial maiúscula, as partículas em minúscula e os numerais romanos inteiros. O acento que o Hub
- * não mandou não é posto: seria inventar a grafia do nome.
+ * O nome como o Hub o manda, em maiúsculas ("ANA PAULA DA SILVA"), só sem os espaços a mais. É
+ * assim que ele vai na saudação: decidido com o operador em 20/10/2026, pelo e-mail de auditoria
+ * que o cliente aprovou, com o nome todo em maiúsculas. Até ali a Mesa o reescrevia com as iniciais
+ * maiúsculas.
  *
  * @returns {string}
  */
-export const nomeProprio = (nome) =>
-  String(nome ?? '')
-    .trim()
-    .toLocaleLowerCase('pt-BR')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((palavra, i) => {
-      if (/^(ii|iii|iv)$/.test(palavra)) return palavra.toUpperCase();
-      if (i > 0 && PARTICULAS.has(palavra)) return palavra;
-      // Ana-Maria, D'Ávila
-      return palavra
-        .split('-')
-        .map((parte) => parte.split("'").map(maiuscula).join("'"))
-        .join('-');
-    })
-    .join(' ');
+export const nomeDoHub = (nome) => String(nome ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
 
 /**
  * O que o robô entregou, conferido: só vale para a conta pedida.
@@ -57,7 +38,7 @@ export const lerClienteDoRobo = (dados, conta) => {
 };
 
 /**
- * O cliente como o e-mail o usa: o nome já arrumado e o e-mail do assessor achado na planilha.
+ * O cliente como o e-mail o usa: o nome do Hub e o e-mail do assessor achado na planilha.
  *
  * @param {ReturnType<typeof lerClienteDoRobo>} dados
  * @param {Parameters<typeof acharAssessor>[0]} assessores
@@ -66,7 +47,7 @@ export const clienteParaOEmail = (dados, assessores) => {
   const assessor = { codigo: dados.assessorCodigo, nome: dados.assessorNome };
   const achado = acharAssessor(assessores, assessor);
   return {
-    nome: dados.nome ? nomeProprio(dados.nome) : null,
+    nome: dados.nome ? nomeDoHub(dados.nome) : null,
     email: dados.email,
     assessor: {
       ...assessor,

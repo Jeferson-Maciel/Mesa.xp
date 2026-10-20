@@ -507,3 +507,121 @@ describe('secundário', () => {
     expect(validar(s, 'lote').map((d) => d.codigo)).not.toContain('secundario-sem-teto');
   });
 });
+
+describe('venda de fundo do secundário', () => {
+  const fundo = { situacao: 'exato', fundo: { nome: 'Riza Malls Feeder FII RL', ticker: null } };
+  const lida = (extra = {}) => ({
+    situacao: 'pronto',
+    modalidade: 'xp',
+    total: false,
+    quantidade: 100,
+    posicao: { quantidade: 120, disponivel: 120, aVenda: 0 },
+    condicoes: { aberta: true, desagio: 2.25 },
+    outraAberta: true,
+    ...extra
+  });
+  const venda = (extra = {}, vendaExtra = {}) =>
+    solicitacao({
+      ordens: [ordem({ ativo: 'Riza Malls Feeder FII RL', ticker: null, fundo, operacao: 'V', quantidade: 100, venda: lida(vendaExtra), ...extra })]
+    });
+
+  it('a venda conferida com a posição não acusa nada', () => {
+    expect(codigos(venda())).toEqual([]);
+  });
+
+  it('o total sem a posição bloqueia, sem confirmação: falta a quantidade', () => {
+    const s = venda({ quantidade: null, total: true }, { situacao: 'sem-boleta', total: true, quantidade: null });
+    expect(bloqueios(s)).toEqual(['venda-sem-posicao']);
+    expect(validar(s, 'email')[0].confirmavel).toBe(false);
+  });
+
+  it('o total com a posição lida não bloqueia', () => {
+    expect(bloqueios(venda({ quantidade: null, total: true }, { total: true, quantidade: 120 }))).toEqual([]);
+  });
+
+  it('acima da posição disponível bloqueia e oferece vender o total', () => {
+    const d = validar(venda({ quantidade: 130 }, { quantidade: 130 }), 'email').find((x) => x.codigo === 'venda-acima-da-posicao');
+    expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'usar-posicao' } });
+  });
+
+  it('a quantidade sem conferir com a posição bloqueia, mas confirma', () => {
+    const d = validar(venda({}, { situacao: 'sem-boleta' }), 'email').find((x) => x.codigo === 'venda-posicao-nao-conferida');
+    expect(d.confirmavel).toBe(true);
+  });
+
+  it('o Estoque XP fechado oferece vender no Estoque clientes', () => {
+    const d = validar(venda({}, { condicoes: { aberta: false } }), 'email').find((x) => x.codigo === 'venda-modalidade-fechada');
+    expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'estoque-clientes', rotulo: 'Vender no Estoque clientes' } });
+  });
+
+  it('as duas fechadas: não há o que oferecer', () => {
+    expect(bloqueios(venda({}, { condicoes: { aberta: false }, outraAberta: false }))).toContain('venda-sem-modalidade');
+  });
+
+  it('venda em R$ não é tratada: vai em cotas', () => {
+    expect(bloqueios(venda({ quantidade: null, financeiro: 10000 }))).toContain('venda-em-reais');
+  });
+
+  it('no Estoque clientes avisa que é uma intenção, cancelada às 14:00 se não casar', () => {
+    expect(codigos(venda({}, { modalidade: 'clientes' }))).toContain('venda-estoque-clientes');
+  });
+
+  it('avisa das cotas que o cliente já tem à venda', () => {
+    expect(codigos(venda({}, { posicao: { quantidade: 120, disponivel: 100, aVenda: 20 } }))).toContain('venda-cotas-a-venda');
+  });
+
+  it('"total" fora da venda de fundo pede a quantidade', () => {
+    const s = solicitacao({ ordens: [ordem({ quantidade: null, total: true, operacao: 'C' })] });
+    expect(validar(s, 'email').find((d) => d.codigo === 'valor-ausente').mensagem).toMatch(/total/);
+  });
+});
+
+describe('compra pelo Estoque clientes', () => {
+  const fundo = { situacao: 'exato', fundo: { nome: 'Navi Hedge Fund', ticker: 'IMOV11' } };
+  const p2p = (extra = {}) => ({ aberta: true, desagio: 9.9, corretagem: 1.5, disponivel: 25000, variacao: 2, origem: 'boleta', cotasQueCabem: 5000, ...extra });
+  const sec = (extra = {}, p2pExtra = {}) => ({
+    situacao: 'pronto',
+    modalidade: 'clientes',
+    porValor: true,
+    cotas: 5000,
+    limitadoAoEstoque: false,
+    fundo: { nome: 'Navi Hedge Fund', estoque: 1000000, corretagem: 1.5 },
+    planilha: { minutos: 1, deHoje: true, exportadaEm: new Date().toISOString() },
+    p2p: p2p(p2pExtra),
+    ...extra
+  });
+  const compra = (extra, p2pExtra) =>
+    solicitacao({ ordens: [ordem({ ativo: 'IMOV11', ticker: null, fundo, financeiro: 50000, quantidade: null, estoque: 'clientes', secundario: sec(extra, p2pExtra) })] });
+
+  it('com estoque e a boleta lida, só avisa da intenção', () => {
+    expect(bloqueios(compra())).toEqual([]);
+    expect(codigos(compra())).toContain('secundario-p2p-intencao');
+  });
+
+  it('fechado ou vazio bloqueia e oferece o Estoque XP', () => {
+    for (const p of [{ aberta: false }, { disponivel: 0 }]) {
+      const d = validar(compra({}, p), 'email').find((x) => x.codigo === 'secundario-p2p-fechado');
+      expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'estoque-xp' } });
+    }
+  });
+
+  it('estoque menor que o pedido: comprar o que houver, ou no Estoque XP', () => {
+    const d = validar(compra({}, { disponivel: 3000 }), 'email').find((x) => x.codigo === 'secundario-p2p-sem-estoque');
+    expect(d.acoes.map((a) => a.campo)).toEqual(['o-que-for-possivel', 'estoque-xp']);
+  });
+
+  it('"o que for possível" limitado ao estoque só avisa', () => {
+    const s = compra({ cotas: 3000, limitadoAoEstoque: true }, { disponivel: 3000 });
+    expect(bloqueios(s)).toEqual([]);
+    expect(codigos(s)).toContain('secundario-p2p-limitado');
+  });
+
+  it('sem a boleta, o estoque da Prateleira se confirma, com o conserto de cotar na boleta', () => {
+    const d = validar(compra({}, { origem: 'captura' }), 'email').find((x) => x.codigo === 'secundario-p2p-sem-boleta');
+    expect(d).toMatchObject({ confirmavel: true, acao: { campo: 'cotar-estoque-clientes' } });
+  });
+
+  it('o estoque do Estoque XP não conta na compra pelo Estoque clientes', () => {
+    expect(bloqueios(compra({ cotas: 5000, fundo: { nome: 'Navi Hedge Fund', estoque: 10, corretagem: 1.5 } }))).not.toContain('secundario-sem-estoque');
+  });
+});

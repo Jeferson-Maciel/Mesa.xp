@@ -88,7 +88,10 @@ const CAPTURA = {
       treasuryMinimumBuyCost: '0,50',
       percentageComission: '1,50',
       stockOfTreasuryQuotas: '1.755.331,22',
-      stockOfPeerToPeerQuotas: '0,00',
+      stockOfPeerToPeerQuotas: '25.034,00',
+      canBuyPeerToPeer: true,
+      peerToPeerBuyDiscount: '8,90',
+      peerToPeerBuyCommissionFee: '1,50',
       minimalInitialInvestment: '10,00',
       profitability12Gross: '10.32',
       canApply: true
@@ -132,6 +135,12 @@ describe('lerCapturaDoHub', () => {
 
   // `treasuryMinimumBuyCost` parecia o ROA (0,50 no IMOV11), mas no Riza vem 0,00 com a barra
   // indo até 1% na boleta. Não é lido.
+  // O Estoque clientes (peer to peer), com o deságio dele: o do Estoque XP mais 0,15 na captura de 06/10.
+  it('traz o Estoque clientes de cada fundo, quando a captura o tem', () => {
+    expect(fundos[0].p2p).toEqual({ pode: true, desagio: 8.9, corretagem: 1.5, estoque: 25034 });
+    expect(fundos[1].p2p).toBeNull();
+  });
+
   it('não lê o treasuryMinimumBuyCost', () => {
     expect(fundos[0]).not.toHaveProperty('roaAdicional');
   });

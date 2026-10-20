@@ -1,4 +1,5 @@
 import { CORRETAGEM, contaDaBoleta, cotasPara, margemDoPu } from './boleta.js';
+import { chaveDaBoleta } from './boletaDoHub.js';
 import { chaveDoFundo, procurarNoEstoque } from './estoque.js';
 
 /**
@@ -100,7 +101,7 @@ const tetoDo = (fundo, tetos) => {
  *   cenarios?: {maximo: Cenario|null, zerado: Cenario}, roa?: number, cotas?: number|null,
  *   conta?: ReturnType<typeof contaDaBoleta>|null, precoExatoMuda?: boolean}}
  */
-export const secundarioDaOrdem = (ordem, { estoque, tetos = {}, cotas = {}, hoje = new Date(), semRoa = false }) => {
+export const secundarioDaOrdem = (ordem, { estoque, tetos = {}, cotas = {}, boletas = {}, hoje = new Date(), semRoa = false }) => {
   if (ordem.fundo?.situacao !== 'exato' || ordem.operacao !== 'C') return null;
   if (!estoque) return { situacao: 'sem-planilha' };
 
@@ -139,10 +140,76 @@ export const secundarioDaOrdem = (ordem, { estoque, tetos = {}, cotas = {}, hoje
     puExato === null &&
     [cenarios.maximo, cenarios.zerado].some((c) => c && cotasPara(ordem.financeiro, { ...puMaisBaixo, roa: c.roa }) !== c.cotas);
 
-  const base = { planilha, fundo, teto, semRoa, porValor, cenarios, pu, puExato: puExato !== null, precoExatoMuda };
+  const base = { planilha, fundo, teto, semRoa, porValor, cenarios, pu, puExato: puExato !== null, precoExatoMuda, modalidade: 'xp' };
+
+  if (ordem.estoque === 'clientes') return compraNoEstoqueDeClientes(ordem, { base, boletas, hoje });
 
   const escolhido = semRoa ? cenarios.zerado : cenarios.maximo;
   if (!escolhido) return { situacao: 'sem-teto', ...base };
 
   return { situacao: 'pronto', ...base, ...escolhido };
+};
+
+/** Até quantos pontos percentuais o preço do Estoque clientes pode subir, quando a boleta não diz. */
+export const VARIACAO_DO_ESTOQUE_DE_CLIENTES = 2;
+
+/**
+ * As condições do Estoque clientes: as da boleta lida há até 10 minutos, que são as de agora; sem
+ * ela, as da captura da Prateleira.
+ */
+const condicoesDoP2p = (fundo, boletas, hoje) => {
+  const lida = fundo.id ? boletas[chaveDaBoleta(fundo.id, 'comprar')] : null;
+  const daBoleta = lida?.modalidades?.clientes;
+  if (daBoleta && hoje.getTime() - lida.em <= LIMITE_DA_COTACAO_MIN * 60 * 1000) {
+    return { ...daBoleta, variacao: daBoleta.variacao ?? VARIACAO_DO_ESTOQUE_DE_CLIENTES, origem: 'boleta', lidaEm: lida.em, valorDaCota: lida.valorDaCota };
+  }
+  const p2p = fundo.p2p ?? {};
+  return {
+    aberta: p2p.pode === true,
+    desagio: p2p.desagio ?? null,
+    corretagem: p2p.corretagem ?? null,
+    disponivel: p2p.estoque ?? null,
+    variacao: VARIACAO_DO_ESTOQUE_DE_CLIENTES,
+    origem: 'captura'
+  };
+};
+
+/**
+ * A compra pelo **Estoque clientes** (o peer to peer do secundário), pedida com "estoque cliente".
+ * Visto no Hub em 20/10/2026: é uma intenção de ordem, que a Mesa de Fundos casa por ordem de chegada
+ * e cancela às 14:00 se não casar; o deságio é o dele (no IMOV11, 9,90% contra 9,75% do Estoque XP),
+ * a corretagem é a de sempre, e **não há barra de ROA**. O preço pode variar até 2%, e por isso a
+ * conta é sempre no pior caso (decisão do operador): as cotas nunca passam do valor pedido.
+ *
+ * "O que for possível" compra o que houver no estoque, até o valor; sem isso, o estoque que não cobre
+ * o pedido fica à vista, para o validador segurar.
+ */
+const compraNoEstoqueDeClientes = (ordem, { base, boletas, hoje }) => {
+  const { fundo, porValor } = base;
+  const p2p = condicoesDoP2p(fundo, boletas, hoje);
+  const corretagem = p2p.corretagem ?? CORRETAGEM;
+  const desagio = p2p.desagio ?? 0;
+  const fator = 1 + p2p.variacao / 100;
+
+  // O PU mais alto que o arredondamento permite, e ainda os 2% que o preço pode subir.
+  const puExato = p2p.valorDaCota ?? null;
+  const pu = (puExato ?? fundo.pu + margemDoPu(fundo.casasDoPu)) * fator;
+  const boleta = { pu, casasDoPu: 12, desagio, roa: 0, corretagem };
+
+  const cotasQueCabem = porValor ? cotasPara(ordem.financeiro, boleta) : (ordem.quantidade ?? null);
+  const disponivel = p2p.disponivel === null || p2p.disponivel === undefined ? null : Math.floor(p2p.disponivel);
+  const limitadoAoEstoque = Boolean(ordem.oQueForPossivel) && disponivel !== null && cotasQueCabem > disponivel;
+  const cotas = limitadoAoEstoque ? disponivel : cotasQueCabem;
+
+  const cenario = { roa: 0, cotas, conta: cotas ? contaDaBoleta({ ...boleta, cotas }) : null };
+  return {
+    situacao: 'pronto',
+    ...base,
+    modalidade: 'clientes',
+    precoExatoMuda: false,
+    p2p: { ...p2p, disponivel, cotasQueCabem },
+    cenarios: { maximo: cenario, zerado: cenario },
+    limitadoAoEstoque,
+    ...cenario
+  };
 };

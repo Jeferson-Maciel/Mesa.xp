@@ -77,9 +77,17 @@ export const validar = (solicitacao, formato) => {
       diagnosticos.push(bloqueio('ativo-vazio', `Na linha ${i + 1}, informe o ativo.`, i, false));
     }
 
-    if ((o.quantidade === null || o.quantidade === undefined) && (o.financeiro === null || o.financeiro === undefined)) {
+    // A venda do total de um fundo não tem número escrito: a quantidade é a posição (`o.venda`), e o
+    // bloqueio de venda sem posição diz o que falta.
+    const vendaDoTotal = o.total === true && o.operacao === 'V' && Boolean(o.venda);
+    if ((o.quantidade === null || o.quantidade === undefined) && (o.financeiro === null || o.financeiro === undefined) && !vendaDoTotal) {
       diagnosticos.push(
-        bloqueio('valor-ausente', `${nome}: informe a quantidade ou o valor em R$.`, i, false)
+        bloqueio(
+          'valor-ausente',
+          o.total ? `${nome}: "total" só vale para a venda de fundo do secundário. Informe a quantidade.` : `${nome}: informe a quantidade ou o valor em R$.`,
+          i,
+          false
+        )
       );
     }
 
@@ -259,9 +267,170 @@ export const validar = (solicitacao, formato) => {
       }
     }
 
+    // ── Estoque clientes (peer to peer) ──────────────────────────────────────────────────
+    // A compra pedida com "estoque cliente": as cotas estão no pior preço (`secundario.js`). O que
+    // segura o e-mail é o estoque — fechado, vazio, ou menor que o pedido —, e cada bloqueio traz os
+    // dois caminhos a um clique: comprar o que houver, ou comprar no Estoque XP.
+    const noP2p = sec?.situacao === 'pronto' && sec.modalidade === 'clientes';
+    if (noP2p && formato === 'email') {
+      const { p2p } = sec;
+      const daBoleta = p2p.origem === 'boleta';
+      const quando = daBoleta ? 'na boleta do Hub' : 'na Prateleira';
+      const fechado = !p2p.aberta || p2p.disponivel === 0;
+
+      if (fechado) {
+        diagnosticos.push({
+          ...bloqueio(
+            'secundario-p2p-fechado',
+            `${o.ativo}: o Estoque clientes está ${p2p.aberta ? 'sem cotas' : 'fechado'} ${quando}. Compre no Estoque XP, ` +
+              'ou fale com o assessor.',
+            i,
+            false
+          ),
+          acao: { campo: 'estoque-xp', rotulo: 'Comprar no Estoque XP' }
+        });
+      } else if (!sec.limitadoAoEstoque && p2p.disponivel !== null && sec.cotas > p2p.disponivel) {
+        diagnosticos.push({
+          ...bloqueio(
+            'secundario-p2p-sem-estoque',
+            `${o.ativo}: o pedido dá ${sec.cotas.toLocaleString('pt-BR')} cotas, e o Estoque clientes tem ` +
+              `${p2p.disponivel.toLocaleString('pt-BR')} ${quando}. Compre o que houver, ou no Estoque XP.`,
+            i,
+            false
+          ),
+          acoes: [
+            { campo: 'o-que-for-possivel', rotulo: `Comprar o que houver (${p2p.disponivel.toLocaleString('pt-BR')})` },
+            { campo: 'estoque-xp', rotulo: 'Comprar no Estoque XP' }
+          ]
+        });
+      }
+
+      // Sem a boleta lida agora, o estoque é o da Prateleira, de até 2 minutos.
+      if (!fechado && !daBoleta) {
+        diagnosticos.push({
+          ...bloqueio(
+            'secundario-p2p-sem-boleta',
+            `${o.ativo}: o Estoque clientes é o da Prateleira, não o da boleta. Cote na boleta, ou confirme para usar este.`,
+            i
+          ),
+          acao: { campo: 'cotar-estoque-clientes', rotulo: 'Cotar na boleta' }
+        });
+      }
+
+      if (sec.limitadoAoEstoque) {
+        diagnosticos.push(
+          aviso(
+            'secundario-p2p-limitado',
+            `${o.ativo}: o que for possível — ${sec.cotas.toLocaleString('pt-BR')} cotas, o que há no Estoque clientes ` +
+              `(o valor daria ${p2p.cotasQueCabem.toLocaleString('pt-BR')}).`,
+            i
+          )
+        );
+      }
+
+      diagnosticos.push(
+        aviso(
+          'secundario-p2p-intencao',
+          `${o.ativo}: no Estoque clientes a ordem é uma intenção, casada pela Mesa de Fundos; se não casar até ` +
+            `as 14:00, é cancelada. As cotas estão no pior preço (até ${p2p.variacao}% acima).`,
+          i
+        )
+      );
+    }
+
+    // ── Venda de fundo do secundário ─────────────────────────────────────────────────────
+    // `o.venda` chega calculado pela tela (`core/secundario/venda.js`), com a boleta de venda que o
+    // robô leu: a posição do cliente e as modalidades abertas no dia.
+    const venda = o.venda;
+    if (venda && formato === 'email') {
+      const lida = venda.situacao === 'pronto';
+      const disponivel = lida ? venda.posicao?.disponivel ?? null : null;
+      const motivoSemBoleta = {
+        'sem-planilha': ' (carregue os fundos do secundário)',
+        'fora-da-planilha': ' (o fundo não está nos fundos do secundário carregados)',
+        'sem-boleta': ''
+      }[venda.situacao] ?? '';
+
+      if (porFinanceiro) {
+        diagnosticos.push(
+          bloqueio('venda-em-reais', `${o.ativo}: a venda de fundo vai em cotas. Troque para Qtd. e informe a quantidade.`, i, false)
+        );
+      } else if (venda.total && venda.quantidade === null) {
+        diagnosticos.push(
+          bloqueio(
+            'venda-sem-posicao',
+            `${o.ativo}: venda do total — falta a posição do cliente, que o robô lê na boleta de venda do Hub` +
+              `${motivoSemBoleta}. Sem ele, digite a quantidade.`,
+            i,
+            false
+          )
+        );
+      } else if (!lida) {
+        diagnosticos.push(
+          bloqueio(
+            'venda-posicao-nao-conferida',
+            `${o.ativo}: ${o.quantidade} cotas, sem conferir com a posição do cliente na boleta de venda do Hub` +
+              `${motivoSemBoleta}. Confirme para mandar assim.`,
+            i
+          )
+        );
+      }
+
+      if (lida && !venda.total && disponivel !== null && o.quantidade > disponivel + 1e-9) {
+        diagnosticos.push({
+          ...bloqueio(
+            'venda-acima-da-posicao',
+            `${o.ativo}: ${o.quantidade} cotas passam da posição disponível do cliente ` +
+              `(${disponivel.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}).`,
+            i,
+            false
+          ),
+          acao: { campo: 'usar-posicao', rotulo: 'Vender o total' }
+        });
+      }
+
+      if (lida && venda.posicao?.aVenda > 0) {
+        diagnosticos.push(
+          aviso(
+            'venda-cotas-a-venda',
+            `${o.ativo}: o cliente já tem ${venda.posicao.aVenda.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} cotas à venda.`,
+            i
+          )
+        );
+      }
+
+      // A modalidade pedida fechada no dia: a decisão de ir pela outra é do operador — o preço muda,
+      // e o Estoque clientes pode não executar.
+      if (lida && !venda.condicoes?.aberta) {
+        const nomeDela = venda.modalidade === 'clientes' ? 'Estoque clientes' : 'Estoque XP';
+        diagnosticos.push(
+          venda.outraAberta
+            ? {
+                ...bloqueio('venda-modalidade-fechada', `${o.ativo}: o ${nomeDela} não está comprando este fundo hoje.`, i, false),
+                acao:
+                  venda.modalidade === 'clientes'
+                    ? { campo: 'estoque-xp', rotulo: 'Vender no Estoque XP' }
+                    : { campo: 'estoque-clientes', rotulo: 'Vender no Estoque clientes' }
+              }
+            : bloqueio('venda-sem-modalidade', `${o.ativo}: nem o Estoque XP nem o Estoque clientes estão abertos para este fundo hoje.`, i, false)
+        );
+      }
+
+      if (lida && venda.modalidade === 'clientes' && venda.condicoes?.aberta) {
+        diagnosticos.push(
+          aviso(
+            'venda-estoque-clientes',
+            `${o.ativo}: no Estoque clientes a venda é uma intenção, casada pela Mesa de Fundos; se não casar até as 14:00, é cancelada.`,
+            i
+          )
+        );
+      }
+    }
+
     // Corretagem 0,00 na captura é um modelo de boleta que ainda não foi conferido (os XP CDI
-    // Private, os FIPs). Se a boleta cobrar a corretagem de sempre, as cotas passam do pedido.
-    if (sec?.situacao === 'pronto' && formato === 'email' && porFinanceiro && sec.fundo.corretagem === 0) {
+    // Private, os FIPs). Se a boleta cobrar a corretagem de sempre, as cotas passam do pedido. No
+    // Estoque clientes vale a corretagem dele.
+    if (sec?.situacao === 'pronto' && !noP2p && formato === 'email' && porFinanceiro && sec.fundo.corretagem === 0) {
       diagnosticos.push(
         bloqueio(
           'secundario-sem-corretagem',
@@ -272,7 +441,7 @@ export const validar = (solicitacao, formato) => {
       );
     }
 
-    if (sec?.situacao === 'pronto' && formato === 'email' && sec.cotas > 0) {
+    if (sec?.situacao === 'pronto' && !noP2p && formato === 'email' && sec.cotas > 0) {
       const { estoque } = sec.fundo;
       if (estoque !== null && sec.cotas > estoque) {
         diagnosticos.push(

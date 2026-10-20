@@ -291,3 +291,57 @@ describe('com os fundos do favorito do Hub', () => {
     expect(sec.conta.percentualDaRemuneracao).toBe(2);
   });
 });
+
+describe('compra pelo Estoque clientes (peer to peer)', () => {
+  // A captura traz o deságio e a corretagem do Estoque clientes e as cotas que há nele.
+  const comP2p = (p2p = {}) => doHub({ id: 'f-riza', p2p: { pode: true, desagio: 2.4, corretagem: 1.5, estoque: 5000, ...p2p } });
+  const p2p = (extra = {}) => compra({ estoque: 'clientes', ...extra });
+  const agora = { hoje };
+
+  it('conta no pior preço: o PU pode subir até 2% no Estoque clientes, e o ROA não entra', () => {
+    const sec = secundarioDaOrdem(p2p(), { estoque: comP2p(), tetos, ...agora });
+    expect(sec).toMatchObject({ situacao: 'pronto', modalidade: 'clientes', roa: 0, cotas: 160 });
+    expect(sec.p2p).toMatchObject({ aberta: true, desagio: 2.4, variacao: 2, origem: 'captura' });
+    expect(sec.conta.total).toBeLessThanOrEqual(16000);
+    // Os dois cenários são o mesmo: o e-mail tem um botão de copiar só.
+    expect(sec.cenarios.maximo.cotas).toBe(sec.cenarios.zerado.cotas);
+  });
+
+  it('pelo Estoque XP, o mesmo pedido compra mais: lá o preço é o da boleta', () => {
+    expect(secundarioDaOrdem(compra({ semRoa: true }), { estoque: comP2p(), tetos, semRoa: true, ...agora }).cotas).toBe(162);
+  });
+
+  it('"o que for possível" fica no que há no estoque', () => {
+    const sec = secundarioDaOrdem(p2p({ oQueForPossivel: true }), { estoque: comP2p({ estoque: 100.5 }), tetos, ...agora });
+    expect(sec).toMatchObject({ cotas: 100, limitadoAoEstoque: true });
+    expect(sec.p2p.cotasQueCabem).toBe(160);
+  });
+
+  it('sem "o que for possível", o estoque que não cobre fica à vista para bloquear', () => {
+    const sec = secundarioDaOrdem(p2p(), { estoque: comP2p({ estoque: 100 }), tetos, ...agora });
+    expect(sec).toMatchObject({ cotas: 160, limitadoAoEstoque: false });
+    expect(sec.p2p.disponivel).toBe(100);
+  });
+
+  it('a boleta lida há menos de 10 minutos vale mais que a captura', () => {
+    const boletas = {
+      'f-riza|comprar': {
+        fundoId: 'f-riza',
+        lado: 'comprar',
+        valorDaCota: 98.931234,
+        dataDaCota: '2026-10-05',
+        modalidades: { xp: { aberta: true }, clientes: { aberta: false, desagio: 2.4, corretagem: 1.5, disponivel: 0, variacao: 2 } },
+        em: hoje.getTime() - 5 * 60 * 1000
+      }
+    };
+    const sec = secundarioDaOrdem(p2p(), { estoque: comP2p(), tetos, boletas, ...agora });
+    expect(sec.p2p).toMatchObject({ aberta: false, disponivel: 0, origem: 'boleta' });
+    const velha = { 'f-riza|comprar': { ...boletas['f-riza|comprar'], em: hoje.getTime() - 11 * 60 * 1000 } };
+    expect(secundarioDaOrdem(p2p(), { estoque: comP2p(), tetos, boletas: velha, ...agora }).p2p.origem).toBe('captura');
+  });
+
+  it('por cotas, a quantidade é a pedida', () => {
+    const sec = secundarioDaOrdem(p2p({ financeiro: null, quantidade: 50 }), { estoque: comP2p(), tetos, ...agora });
+    expect(sec).toMatchObject({ cotas: 50, porValor: false });
+  });
+});

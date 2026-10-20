@@ -789,7 +789,7 @@ try {
       await mesa.keyboard.press('Control+Enter');
       await mesa.waitForFunction(() => document.querySelector('.secundario-dados')?.textContent.includes('exato'), null, { timeout: 40_000 });
       await terminarBusca();
-      await esperarCliente('Fulana de Tal da Silva');
+      await esperarCliente('FULANA DE TAL DA SILVA');
     };
     const email = () => mesa.textContent('.saida[data-formato="email"] pre');
     const abaDeClientes = async () => {
@@ -854,7 +854,7 @@ try {
       linhaCliente.includes('fulana.tal@exemplo.com') && linhaCliente.includes('Beltrano Souza') && linhaCliente.includes('A12345') && linhaCliente.includes('beltrano.souza@exemplo.com.br'),
       'o cartão mostra o cliente, o e-mail dele e o assessor que vai em cópia, achado pelo código'
     );
-    ok((await email()).startsWith('Prezado(a) Fulana de Tal da Silva,\n'), 'o e-mail sai com o nome completo do cliente, com as maiúsculas arrumadas');
+    ok((await email()).startsWith('Prezado(a) FULANA DE TAL DA SILVA,\n'), 'o e-mail sai com o nome completo do cliente, em maiúsculas como no Hub');
     ok(nadaDoCliente(), 'nada do cliente fica no armazenamento do robô: nem a conta, nem o nome, nem o e-mail, nem o CPF');
     ok(!linhaCliente.includes('99988877766') && !linhaCliente.includes('TELEFONE'), 'da ficha só saem o nome, o e-mail e o assessor');
 
@@ -869,7 +869,7 @@ try {
       outlook.protocol === 'mailto:' &&
         decodeURIComponent(outlook.pathname) === 'fulana.tal@exemplo.com' &&
         outlook.searchParams.get('cc') === 'beltrano.souza@exemplo.com.br' &&
-        outlook.searchParams.get('body').startsWith('Prezado(a) Fulana de Tal da Silva,'),
+        outlook.searchParams.get('body').startsWith('Prezado(a) FULANA DE TAL DA SILVA,'),
       'Abrir no Outlook vai para o cliente, com o assessor em cópia (num mailto: dentro do to) e o nome no corpo'
     );
 

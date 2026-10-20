@@ -1,28 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import XLSX from '../../../../vendor/xlsx.full.min.js';
 import { acharAssessor, lerAssessores, lerPlanilhaDosAssessores } from './assessores.js';
-import { clienteParaOEmail, lerClienteDoRobo, nomeProprio } from './cliente.js';
+import { clienteParaOEmail, lerClienteDoRobo, nomeDoHub } from './cliente.js';
 
 // Nomes, e-mails e códigos inventados: o repositório é público.
 
-describe('nomeProprio', () => {
-  it('arruma o nome que o Hub manda em maiúsculas', () => {
-    expect(nomeProprio('ANA PAULA DA SILVA')).toBe('Ana Paula da Silva');
-    expect(nomeProprio('  JOSE   DOS SANTOS E SOUZA ')).toBe('Jose dos Santos e Souza');
+describe('nomeDoHub', () => {
+  it('mantém o nome em maiúsculas, como o Hub manda, sem os espaços a mais', () => {
+    expect(nomeDoHub('ANA PAULA DA SILVA')).toBe('ANA PAULA DA SILVA');
+    expect(nomeDoHub('  JOSE   DOS SANTOS E SOUZA ')).toBe('JOSE DOS SANTOS E SOUZA');
   });
 
   it('não põe o acento que o Hub não mandou, e mantém o que veio', () => {
-    expect(nomeProprio('JOAO CONCEICAO')).toBe('Joao Conceicao');
-    expect(nomeProprio('JOÃO CONCEIÇÃO')).toBe('João Conceição');
-  });
-
-  it('cuida de hífen, apóstrofo e numeral romano', () => {
-    expect(nomeProprio("MARIA-CLARA D'AVILA")).toBe("Maria-Clara D'Avila");
-    expect(nomeProprio('PEDRO HENRIQUE ALVES II')).toBe('Pedro Henrique Alves II');
-  });
-
-  it('partícula só fica minúscula no meio do nome', () => {
-    expect(nomeProprio('DE PAULA FERREIRA')).toBe('De Paula Ferreira');
+    expect(nomeDoHub('JOAO CONCEICAO')).toBe('JOAO CONCEICAO');
+    expect(nomeDoHub('João Conceição')).toBe('JOÃO CONCEIÇÃO');
   });
 });
 
@@ -134,10 +125,10 @@ describe('acharAssessor', () => {
 });
 
 describe('clienteParaOEmail', () => {
-  it('junta o nome arrumado, o e-mail do cliente e o do assessor', () => {
+  it('junta o nome do Hub, o e-mail do cliente e o do assessor', () => {
     const dados = lerClienteDoRobo({ conta: '1234567', nome: 'ANA PAULA DA SILVA', email: 'ANA@EXEMPLO.COM', assessorCodigo: 'A12345', assessorNome: 'Bruno Costa' }, '1234567');
     expect(clienteParaOEmail(dados, lerAssessores(CONTATOS))).toEqual({
-      nome: 'Ana Paula da Silva',
+      nome: 'ANA PAULA DA SILVA',
       email: 'ana@exemplo.com',
       assessor: { codigo: 'A12345', nome: 'Bruno Costa', email: 'bruno.costa@exemplo.com.br', peloNome: false, motivo: null }
     });

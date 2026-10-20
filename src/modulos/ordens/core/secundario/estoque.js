@@ -107,7 +107,23 @@ const fundoDe = (linha) => {
     desagioMinimo: lerNumero(linha[DO_HUB.desagioMinimo]),
     corretagem: lerNumero(linha[DO_HUB.corretagem]),
     estoque: lerNumero(linha[COLUNAS.estoque]),
-    aplicacaoMinima: lerNumero(linha[COLUNAS.aplicacaoMinima])
+    aplicacaoMinima: lerNumero(linha[COLUNAS.aplicacaoMinima]),
+    p2p: estoqueDeClientesDe(linha)
+  };
+};
+
+/**
+ * O **Estoque clientes** (o peer to peer do secundário), como a Prateleira o mostra: se a compra está
+ * aberta, o deságio, a corretagem e as cotas que há nele. Na captura de 06/10, o deságio é sempre o
+ * do Estoque XP mais 0,15. A boleta lida pelo robô, quando há, vale mais (`secundario.js`).
+ */
+const estoqueDeClientesDe = (linha) => {
+  if (!('canBuyPeerToPeer' in linha) && !('peerToPeerBuyDiscount' in linha)) return null;
+  return {
+    pode: linha.canBuyPeerToPeer === true || linha.canBuyPeerToPeer === 'true',
+    desagio: lerNumero(linha.peerToPeerBuyDiscount),
+    corretagem: lerNumero(linha.peerToPeerBuyCommissionFee),
+    estoque: lerNumero(linha.stockOfPeerToPeerQuotas)
   };
 };
 

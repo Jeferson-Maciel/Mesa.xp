@@ -390,6 +390,20 @@ export const validar = (solicitacao, formato) => {
             false
           )
         );
+      } else if (venda.total && lida && !(disponivel > 0)) {
+        // Visto no Hub de verdade em 20/10/2026: com uma venda em aberto, a posição inteira fica à
+        // venda, e o disponível é zero. A boleta não faz conta com zero, e não há print; até aqui, o
+        // e-mail saía com 0 cotas.
+        const aVenda = venda.posicao?.aVenda ?? 0;
+        diagnosticos.push(
+          bloqueio(
+            'venda-sem-disponivel',
+            `${o.ativo}: o cliente não tem cotas disponíveis para vender` +
+              (aVenda > 0 ? ` — as ${aVenda.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} cotas dele já estão à venda.` : '.'),
+            i,
+            false
+          )
+        );
       } else if (!lida) {
         diagnosticos.push(
           bloqueio(
@@ -414,7 +428,8 @@ export const validar = (solicitacao, formato) => {
         });
       }
 
-      if (lida && venda.posicao?.aVenda > 0) {
+      const semDisponivel = lida && !(disponivel > 0);
+      if (lida && venda.posicao?.aVenda > 0 && !(venda.total && semDisponivel)) {
         diagnosticos.push(
           aviso(
             'venda-cotas-a-venda',
@@ -443,7 +458,7 @@ export const validar = (solicitacao, formato) => {
 
       // O print da cotação vai abaixo de "Condições:". O robô o tira na hora de copiar ou de abrir no
       // Outlook (e ele vale um dia útil); sem o robô, cola-se à mão.
-      if (lida && venda.condicoes?.aberta && !o.print) {
+      if (lida && venda.condicoes?.aberta && !o.print && !semDisponivel) {
         diagnosticos.push(
           aviso(
             'venda-sem-print',

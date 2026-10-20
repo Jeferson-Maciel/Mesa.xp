@@ -150,6 +150,12 @@ describe('o bloco da venda e do Estoque clientes', () => {
     expect(html).toContain('não está comprando este fundo hoje — o outro estoque está aberto');
   });
 
+  it('o print que falhou mostra o motivo ao lado da venda, até o próximo', () => {
+    const html = renderSecundario(comVenda(vendaLida, { printFalhou: 'a boleta não fez a conta da venda com a quantidade' }));
+    expect(html).toContain('data-print="falhou"');
+    expect(html).toContain('sem o print: a boleta não fez a conta da venda com a quantidade');
+  });
+
   it('sem a boleta lida, diz de onde a posição vem', () => {
     expect(renderSecundario(comVenda({ situacao: 'sem-boleta', modalidade: 'xp', total: true, quantidade: null }))).toContain('boleta de venda do Hub');
   });

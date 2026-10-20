@@ -198,7 +198,9 @@ const venda = (ordem, indice) => {
       </figure>`
     : ordem.buscandoPrint
       ? '<span class="secundario-falta buscando">tirando o print na boleta…</span>'
-      : '';
+      : ordem.printFalhou
+        ? `<span class="secundario-falta" data-print="falhou">sem o print: ${esc(ordem.printFalhou)}</span>`
+        : '';
 
   return `
     <div class="secundario-fundo" data-ordem="${indice}" data-venda="pronto" data-modalidade="${v.modalidade}">

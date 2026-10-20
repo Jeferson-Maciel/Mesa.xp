@@ -247,12 +247,20 @@ export const iniciarOrdens = (secao) => {
    * @returns {Promise<string[]>} os motivos dos que não saíram
    */
   async function garantirPrints(solicitacao) {
-    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) return [];
     calcularSecundario([solicitacao]);
     const faltam = solicitacao.ordens.filter(
       (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print && !o.buscandoPrint
     );
     if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
+    // Sem o robô certo, o print não sai — e isso fica à vista em vermelho, não só no aviso do cartão.
+    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) {
+      const motivo = !robo.presente
+        ? 'o robô do Hub não está instalado nesta página'
+        : `o robô instalado é a versão ${robo.versao}, e a Mesa precisa da ${VERSAO_DO_ROBO} — use "Copiar robô" e cole no Tampermonkey`;
+      aviso(`Sem o print da venda: ${motivo}.`, { tipo: 'erro' });
+      for (const o of faltam) o.printFalhou = motivo;
+      return [motivo];
+    }
 
     for (const o of faltam) o.buscandoPrint = true;
     marcarBusca('tirando os prints na boleta…');
@@ -263,9 +271,11 @@ export const iniciarOrdens = (secao) => {
       aoChegar: (r) => {
         const o = faltam[r.indice];
         o.buscandoPrint = false;
+        // O motivo da falha fica no cartão, ao lado da venda, até o próximo print.
+        o.printFalhou = r.png ? null : (r.erro?.message ?? 'o print não saiu');
         if (r.png) {
           estado.prints.set(chaveDoPrint(solicitacao.conta, o), { png: r.png, quantidade: r.quantidade, em: r.em, validaAte: umDiaUtilDepois(r.em) });
-        } else motivos.push(`${o.ativo}: ${r.erro?.message ?? 'o print não saiu'}`);
+        } else motivos.push(`${o.ativo}: ${o.printFalhou}`);
         render();
       }
     });
@@ -462,7 +472,7 @@ export const iniciarOrdens = (secao) => {
           }`
         );
         (async () => {
-          if (comPrints) await garantirPrints(solicitacao);
+          const semPrint = comPrints ? await garantirPrints(solicitacao) : [];
           if (comTaxaNova) await buscarTesouro([solicitacao.conta], { idadeMaxima: 2, leitura });
           calcularSecundario([solicitacao]);
           const comHtml = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo });
@@ -473,7 +483,9 @@ export const iniciarOrdens = (secao) => {
           const r = await reserva.resposta;
           if (r.ok) {
             aviso(
-              comPrints
+              comPrints && semPrint.length > 0
+                ? 'O corpo está no e-mail, mas sem o print de cada venda que falhou: cole-o abaixo de "Condições:".'
+                : comPrints
                 ? 'Os prints da cotação estão no e-mail, abaixo de "Condições:". Confira e envie.'
                 : comTaxaNova
                   ? `O e-mail do Tesouro está com ${leitura === 'posicoes' ? 'a posição' : 'a taxa'} de agora. Confira e envie.`
@@ -488,6 +500,8 @@ export const iniciarOrdens = (secao) => {
           }
         })();
       } else if (comCorpo) {
+        // Sem o robô certo, o print não vem — e o motivo aparece em vermelho.
+        if (formato === 'email' && grupo === 'fundos-venda') garantirPrints(solicitacao);
         aviso(`E-mail aberto no Outlook${resto}.${formato === 'email' && grupo === 'fundos-venda' ? ' Cole o print de cada cotação abaixo de "Condições:".' : ''}`);
       } else aviso(`O texto é longo para ir junto: cole-o no corpo do e-mail (Ctrl+V)${resto}.`);
 

@@ -558,7 +558,9 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   a escrita se confirma, e o total não sai (digite a quantidade). A modalidade pedida fechada no dia
   bloqueia e oferece a outra (**Vender no Estoque clientes** / **Vender no Estoque XP**): a decisão é
   do operador, porque o preço muda e o Estoque clientes pode não executar. Venda em R$ não é tratada.
-  Cotas já à venda viram aviso. A conta do valor (`contaDaVenda`) é a do painel "Visualizar mais
+  Cotas já à venda viram aviso. **Com todas à venda** — no Hub de verdade, uma venda em aberto põe a
+  posição inteira à venda, e o disponível fica zero; a boleta não faz conta com zero —, a venda do
+  total bloqueia sem confirmar (`venda-sem-disponivel`); até 20/10 o e-mail saía com 0 cotas. A conta do valor (`contaDaVenda`) é a do painel "Visualizar mais
   detalhes da operação" da boleta, conferida centavo por centavo (posição = cotas × PU; deságio = %
   da posição; o cliente recebe a posição com deságio, menos a corretagem).
 - **A cotação de venda vale um dia útil** (`core/util/diasUteis.js`, com a Páscoa calculada e os dias
@@ -579,7 +581,12 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   no Outlook o e-mail de venda ("atualizado em tempo real", pedido do operador), ou no botão **Tirar
   prints** da venda; cada um vale um dia útil, preso à conta, ao fundo e à quantidade — se a posição
   mudar, o print velho não serve —, e fica **só na memória da página**. A miniatura aparece na venda.
-  Sem o robô, o e-mail sai sem o print, com um aviso para colá-lo abaixo de "Condições:".
+  Sem o robô, o e-mail sai sem o print, com um aviso para colá-lo abaixo de "Condições:"; sem o robô
+  da versão certa, o motivo aparece em vermelho na hora de copiar ou abrir no Outlook. O print que
+  falha deixa o motivo no cartão, ao lado da venda, e o aviso do Outlook diz que ele faltou. Os passos
+  do print foram repetidos à mão numa boleta de venda de verdade em 20/10 (o campo, o "Total de cotas",
+  que preenche o **disponível**, a conta, o detalhe, a quantidade do painel e o recorte): todos
+  funcionam. A foto (a SnapDOM) não pôde ser testada lá.
 - **O corpo no Outlook** (robô 1.5.0, @match no Outlook na web): a janela abre no clique, com o texto
   — senão o navegador a bloqueia como pop-up —, e o robô, **só no compor que a Mesa acabou de abrir**
   (`/deeplink/compose`, pedido de menos de 2 minutos, corpo começando pelo texto que a Mesa mandou),
@@ -1317,7 +1324,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.110 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.112 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

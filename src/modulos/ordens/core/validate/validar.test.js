@@ -571,6 +571,17 @@ describe('venda de fundo do secundário', () => {
     expect(codigos(venda({}, { modalidade: 'clientes' }))).toContain('venda-estoque-clientes');
   });
 
+  // Visto no Hub de verdade em 20/10/2026: com uma venda em aberto, a posição inteira fica à venda e
+  // o disponível é zero; a boleta não faz conta, e não há print. Antes, o e-mail saía com 0 cotas.
+  it('o total com todas as cotas já à venda bloqueia, sem confirmação: não há o que vender', () => {
+    const s = venda({ quantidade: null, total: true }, { total: true, quantidade: 0, posicao: { quantidade: 120, disponivel: 0, aVenda: 120 } });
+    const d = validar(s, 'email').find((x) => x.codigo === 'venda-sem-disponivel');
+    expect(d).toMatchObject({ nivel: 'bloqueio', confirmavel: false });
+    expect(d.mensagem).toContain('120 cotas dele já estão à venda');
+    expect(codigos(s)).not.toContain('venda-cotas-a-venda');
+    expect(codigos(s)).not.toContain('venda-sem-print');
+  });
+
   it('avisa das cotas que o cliente já tem à venda', () => {
     expect(codigos(venda({}, { posicao: { quantidade: 120, disponivel: 100, aVenda: 20 } }))).toContain('venda-cotas-a-venda');
   });

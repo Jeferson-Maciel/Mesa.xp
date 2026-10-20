@@ -98,9 +98,12 @@ const tipoDe = (ordem) => ordem.tipo ?? (porFinanceiro(ordem) ? 'financeiro' : '
 
 /** Venda de fundo do secundário: a cota é fracionada, e o total da posição vale como quantidade. */
 const vendaDeFundo = (ordem) => Boolean(ordem.fundo) && ordem.operacao === 'V';
+// O resgate de Tesouro também tem o "Total" (o valor disponível da posição).
+const temTotal = (ordem) => (Boolean(ordem.fundo) || Boolean(ordem.tesouro)) && ordem.operacao === 'V';
 
 const valorVisivel = (ordem) => {
   if (porFinanceiro(ordem)) return formatarFinanceiro(ordem.financeiro);
+  if (ordem.total && ordem.tesouro) return ordem.resgateDoHub?.valor ? formatarFinanceiro(ordem.resgateDoHub.valor) : '';
   if (ordem.total) return ordem.venda?.quantidade ? formatarCotas(ordem.venda.quantidade) : '';
   if (vendaDeFundo(ordem) && ordem.quantidade !== null && !Number.isInteger(ordem.quantidade)) return formatarCotas(ordem.quantidade);
   return ordem.quantidade ?? '';
@@ -108,9 +111,11 @@ const valorVisivel = (ordem) => {
 
 // O "Total" da venda de fundo: a quantidade é a posição disponível do cliente, lida na boleta.
 const botaoDoTotal = (ordem) =>
-  vendaDeFundo(ordem)
+  temTotal(ordem)
     ? `<button type="button" class="seg seg-total${ordem.total ? ' ativo' : ''}" data-campo="usar-posicao" data-valor=""
-              aria-pressed="${ordem.total === true}" title="Vender a posição disponível inteira, lida na boleta de venda do Hub">Total</button>`
+              aria-pressed="${ordem.total === true}" title="${
+                ordem.tesouro ? 'Resgatar o valor disponível inteiro, lido na posição do Hub' : 'Vender a posição disponível inteira, lida na boleta de venda do Hub'
+              }">Total</button>`
     : '';
 
 /** A linha que o botão + acrescenta: tudo em branco, para o operador preencher. */
@@ -356,11 +361,12 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
       ordem.oQueForPossivel = true;
       return;
     // Vender a posição disponível inteira: a quantidade é a que o robô lê na boleta de venda.
+    // No Tesouro, resgatar o valor disponível inteiro, lido na posição.
     case 'usar-posicao':
       ordem.total = true;
       ordem.quantidade = null;
       ordem.financeiro = null;
-      ordem.tipo = 'quantidade';
+      ordem.tipo = ordem.tesouro ? 'financeiro' : 'quantidade';
       return;
     case 'ativo': {
       const texto = valor.trim();

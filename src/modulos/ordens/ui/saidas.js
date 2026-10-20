@@ -5,6 +5,7 @@ import {
   formatarEmailVenda,
   formatarEmailVendaHtml,
   formatarEmailTesouro,
+  formatarEmailResgateTesouro,
   formatarLoteSimples,
   formatarLoteTwap
 } from '../core/format/formatadores.js';
@@ -54,6 +55,7 @@ const GERADORES_HTML = {
  */
 const saidaDe = (parte, formato, { prints } = {}) => {
   if (formato === 'email' && parte.grupo === 'tesouro') return { texto: formatarEmailTesouro(parte), html: null };
+  if (formato === 'email' && parte.grupo === 'tesouro-resgate') return { texto: formatarEmailResgateTesouro(parte), html: null };
   if (formato === 'email' && parte.grupo === 'fundos-venda') {
     return { texto: formatarEmailVenda(parte), html: prints?.size ? formatarEmailVendaHtml(parte, { prints }) : null };
   }
@@ -254,14 +256,14 @@ const renderPorGrupo = (solicitacao, formatos, confirmados, { prints }) => {
         ? renderSecundario(solicitacao, { so: 'compra' })
         : grupo === 'fundos-venda'
           ? renderSecundario(solicitacao, { so: 'venda' })
-          : grupo === 'tesouro'
-            ? renderTesouro(solicitacao)
+          : grupo === 'tesouro' || grupo === 'tesouro-resgate'
+            ? renderTesouro(solicitacao, { so: grupo === 'tesouro' ? 'aplicacao' : 'resgate' })
             : '';
     const doFormato = formatos.filter((f) => f === 'email' || grupo === 'bolsa');
     const saidas = doFormato.map((f) => saidaDoGrupo(f, grupo)).join('');
     const semEmail =
       grupo !== 'bolsa' && !formatos.includes('email')
-        ? `<p class="saida-nota">${grupo === 'tesouro' ? 'O Tesouro' : 'Os fundos'} saem na Ordem por e-mail: marque-a nos formatos de saída.</p>`
+        ? `<p class="saida-nota">${grupo.startsWith('tesouro') ? 'O Tesouro' : 'Os fundos'} saem na Ordem por e-mail: marque-a nos formatos de saída.</p>`
         : '';
     return `
     <section class="grupo-saidas" data-grupo="${grupo}">

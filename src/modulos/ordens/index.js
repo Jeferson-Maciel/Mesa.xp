@@ -4,7 +4,7 @@ import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
 import { ASSUNTOS_DOS_GRUPOS, ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
-import { lerTitulosDoHub, tesouroDaOrdem } from './core/tesouro/tesouro.js';
+import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } from './core/tesouro/tesouro.js';
 import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
 import { vendaDaOrdem } from './core/secundario/venda.js';
@@ -81,7 +81,9 @@ export const iniciarOrdens = (secao) => {
     prints: new Map(),
     // A lista do Tesouro Direto de cada conta, lida pelo robô no Hub, com a hora: a taxa muda ao longo
     // do dia. Só na memória da página.
-    tesouro: new Map()
+    tesouro: new Map(),
+    // A posição de cada conta no Tesouro, para o resgate (robô 1.7.0). Também só na memória.
+    posicoesTesouro: new Map()
   };
 
   const formatosDe = (indice) => estado.escolhaManual ?? estado.detectados[indice] ?? [];
@@ -104,7 +106,8 @@ export const iniciarOrdens = (secao) => {
       '1234567\nvia email\nCompras\nIMOV11 - Navi Hedge Fund    R$20.000,00 (Estoque cliente)\nXPHF11 - XP Hedge Fund    R$10.000,00 (Estoque cliente o que for possível)',
     'Fundos · venda':
       '1234567\nvia email\nVendas | Quantidade Total\nRiza Malls Feeder FII RL\nTG Renda Urbana Feeder FII RL\n\nV 590qtds XP Habitat Renda Imobiliária II Feeder FII RL',
-    'Tesouro Direto': '1234567\nvia email\nCompra\nTesouro Selic 2031 R$ 2.000,00\nComprar 5k\nTesouro Prefixado 2029',
+    'Tesouro · aplicação': '1234567\nvia email\nCompra\nTesouro Selic 2031 R$ 2.000,00\nComprar 5k\nTesouro Prefixado 2029',
+    'Tesouro · resgate': '1234567\nvia email\nResgate\nTesouro Selic 2031 R$ 5.000,00\nTesouro Selic 2029 total',
     'Pedido misto':
       '1234567\nvia email\n\nV KLBN11 674qtds\nC VULC3 R$ 11.800,00\n\nVendas | Quantidade Total\nPAAG11 - Pátria Crédito Agrícola FiAgro\nBGR Galpões Logísticos I Feeder FII\n\nCompras\nAZ Quest Panorama Data Centers FII RL    R$50.000,00\nIMOV11 - Navi Hedge Fund    R$52.832,35 (Estoque cliente)\nBrio Renda Mais FII RL    R$52.000,00'
   };
@@ -159,8 +162,8 @@ export const iniciarOrdens = (secao) => {
 
     // Ao mesmo tempo, noutra aba do robô, o cliente de cada conta: nome, e-mail e assessor.
     buscarClientes(solicitacoes.map((s) => s.conta));
-    // E noutra, a lista do Tesouro de cada conta com aplicação no Tesouro.
-    buscarTesouro(solicitacoes.filter((s) => s.ordens.some((o) => o.tesouro && o.operacao !== 'V')).map((s) => s.conta));
+    // E noutra, a lista do Tesouro de cada conta com aplicação, e a posição de cada uma com resgate.
+    buscarTesouroDe(solicitacoes);
   }
 
   const TODOS_FORMATOS = ['email', 'auditoria', 'lote', 'twap'];
@@ -207,6 +210,8 @@ export const iniciarOrdens = (secao) => {
         ordem.print = printValido(s.conta, ordem, hoje);
         // O Tesouro: o título da lista do Hub lida para a conta, com a taxa e o vencimento.
         ordem.tesouroDoHub = tesouroDaOrdem(ordem, { lista: estado.tesouro.get(String(s.conta ?? '')), hoje, ehDiaUtil });
+        // O resgate: o título na posição do cliente, e o valor disponível.
+        ordem.resgateDoHub = resgateDaOrdem(ordem, { lista: estado.posicoesTesouro.get(String(s.conta ?? '')), hoje, ehDiaUtil });
       }
       s.prints = printsDa(s);
     }
@@ -350,7 +355,7 @@ export const iniciarOrdens = (secao) => {
     if (campo === 'conta' && e.type === 'change') {
       const s = estado.solicitacoes[iSolicitacao];
       buscarClientes([s.conta]);
-      if (s.ordens.some((o) => o.tesouro && o.operacao !== 'V')) buscarTesouro([s.conta]);
+      buscarTesouroDe([s]);
     }
   }
 
@@ -367,7 +372,8 @@ export const iniciarOrdens = (secao) => {
     if (segmento?.dataset.campo === 'atualizar-cotacoes') return atualizarCotacoes();
     if (segmento?.dataset.campo === 'cotar-estoque-clientes') return buscarBoletas({ forcar: true });
     if (segmento?.dataset.campo === 'tirar-prints') return garantirPrints(solicitacao);
-    if (segmento?.dataset.campo === 'ler-tesouro') return buscarTesouro([solicitacao.conta], { forcar: true });
+    if (segmento?.dataset.campo === 'ler-tesouro')
+      return buscarTesouro([solicitacao.conta], { forcar: true, leitura: segmento.dataset.valor === 'posicoes' ? 'posicoes' : 'lista' });
     if (segmento) {
       aplicarEdicao(solicitacao, segmento.dataset.campo, segmento.dataset.valor, indiceDo(segmento, 'ordem'));
       render();
@@ -425,8 +431,10 @@ export const iniciarOrdens = (secao) => {
       const comGrade = comRobo && formato === 'auditoria' && saida.html;
       // A taxa do Tesouro lida há mais de 2 minutos: o e-mail abre já, e o robô põe nele o texto com a
       // taxa de agora, assim que a lista chegar.
-      const listaDoTesouro = estado.tesouro.get(String(solicitacao.conta ?? ''));
-      const comTaxaNova = comRobo && formato === 'email' && grupo === 'tesouro' && (!listaDoTesouro || Date.now() - listaDoTesouro.em > 2 * 60 * 1000);
+      // No resgate, a posição: o valor disponível muda com o PU.
+      const leitura = leituraDoGrupo(grupo);
+      const listaDoTesouro = leitura && (leitura === 'posicoes' ? estado.posicoesTesouro : estado.tesouro).get(String(solicitacao.conta ?? ''));
+      const comTaxaNova = comRobo && formato === 'email' && leitura && (!listaDoTesouro || Date.now() - listaDoTesouro.em > 2 * 60 * 1000);
       const reserva = comPrints || comGrade || comTaxaNova ? robo.reservarOutlook({ texto: saida.texto, inicio: saida.texto.split('\n')[0] }) : null;
       if (!comCorpo && !(await copiar(saida.texto, saida.html))) {
         return aviso('Não consegui copiar o e-mail para colar no Outlook.', { tipo: 'erro' });
@@ -444,12 +452,16 @@ export const iniciarOrdens = (secao) => {
       if (reserva) {
         aviso(
           `E-mail aberto no Outlook${resto}. ${
-            comPrints ? 'O robô vai pôr os prints da cotação no corpo.' : comTaxaNova ? 'O robô vai pôr a taxa do Tesouro de agora no corpo.' : 'O robô vai pôr a tabela em grade no corpo.'
+            comPrints
+              ? 'O robô vai pôr os prints da cotação no corpo.'
+              : comTaxaNova
+                ? `O robô vai pôr ${leitura === 'posicoes' ? 'a posição' : 'a taxa'} do Tesouro de agora no corpo.`
+                : 'O robô vai pôr a tabela em grade no corpo.'
           }`
         );
         (async () => {
           if (comPrints) await garantirPrints(solicitacao);
-          if (comTaxaNova) await buscarTesouro([solicitacao.conta], { idadeMaxima: 2 });
+          if (comTaxaNova) await buscarTesouro([solicitacao.conta], { idadeMaxima: 2, leitura });
           calcularSecundario([solicitacao]);
           const comHtml = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo });
           // O Tesouro é texto: vai como HTML de linhas, com a taxa de agora.
@@ -462,7 +474,7 @@ export const iniciarOrdens = (secao) => {
               comPrints
                 ? 'Os prints da cotação estão no e-mail, abaixo de "Condições:". Confira e envie.'
                 : comTaxaNova
-                  ? 'O e-mail do Tesouro está com a taxa de agora. Confira e envie.'
+                  ? `O e-mail do Tesouro está com ${leitura === 'posicoes' ? 'a posição' : 'a taxa'} de agora. Confira e envie.`
                   : 'A tabela em grade está no e-mail. Confira e envie.'
             );
           }
@@ -501,7 +513,7 @@ export const iniciarOrdens = (secao) => {
       // —, para o texto à vista ser o copiado; o botão novo é que recebe o visto.
       if (roa) aplicarEdicao(solicitacao, roa === 'zerado' ? 'roa-zerado' : 'roa-maximo', '');
       if (formato === 'email' && grupo === 'fundos-venda') await garantirPrints(solicitacao);
-      if (formato === 'email' && grupo === 'tesouro') await buscarTesouro([solicitacao.conta], { idadeMaxima: 2 });
+      if (formato === 'email' && leituraDoGrupo(grupo)) await buscarTesouro([solicitacao.conta], { idadeMaxima: 2, leitura: leituraDoGrupo(grupo) });
       renderSaidasDe(iSolicitacao);
       copiarBotao = container.querySelector(
         `[data-solicitacao="${iSolicitacao}"] [data-copiar="${formato}"]${roa ? `[data-roa="${roa}"]` : ''}${grupo ? `[data-grupo="${grupo}"]` : ''}`
@@ -876,33 +888,56 @@ export const iniciarOrdens = (secao) => {
    * do Hub (conta não habilitada). Uma conta por vez. `forcar` lê de novo a que já veio; sem ele, só a
    * que ainda não veio ou tem mais de `idadeMaxima` minutos.
    */
+  //
+  // Com `leitura: 'posicoes'` (robô 1.7.0), a posição da conta no Tesouro, para o resgate: o robô vai a
+  // Posições → Tesouro Direto e traz os títulos que o cliente tem, com o disponível.
   let filaDoTesouro = Promise.resolve();
-  function buscarTesouro(contas, { forcar = false, idadeMaxima = 10 } = {}) {
+  function buscarTesouro(contas, { forcar = false, idadeMaxima = 10, leitura = 'lista' } = {}) {
     if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) return Promise.resolve();
+    const posicoes = leitura === 'posicoes';
+    const lidas = posicoes ? estado.posicoesTesouro : estado.tesouro;
     const pedidas = [...new Set(contas.map((c) => String(c ?? '')))].filter((conta) => {
       if (!/^\d{5,8}$/.test(conta)) return false;
-      const lida = estado.tesouro.get(conta);
+      const lida = lidas.get(conta);
       return forcar || !lida || Date.now() - lida.em > idadeMaxima * 60 * 1000;
     });
     for (const conta of pedidas) {
-      marcarTesouro(conta, true);
+      marcarTesouro(conta, true, posicoes);
       filaDoTesouro = filaDoTesouro.then(async () => {
         try {
-          const { itens, erro } = await robo.pedirTesouro(conta);
-          estado.tesouro.set(conta, erro ? { erro, em: Date.now() } : { titulos: lerTitulosDoHub(itens), em: Date.now() });
+          const resposta = await robo.pedirTesouro(conta, { leitura });
+          lidas.set(
+            conta,
+            resposta.erro
+              ? { erro: resposta.erro, em: Date.now() }
+              : posicoes
+                ? { posicoes: lerPosicoesDoHub(resposta.posicoes), em: Date.now() }
+                : { titulos: lerTitulosDoHub(resposta.itens), em: Date.now() }
+          );
         } catch (falha) {
-          estado.tesouro.set(conta, { erro: falha instanceof ErroDoRobo ? falha.message : 'o robô não trouxe a lista do Tesouro', em: Date.now() });
+          const motivo = posicoes ? 'o robô não trouxe a posição no Tesouro' : 'o robô não trouxe a lista do Tesouro';
+          lidas.set(conta, { erro: falha instanceof ErroDoRobo ? falha.message : motivo, em: Date.now() });
         }
-        marcarTesouro(conta, false);
+        marcarTesouro(conta, false, posicoes);
       });
     }
     return filaDoTesouro;
   }
 
-  function marcarTesouro(conta, buscando) {
+  // A lista de cada conta com aplicação no Tesouro, e a posição de cada uma com resgate.
+  function buscarTesouroDe(solicitacoes) {
+    const com = (resgate) => solicitacoes.filter((s) => s.ordens.some((o) => o.tesouro && (o.operacao === 'V') === resgate)).map((s) => s.conta);
+    buscarTesouro(com(false));
+    buscarTesouro(com(true), { leitura: 'posicoes' });
+  }
+
+  // O e-mail do Tesouro que lê o Hub na hora de sair: a aplicação, a lista; o resgate, a posição.
+  const leituraDoGrupo = (grupo) => (grupo === 'tesouro' ? 'lista' : grupo === 'tesouro-resgate' ? 'posicoes' : null);
+
+  function marcarTesouro(conta, buscando, resgate = false) {
     estado.solicitacoes.forEach((s, i) => {
       if (String(s.conta ?? '') !== conta) return;
-      for (const o of s.ordens) if (o.tesouro) o.buscandoTesouro = buscando;
+      for (const o of s.ordens) if (o.tesouro && (o.operacao === 'V') === resgate) o.buscandoTesouro = buscando;
       renderSaidasDe(i);
     });
   }

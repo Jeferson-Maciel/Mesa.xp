@@ -214,3 +214,76 @@ export const noHorarioDoTesouro = (hoje, ehDiaUtil) => {
   const minutos = hoje.getHours() * 60 + hoje.getMinutes();
   return ehDiaUtil(hoje) && minutos >= 9 * 60 + 30 && minutos < 18 * 60;
 };
+
+/* ── O resgate ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A posição do cliente no Tesouro, lida do que o robô entregou. Vista no Hub em 20/10/2026, em
+ * `rede-treasury/v1/customers/<conta>/positions` (Posições → Posição por cliente → Tesouro Direto):
+ * `quantityBalance` é a quantidade, `blockedQuantity` a bloqueada, e `grossValue` a posição a mercado —
+ * o mesmo "Valor Disponível" da boleta de resgate. O disponível é o saldo menos o bloqueado, e o valor
+ * disponível, a parte da posição que ele representa.
+ *
+ * @typedef {object} PosicaoNoTesouro
+ * @property {number|null} codigo
+ * @property {string} nome
+ * @property {string|null} especie
+ * @property {number|null} ano
+ * @property {string} vencimento  'DD/MM/AAAA'
+ * @property {number} disponivel  títulos, com 2 casas
+ * @property {number|null} puVenda
+ * @property {number|null} valorDisponivel  em reais
+ */
+export const lerPosicoesDoHub = (posicoes) =>
+  (Array.isArray(posicoes) ? posicoes : [])
+    .filter((p) => p && typeof p.bondName === 'string' && p.bondName.trim())
+    .map((p) => {
+      const nome = p.bondName.trim();
+      const data = String(p.expirateDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const saldo = numero(p.quantityBalance) ?? 0;
+      const disponivel = Math.max(0, saldo - (numero(p.blockedQuantity) ?? 0));
+      const bruto = numero(p.grossValue);
+      return {
+        codigo: numero(p.codeBonds),
+        nome,
+        especie: especieDoNome(nome),
+        ano: Number(nome.match(/(20\d\d)\s*$/)?.[1]) || null,
+        vencimento: data ? `${data[3]}/${data[2]}/${data[1]}` : '',
+        disponivel,
+        puVenda: numero(p.sellPrice),
+        valorDisponivel: bruto === null || saldo === 0 ? null : Math.round(((bruto * disponivel) / saldo) * 100) / 100
+      };
+    });
+
+/**
+ * O que a posição do cliente diz de um resgate: o título na carteira dele e o valor — o do pedido, ou,
+ * no "total", o valor disponível (decidido com o operador em 20/10/2026, com o modelo "Confirmação
+ * resgate Tesouro Direto", que pede o valor a ser resgatado).
+ *
+ * @param {object} ordem  com `ordem.tesouro` e operação de venda
+ * @param {{lista: {posicoes?: PosicaoNoTesouro[], erro?: string, em: number}|null|undefined, hoje?: Date, ehDiaUtil?: Function}} contexto
+ */
+export const resgateDaOrdem = (ordem, { lista, hoje = new Date(), ehDiaUtil = () => true }) => {
+  if (!ordem.tesouro || ordem.operacao !== 'V') return null;
+  const foraDoHorario = !noHorarioDoTesouro(hoje, ehDiaUtil);
+  const total = ordem.total === true;
+  if (!lista || (!lista.posicoes && !lista.erro)) return { situacao: 'sem-posicoes', total, foraDoHorario };
+  if (lista.erro) return { situacao: /habilitad/i.test(lista.erro) ? 'nao-habilitada' : 'erro', mensagem: lista.erro, total, foraDoHorario };
+
+  const minutos = Math.floor((hoje.getTime() - lista.em) / 60000);
+  const achado = acharTitulo(ordem.tesouro, lista.posicoes);
+  if (achado.situacao === 'nenhum') return { situacao: 'nao-tem', total, minutos, foraDoHorario };
+  if (achado.situacao === 'ambiguo') return { situacao: 'ambiguo', candidatos: achado.candidatos, total, minutos, foraDoHorario };
+
+  const posicao = achado.titulo;
+  return {
+    situacao: 'pronto',
+    posicao,
+    total,
+    unicoDoTipo: achado.situacao === 'unico-do-tipo',
+    valor: total ? posicao.valorDisponivel : (ordem.financeiro ?? null),
+    lidaEm: lista.em,
+    minutos,
+    foraDoHorario
+  };
+};

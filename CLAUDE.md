@@ -290,7 +290,8 @@ projeto existe para evitar. O sistema os reconhece e os **descarta com o motivo 
   de tamanho. Não há número a preservar, então não há ordem a gerar. A exceção, desde 20/10/2026, é
   a **venda do total de fundo do secundário**: a quantidade é a posição disponível do cliente, que o
   robô lê na boleta de venda do Hub (ver "Venda de fundo e Estoque clientes"). Papel de bolsa
-  continua descartado, com o motivo.
+  continua descartado, com o motivo. O resgate do total no Tesouro Direto também vira ordem: o valor
+  é o disponível da posição do cliente, lida pelo robô (ver "Tesouro Direto").
 - **Push** — é canal do Hub da XP, alheio ao fluxo de e-mail e lote.
 - **Observações entre parênteses** coladas ao valor ("R$ 34.800(não ultrapassar esse valor)"): o
   valor é lido, a observação não é reproduzida.
@@ -406,7 +407,9 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     cotação. Se a última aba aberta nunca deu sinal (Hub deslogado), a Mesa recarregada espera 10
     minutos antes de abrir outra;
   - a aba do robô avisa que pegou o pedido (`atendendo`); sem o aviso em 3 s — aba fechada, posta
-    para dormir pelo Chrome —, a Mesa abre outra em segundo plano. Uma aba viva avisa em menos de
+    para dormir pelo Chrome —, a Mesa abre outra em segundo plano. Desde a 1.7.0, só se o pedido ainda
+    estiver esperando: até a 1.6.0, um pedido atendido em menos de 3 s, seguido de outro, abria uma aba
+    à toa (a marca já era a do outro), e numa colagem com várias contas as abas 🤖 se acumulavam. Uma aba viva avisa em menos de
     1 s; ocupada desenhando a Prateleira, levou até 3 s, e por isso não é menos. Se a última que
     abriu nunca deu sinal (Hub deslogado), espera um minuto antes de abrir mais uma;
   - uma tarefa por vez, numa fila;
@@ -586,20 +589,20 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   clica em nada. Sem resposta, a Mesa avisa para usar o Copiar e colar com Ctrl+V.
 - **A posição do cliente fica só na memória da página** (`estado.boletas`), como o cliente; nunca no
   `localStorage`, no histórico ou no repositório.
-- **Os grupos de e-mail.** Cada conta sai em até três e-mails, um por grupo, cada um numa seção do
+- **Os grupos de e-mail.** Cada conta sai em até cinco e-mails, um por grupo, cada um numa seção do
   cartão com o que é dele: **Bolsa** (ações, FIIs listados, ETFs, BDRs; compra e venda juntas, no
   modelo de sempre), **Fundos · Compra** (o modelo de sempre, com as cotas) e **Fundos · Venda** (o
-  modelo da auditoria de venda, em `docs/FORMATOS-DE-SAIDA.md`). O quarto é o **Tesouro Direto**
-  (ver "Tesouro Direto"), com o assunto dele. O E-mail em tabela, o Lote Simples e o TWAP são só de bolsa — com os fundos escritos pelo ticker,
+  modelo da auditoria de venda, em `docs/FORMATOS-DE-SAIDA.md`). O quarto e o quinto são o
+  **Tesouro · Aplicação** e o **Tesouro · Resgate** (ver "Tesouro Direto"), cada um com o assunto dele. O E-mail em tabela, o Lote Simples e o TWAP são só de bolsa — com os fundos escritos pelo ticker,
   que seguem com o bloqueio confirmável de sempre. Um grupo é a própria solicitação com só as ordens
   dele (`recorte`): o validador e os formatadores não mudaram de contrato. A confirmação de um
   bloqueio vale para o grupo em que foi dada (`grupo:codigo`).
 
-### Tesouro Direto (robô 1.6.0)
+### Tesouro Direto (robôs 1.6.0 e 1.7.0)
 
-Decidido com o operador em 20/10/2026, com o modelo de e-mail dele, um pedido real e a página do
-Tesouro vista no Hub de verdade. Código em `core/tesouro/tesouro.js`, `ui/tesouro.js` e o quarto
-grupo de e-mail.
+Decidido com o operador em 20/10/2026, com os dois modelos de e-mail dele (aplicação e resgate), um
+pedido real e as páginas do Tesouro vistas no Hub de verdade. Código em `core/tesouro/tesouro.js`,
+`ui/tesouro.js` e os grupos de e-mail `tesouro` e `tesouro-resgate`.
 
 - **O pedido.** O assessor escreve "Tesouro Selic 2031", "LFT", "Selic 2031 - 2k", "Pré 2029",
   "LTN 2032", "IPCA+ 2045 juros semestrais", "NTN-B 2045", "Renda+ 2065", "Educa+ 2030", "Tesouro
@@ -618,23 +621,57 @@ grupo de e-mail.
   outra conta XP Inc atrelada ao CPF"). **A taxa muda ao longo do dia** (o Prefixado 2029 foi de
   12,58% a 12,63% em minutos): o robô a lê ao colar e de novo na hora de gerar, se tiver mais de 2
   minutos; passados 10, o e-mail segura com "Atualizar a taxa" (confirmável).
-- **O robô 1.6.0** tem uma aba só dele no Renda Fixa ("🤖 Tesouro"). Para a lista, vai e volta de
-  tela (o Hub pede a lista do cliente que está escolhido); se não vier a da conta pedida, **digita a
-  conta no "Pesquisar cliente" e clica só no resultado "Conta XP: <conta>"** (liberado pelo operador,
-  T5), nada mais. Entrega só os dados dos títulos, que são públicos, ou o erro do Hub.
+- **O robô** tem uma aba só dele no Renda Fixa ("🤖 Tesouro"). Se o Hub não mandar a lista da conta
+  pedida ao entrar na tela, ele **digita a conta no "Pesquisar cliente" e clica só no resultado "Conta
+  XP: <conta>"** (liberado pelo operador, T5); em Posições, clica também na aba "Tesouro Direto". Nada
+  mais. Entrega só os dados dos títulos, que são públicos, ou o erro do Hub.
+- **Como o Hub de verdade se comporta** (testado em 20/10/2026 com o Claude in Chrome, só leitura,
+  repetindo os passos do robô), e por isso a 1.7.0 refez a leitura da 1.6.0, que nunca tinha rodado no
+  Hub de verdade:
+  - **o Hub pede a lista, e a posição, de um cliente uma vez só por carga da página.** Ir e voltar de
+    tela, escolher o mesmo cliente de novo, "Atualizar" ou "Limpar valor" e escolher de novo: nada o
+    faz pedir outra vez. Na 1.6.0, a segunda leitura da taxa ("na hora", depois de 2 minutos)
+    esperaria 25 s e falharia. **A 1.7.0 recarrega a aba** quando aquela carga da página já leu a conta
+    pedida (`lidasNaPagina`), e a página nova retoma o pedido (`recarregouTesouro`), sem a Mesa abrir
+    outra aba;
+  - o cliente escolhido vale para Produtos e Posições, e **continua escolhido depois de recarregar**: a
+    página nova pede de novo, sozinha, a lista dele;
+  - **o resultado da busca ignora o clique que chega cedo demais** (1,3 s depois de aparecer, o clique
+    não fez nada; 1,5 s depois, escolheu): o robô espera 1,5 s e clica de novo enquanto a lista de
+    resultados não fecha, até 3 vezes. O campo e o resultado (`SOMA-CAPTION-V4` dentro de
+    `SOMA-MENU-ITEM`) foram achados do jeito que o robô procura;
+  - **Posições abre na aba Renda Fixa** e desfaz a troca de rota feita na carga; a posição do Tesouro é
+    pedida no clique da aba "Tesouro Direto" (`SOMA-TAB`), por XHR.
 - **O título**: o do tipo e do ano pedidos; sem o ano, o único daquele tipo na lista, com aviso
   (decisão do operador, T4); com mais de um, o operador escolhe num botão por candidato; nenhum,
   bloqueia.
 - **A aplicação vai por valor em R$** — o modelo pede "Valor a ser aplicado" e avisa que o PU e o
   valor final dependem da cotação —, e não é convertida em títulos. Por quantidade bloqueia; abaixo
   da aplicação mínima (1% do PU) bloqueia; fora do horário (dia útil, 9h30–18h) avisa.
-- **O resgate** ainda não tem modelo de e-mail: bloqueia, para fazer na mão. A página de posições
-  (`#/posicoes/cliente/tesouro-direto`, de `rede-treasury/v1/customers/<conta>/positions`) e a boleta
-  de resgate (`#/posicoes/cliente/tesouro-direto/<codeBonds>`, que avisa que o resgate "não poderá
-  ser cancelado após seu envio") já foram vistas.
+- **O resgate** (robô 1.7.0) tem e-mail próprio, no modelo do operador ("Confirmação resgate Tesouro
+  Direto": título, vencimento e "Valor a ser resgatado", sem taxa, e o fecho "atte,"), num quinto
+  grupo, **Tesouro · Resgate**, separado da aplicação. O título e o vencimento vêm da **posição do
+  cliente**, em Posições → Posição por cliente → Tesouro Direto (`#/posicoes/cliente/tesouro-direto`),
+  de `rede-treasury/v1/customers/<conta>/positions` — uma lista solta, com `bondName`, `codeBonds`,
+  `expirateDate`, `quantityBalance`, `blockedQuantity`, `sellPrice` e `grossValue` (o "Valor
+  Disponível" da boleta de resgate). O robô traz só esses sete campos: o preço médio, o investido, o
+  líquido e o imposto não saem do Hub.
+- **O resgate vai por valor em R$, ou pelo total** ("resgate total", "resgatar tudo do Tesouro Selic
+  2031", o botão Total), que é o valor disponível: a parte livre da posição (o saldo menos o
+  bloqueado) a mercado. Por quantidade de títulos bloqueia; acima do disponível bloqueia, com
+  **Resgatar o total**; abaixo de 0,01 título bloqueia; um título que o cliente não tem bloqueia. A
+  posição é lida ao colar e de novo na hora de gerar, se tiver mais de 2 minutos (o valor a mercado
+  muda com o PU); passados 10, segura com "Atualizar a posição" (confirmável). Sem a posição, o valor
+  escrito se confirma e o e-mail sai com o vencimento em branco; o total, não.
+- **"Tudo" é total só com o que diz de quê** ("tudo do", "tudo da") **ou com o verbo** ("vender
+  tudo", "resgatar tudo"): sozinho, "Tudo via email" num cabeçalho venderia a posição de quem não
+  pediu.
+- A boleta de resgate (`#/posicoes/cliente/tesouro-direto/<codeBonds>`) avisa que o resgate "não
+  poderá ser cancelado após seu envio". O robô **não a abre**.
 - **Sem o robô**, a lista não vem: o bloqueio se confirma, e o e-mail sai com a taxa e o vencimento em
   branco, para preencher no Outlook — nada é inventado, e o operador não fica sem saída.
-- A lista fica só na memória da página (`estado.tesouro`), por conta.
+- A lista e a posição ficam só na memória da página (`estado.tesouro`, `estado.posicoesTesouro`),
+  por conta, e saem do Tampermonkey assim que a Mesa as recebe.
 
 ### O cliente e o assessor (robô 1.3.0)
 
@@ -727,7 +764,8 @@ Cada uma vale um teste. Violá-las é um bug de negócio, não de estilo.
 1. `Cliente` é sempre a conta numérica.
 2. Quantidade nunca vira financeiro, financeiro nunca vira quantidade. Exceção única: compra de
    fundo no secundário, convertida pela planilha do dia (ver "Fundos no secundário"). A venda do
-   total de fundo do secundário não converte nada: a quantidade é a posição lida na boleta.
+   total de fundo do secundário não converte nada: a quantidade é a posição lida na boleta. O resgate
+   do total no Tesouro também não: o valor é o disponível, em reais, lido na posição.
 3. `Compra` → `C`, `Venda` → `V`.
 4. Preço informado é preservado literalmente; ausente é `A mercado`.
 5. Ticker suspeito de erro de digitação gera **aviso pedindo confirmação** — a correção automática
@@ -1269,7 +1307,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.080 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.104 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

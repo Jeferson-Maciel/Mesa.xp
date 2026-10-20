@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { acharTitulo, especieDoNome, lerTitulosDoHub, noHorarioDoTesouro, pedidoDeTesouro, semOTitulo, tesouroDaOrdem } from './tesouro.js';
+import { acharTitulo, especieDoNome, lerPosicoesDoHub, lerTitulosDoHub, noHorarioDoTesouro, pedidoDeTesouro, resgateDaOrdem, semOTitulo, tesouroDaOrdem } from './tesouro.js';
 import { ehDiaUtil } from '../util/diasUteis.js';
 
 // A lista como o Hub a mandou em 20/10/2026 (dados de título, públicos), um de cada espécie.
@@ -112,5 +112,44 @@ describe('especieDoNome', () => {
   it('separa o com juros do sem juros', () => {
     expect(especieDoNome('Tesouro IPCA+ 2035')).toBe('ipca');
     expect(especieDoNome('Tesouro Prefixado com Juros Semestrais 2035')).toBe('prefixado-juros');
+  });
+});
+
+describe('o resgate', () => {
+  // A posição no formato do Hub (os PUs de venda são os de 20/10/2026; as quantidades, inventadas).
+  const POSICOES = lerPosicoesDoHub([
+    { bondName: 'Tesouro Selic 2029', codeBonds: 178, expirateDate: '2029-03-01T00:00:00-03:00', quantityBuy: 0.5, quantityBalance: 0.5, blockedQuantity: 0, sellPrice: 20090.26, grossValue: 10045.13 },
+    { bondName: 'Tesouro Selic 2031', codeBonds: 212, expirateDate: '2031-03-01T00:00:00-03:00', quantityBuy: 4.2, quantityBalance: 4.2, blockedQuantity: 0, sellPrice: 20024.39, grossValue: 84102.44 }
+  ]);
+  const hoje = new Date(2026, 9, 20, 14, 0);
+  const lista = { posicoes: POSICOES, em: hoje.getTime() - 60000 };
+  const resgate = (linha, extra = {}) => ({ tesouro: pedidoDeTesouro(linha), operacao: 'V', financeiro: null, quantidade: null, total: false, ...extra });
+
+  it('lê a posição: disponível e o valor disponível, que é o da boleta de resgate', () => {
+    expect(POSICOES[1]).toMatchObject({ nome: 'Tesouro Selic 2031', vencimento: '01/03/2031', disponivel: 4.2, valorDisponivel: 84102.44 });
+  });
+
+  it('com quantidade bloqueada, o disponível e o valor dele são a parte livre', () => {
+    const [p] = lerPosicoesDoHub([{ bondName: 'Tesouro Selic 2031', quantityBalance: 10, blockedQuantity: 2, grossValue: 200000 }]);
+    expect(p).toMatchObject({ disponivel: 8, valorDisponivel: 160000 });
+  });
+
+  it('o total resgata o valor disponível', () => {
+    expect(resgateDaOrdem(resgate('Tesouro Selic 2031', { total: true }), { lista, hoje })).toMatchObject({ situacao: 'pronto', valor: 84102.44, total: true });
+  });
+
+  it('o valor pedido vai como pedido, com a posição para conferir', () => {
+    const r = resgateDaOrdem(resgate('Selic 2031', { financeiro: 10000 }), { lista, hoje });
+    expect(r).toMatchObject({ situacao: 'pronto', valor: 10000, posicao: { valorDisponivel: 84102.44 } });
+  });
+
+  it('o título que o cliente não tem não é chutado; dois do mesmo tipo, o operador escolhe', () => {
+    expect(resgateDaOrdem(resgate('Tesouro Prefixado 2029', { financeiro: 1 }), { lista, hoje }).situacao).toBe('nao-tem');
+    expect(resgateDaOrdem(resgate('LFT', { total: true }), { lista, hoje }).situacao).toBe('ambiguo');
+  });
+
+  it('sem a posição lida, diz que falta; não é resgate, nada a dizer', () => {
+    expect(resgateDaOrdem(resgate('LFT', { total: true }), { lista: null, hoje }).situacao).toBe('sem-posicoes');
+    expect(resgateDaOrdem({ ...resgate('LFT'), operacao: 'C' }, { lista, hoje })).toBeNull();
   });
 });

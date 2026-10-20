@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.6.0
-// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
+// @version      1.7.0
+// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
 // @match        https://outlook.cloud.microsoft/*
@@ -52,6 +52,11 @@
  *                          lista que o Hub recebe — os títulos, com a taxa e o vencimento
  *   aba da Mesa  ←── só os dados dos títulos (públicos), ou o erro do Hub (conta não habilitada)
  *
+ *   aba da Mesa   pede ──→ a mesma aba do Tesouro (1.7.0), em Posições → Posição por cliente → Tesouro
+ *                          Direto: escolhe o cliente do mesmo jeito e lê a posição que o Hub recebe
+ *   aba da Mesa  ←── de cada título que o cliente tem, só o nome, o vencimento, a quantidade, a
+ *                    bloqueada, o PU de venda e o valor bruto — para o e-mail de resgate
+ *
  *   São abas separadas porque a Posição Consolidada e o Renda Fixa são outros módulos do Hub: ir e voltar da Prateleira
  *   recarregaria a página inteira a cada cliente, e a Prateleira deixaria de estar pronta para a
  *   cotação. Na aba de clientes, trocar de cliente é só trocar o fim do endereço.
@@ -98,7 +103,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.6.0';
+  const VERSAO = '1.7.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -111,6 +116,10 @@
   const TESOURO = 'https://hub.xpi.com.br/new/renda-fixa/#/produtos/tesouro-direto';
   const ROTA_DO_TESOURO = '#/produtos/tesouro-direto';
   const LISTA_DO_TESOURO = /\/rede-treasury\/v\d+\/customers\/(\d+)\/available-assets(\?|$)/;
+  // A posição do cliente no Tesouro (1.7.0), para o resgate: Posições → Posição por cliente, que abre
+  // na aba Renda Fixa; a do Tesouro Direto é aberta no clique.
+  const ROTA_DA_RENDA_FIXA = '#/posicoes/cliente/renda-fixa';
+  const POSICOES_DO_TESOURO = /\/rede-treasury\/v\d+\/customers\/(\d+)\/positions(\?|$)/;
   const NOME_DA_ABA_DE_CLIENTES = 'mesa-xp-clientes';
   const rotaDoCliente = (conta) => `#/${btoa(String(conta))}`;
   const FICHA = /\/advisor-customer-consolidated-portfolio\/v\d+\/api\/customers\/(\d+)\/customer-info(\?|$)/;
@@ -318,19 +327,35 @@
      * mensagem do Hub, que segue para a Mesa como está.
      */
     const CAMPOS_DO_TITULO = ['codeBonds', 'descTypeBond', 'expirateDate', 'buyValue', 'minimumInvestmentValue', 'nickname', 'descIndex', 'profitability', 'indexBonds'];
-    let listaVista = null;
+    // Da posição (1.7.0), só o que o e-mail de resgate e a conferência usam: o preço médio, o valor
+    // investido, o líquido e o imposto não saem do Hub.
+    const CAMPOS_DA_POSICAO_NO_TESOURO = ['bondName', 'codeBonds', 'expirateDate', 'quantityBalance', 'blockedQuantity', 'sellPrice', 'grossValue'];
+    const soCampos = (itens, campos) => itens.filter((i) => i && typeof i === 'object').map((i) => Object.fromEntries(campos.filter((c) => c in i).map((c) => [c, i[c]])));
+    // O que chegou sem ninguém esperar fica 5 s: a lista pedida pela própria página, logo antes do pedido.
+    const vistas = { lista: null, posicoes: null };
+    // O que esta carga da página já leu (`lista:<conta>`, `posicoes:<conta>`): o Hub não pede de novo.
+    const lidasNaPagina = new Set();
     let esperaLista = null;
     const anotarTesouro = (endereco, json) => {
-      const conta = (LISTA_DO_TESOURO.exec(endereco) || [])[1];
+      const leitura = POSICOES_DO_TESOURO.test(endereco) ? 'posicoes' : 'lista';
+      const conta = ((leitura === 'posicoes' ? POSICOES_DO_TESOURO : LISTA_DO_TESOURO).exec(endereco) || [])[1];
       if (!doRobo || papel !== 'tesouro' || !conta) return;
-      const itens = json && json.data && Array.isArray(json.data.items) ? json.data.items : null;
-      const lista = itens
-        ? { conta, itens: itens.map((i) => Object.fromEntries(CAMPOS_DO_TITULO.filter((c) => c in i).map((c) => [c, i[c]]))) }
-        : { conta, erro: String((json && (json.message || json.moreInfo)) || 'o Hub não mostrou a lista do Tesouro') };
-      registrar(itens ? 'a lista do Tesouro chegou' : 'o Hub recusou a lista do Tesouro');
-      if (esperaLista && esperaLista.conta === conta) esperaLista.resolver(lista);
-      else listaVista = { ...lista, em: Date.now() };
+      lidasNaPagina.add(`${leitura}:${conta}`);
+      let lista;
+      if (leitura === 'posicoes') {
+        // A posição vem como uma lista solta (vista no Hub em 20/10/2026); embrulhada em `data`, também.
+        const itens = Array.isArray(json) ? json : json && Array.isArray(json.data) ? json.data : null;
+        lista = itens ? { conta, posicoes: soCampos(itens, CAMPOS_DA_POSICAO_NO_TESOURO) } : { conta, erro: String((json && (json.message || json.moreInfo)) || 'o Hub não mostrou a posição no Tesouro') };
+        registrar(itens ? 'a posição no Tesouro chegou' : 'o Hub recusou a posição no Tesouro');
+      } else {
+        const itens = json && json.data && Array.isArray(json.data.items) ? json.data.items : null;
+        lista = itens ? { conta, itens: soCampos(itens, CAMPOS_DO_TITULO) } : { conta, erro: String((json && (json.message || json.moreInfo)) || 'o Hub não mostrou a lista do Tesouro') };
+        registrar(itens ? 'a lista do Tesouro chegou' : 'o Hub recusou a lista do Tesouro');
+      }
+      if (esperaLista && esperaLista.conta === conta && esperaLista.leitura === leitura) esperaLista.resolver(lista);
+      else vistas[leitura] = { ...lista, em: Date.now() };
     };
+    const doTesouro = (endereco) => LISTA_DO_TESOURO.test(endereco) || POSICOES_DO_TESOURO.test(endereco);
 
     // A ficha chega por XHR, não por fetch: o gancho no XHR só entra nas abas de clientes e do
     // Tesouro do robô.
@@ -344,7 +369,7 @@
       };
       prototipo.send = function (...args) {
         const endereco = this.mesaxpEndereco || '';
-        if (LISTA_DO_TESOURO.test(endereco)) {
+        if (papel === 'tesouro' && doTesouro(endereco)) {
           this.addEventListener('load', () => {
             try {
               anotarTesouro(endereco, JSON.parse(this.responseText));
@@ -447,8 +472,8 @@
             .catch(() => {});
         }
 
-        // A lista do Tesouro, por fetch.
-        if (papel === 'tesouro' && LISTA_DO_TESOURO.test(endereco)) {
+        // A lista do Tesouro e a posição nele, por fetch.
+        if (papel === 'tesouro' && doTesouro(endereco)) {
           resposta
             .clone()
             .json()
@@ -715,11 +740,22 @@
     };
 
     /*
-     * A lista do Tesouro de uma conta (1.6.0): na página de Produtos → Tesouro Direto, escolhe o cliente
-     * — digita a conta no "Pesquisar cliente" e clica no resultado "Conta XP: <conta>", e só nele — e
-     * espera a lista que o Hub pede para ele. Não abre boleta nem clica em mais nada.
+     * A lista do Tesouro de uma conta (1.6.0), em Produtos → Tesouro Direto, e a posição dela (1.7.0),
+     * em Posições → Posição por cliente → Tesouro Direto. Escolhe o cliente — digita a conta no
+     * "Pesquisar cliente" e clica no resultado "Conta XP: <conta>", e só nele — e espera a resposta que
+     * o Hub pede para ele. Não abre boleta nem clica em mais nada além da aba "Tesouro Direto".
+     *
+     * O que o Hub de verdade faz, visto em 20/10/2026 (e por isso a 1.7.0 refez a 1.6.0):
+     *  - pede a lista, e a posição, de um cliente **uma vez só por carga da página**: ir e voltar de
+     *    tela, escolher o mesmo cliente de novo ou clicar em "Atualizar" não o fazem pedir outra vez.
+     *    Se esta carga da página já leu a conta pedida, o robô recarrega a aba e retoma o pedido;
+     *  - o cliente escolhido vale para Produtos e Posições, e continua escolhido depois de recarregar;
+     *  - o resultado da busca ignora o clique que chega cedo demais: o robô espera 1,5 s e clica de
+     *    novo enquanto a lista de resultados não fecha;
+     *  - em Posições, a página abre na aba Renda Fixa e desfaz a troca de rota feita na carga; a posição
+     *    do Tesouro é pedida no clique da aba "Tesouro Direto".
      */
-    const esperarLista = (conta, prazo) =>
+    const esperarLista = (conta, leitura, prazo) =>
       new Promise((resolver) => {
         const relogio = setTimeout(() => {
           esperaLista = null;
@@ -727,6 +763,7 @@
         }, prazo);
         esperaLista = {
           conta,
+          leitura,
           resolver: (lista) => {
             clearTimeout(relogio);
             esperaLista = null;
@@ -734,36 +771,75 @@
           }
         };
       });
+    const ate = (promessa, ms) => Promise.race([promessa, new Promise((r) => setTimeout(() => r(null), ms))]);
+    const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    const lerTesouro = async ({ id, conta }) => {
-      let lista = listaVista && listaVista.conta === conta && Date.now() - listaVista.em < 5000 ? listaVista : null;
-      listaVista = null;
-      // Uma espera só, para as duas tentativas: a lista da conta pedida, quando o Hub a pedir.
-      const chegando = lista ? null : esperarLista(conta, 25000);
-      if (!lista) {
-        // O cliente escolhido fica guardado na página: ir e voltar faz o Hub pedir a lista dele. Se é
-        // a conta pedida, ela chega aqui; senão, escolhe-se o cliente.
-        await trocarDeTela('#/produtos/destaques');
-        await trocarDeTela(ROTA_DO_TESOURO);
-        lista = await Promise.race([chegando, new Promise((r) => setTimeout(() => r(null), 3000))]);
+    const escolherCliente = async (conta) => {
+      const busca = await esperar(
+        () => elementosDe(document).find((el) => el.tagName === 'INPUT' && /pesquisar cliente/i.test(el.placeholder || el.getAttribute('aria-label') || '')),
+        20000
+      );
+      if (!busca) return false;
+      preencher(busca, conta);
+      registrar('procurou o cliente');
+      const resultado = await esperar(() => elementosDe(document).filter((el) => textoInteiro(el) === `Conta XP: ${conta}`).pop(), 10000);
+      if (!resultado) return false;
+      for (let tentativa = 1; tentativa <= 3; tentativa++) {
+        await pausa(1500);
+        if (!resultado.isConnected || !visivel(resultado)) break;
+        if (!clicarSo(resultado, [`Conta XP: ${conta}`])) return false;
+        registrar('escolheu o cliente', { tentativa });
       }
-      if (!lista) {
-        const busca = await esperar(
-          () => elementosDe(document).find((el) => el.tagName === 'INPUT' && /pesquisar cliente/i.test(el.placeholder || el.getAttribute('aria-label') || '')),
-          10000
-        );
-        if (busca) {
-          preencher(busca, conta);
-          registrar('procurou o cliente');
-          const resultado = await esperar(() => elementosDe(document).filter((el) => textoInteiro(el) === `Conta XP: ${conta}`).pop(), 10000);
-          if (resultado && clicarSo(resultado, [`Conta XP: ${conta}`])) registrar('escolheu o cliente');
-        }
-        lista = await chegando;
+      return true;
+    };
+
+    const abrirAbaDoTesouro = async () => {
+      const aba = await esperar(
+        () => elementosDe(document).find((el) => (el.tagName === 'SOMA-TAB' || el.getAttribute('role') === 'tab') && textoInteiro(el) === 'Tesouro Direto'),
+        20000
+      );
+      if (!aba) return false;
+      await pausa(1500);
+      const clicou = clicarSo(aba, ['Tesouro Direto']);
+      if (clicou) registrar('abriu a aba Tesouro Direto');
+      return clicou;
+    };
+
+    const lerTesouro = async ({ id, conta, leitura }) => {
+      const posicoes = leitura === 'posicoes';
+      const tipo = posicoes ? 'posicoes' : 'lista';
+      const vista = vistas[tipo];
+      let lista = vista && vista.conta === conta && Date.now() - vista.em < 10000 ? vista : null;
+      vistas[tipo] = null;
+      if (!lista && lidasNaPagina.has(`${tipo}:${conta}`)) {
+        // O Hub não pede de novo o que já pediu nesta carga: recarrega, e a página nova retoma o
+        // pedido (`recarregouTesouro`). A marca de atendimento fica, para a Mesa não abrir outra aba.
+        GM_setValue('recarregouTesouro', id);
+        registrar('recarregou para ler de novo');
+        gravarRegistro();
+        location.reload();
+        return;
       }
+      // Uma espera só, para as tentativas: a resposta da conta pedida, quando o Hub a pedir.
+      const chegando = lista ? null : esperarLista(conta, tipo, 30000);
+      if (!lista) {
+        // A tela certa: entrar em Produtos → Tesouro Direto pede a lista do cliente escolhido; em
+        // Posições, é o clique na aba "Tesouro Direto". Se é a conta pedida, a resposta chega aqui.
+        if (posicoes) {
+          if (!location.hash.startsWith('#/posicoes/cliente')) await trocarDeTela(ROTA_DA_RENDA_FIXA);
+          await abrirAbaDoTesouro();
+        } else await trocarDeTela(ROTA_DO_TESOURO);
+        lista = await ate(chegando, 3000);
+      }
+      if (!lista && (await escolherCliente(conta))) {
+        lista = await ate(chegando, 3000);
+        if (!lista && posicoes) await abrirAbaDoTesouro();
+      }
+      lista = lista || (await chegando);
       GM_setValue('pedidoTesouro', null);
       gravarRegistro();
       const { em: _em, ...campos } = lista || {};
-      GM_setValue('tesouro', lista ? { id, ...campos } : { id, conta, erro: 'sem-lista' });
+      GM_setValue('tesouro', lista ? { id, leitura: tipo, ...campos } : { id, conta, leitura: tipo, erro: posicoes ? 'sem-posicoes' : 'sem-lista' });
     };
 
     // As tarefas do robô, uma por vez.
@@ -864,9 +940,10 @@
     const lerCliente = async ({ id, conta }) => {
       const rota = rotaDoCliente(conta);
       const jaRecarregou = GM_getValue('recarregouPara', null) === id;
+      // A marca de atendimento fica (1.7.0): a página nova retoma o pedido por `recarregouPara`, e a
+      // Mesa não abre outra aba no meio da recarga.
       const recarregar = () => {
         GM_setValue('recarregouPara', id);
-        GM_setValue(PAPEIS.clientes.atendendo, null);
         registrar('recarregou a ficha do cliente');
         gravarRegistro();
         location.reload();
@@ -903,7 +980,13 @@
         return;
       }
       const atendendo = PAPEIS[papel].atendendo;
-      if (GM_getValue(atendendo, null)?.id === pedido.id) return; // outra aba do robô já pegou
+      // A aba que recarregou para ler de novo (1.7.0) retoma o pedido que já era dela: a do Tesouro, e
+      // a de clientes (`recarregouPara` fica, para ela não recarregar duas vezes pelo mesmo pedido).
+      const retomada =
+        (papel === 'tesouro' && GM_getValue('recarregouTesouro', null) === pedido.id) ||
+        (papel === 'clientes' && GM_getValue('recarregouPara', null) === pedido.id);
+      if (retomada && papel === 'tesouro') GM_setValue('recarregouTesouro', null);
+      if (!retomada && GM_getValue(atendendo, null)?.id === pedido.id) return; // outra aba do robô já pegou
 
       vistos.add(pedido.id);
       GM_setValue(atendendo, { id: pedido.id, em: Date.now() });
@@ -1116,7 +1199,13 @@
       GM_setValue(chave, pedido);
       const abrir = () => abrirAba(papel, endereco);
       if (!estadoDoHub()[{ clientes: 'clientes', tesouro: 'tesouro' }[papel] || 'robo']) return abrir();
-      setTimeout(() => GM_getValue(PAPEIS[papel].atendendo, null)?.id !== pedido.id && abrir(), ATENDER_MS);
+      // Só se este pedido ainda espera e ninguém o pegou (1.7.0): o que já terminou, ou foi trocado por
+      // um mais novo — que tem a conferência dele —, não abre aba. Até a 1.6.0, um pedido atendido em
+      // menos de 3 s, seguido de outro, abria uma aba à toa: a marca de atendimento já era a do outro.
+      setTimeout(() => {
+        const esperando = GM_getValue(chave, null)?.id === pedido.id;
+        if (esperando && GM_getValue(PAPEIS[papel].atendendo, null)?.id !== pedido.id) abrir();
+      }, ATENDER_MS);
       return false;
     };
 
@@ -1193,7 +1282,8 @@
           enviar({ tipo: 'tesouro', id, erro: 'invalido' });
           return;
         }
-        const abriuHub = encaminhar('pedidoTesouro', { id, conta, em: Date.now() }, 'tesouro', TESOURO);
+        const leitura = mensagem.leitura === 'posicoes' ? 'posicoes' : 'lista';
+        const abriuHub = encaminhar('pedidoTesouro', { id, conta, leitura, em: Date.now() }, 'tesouro', TESOURO);
         enviar({ tipo: 'pedido-recebido', id, abriuHub });
       }
 

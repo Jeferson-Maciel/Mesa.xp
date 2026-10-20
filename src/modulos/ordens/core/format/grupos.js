@@ -1,5 +1,5 @@
 /**
- * Os grupos de e-mail de uma solicitação: cada conta gera até quatro e-mails, um por grupo
+ * Os grupos de e-mail de uma solicitação: cada conta gera até cinco e-mails, um por grupo
  * (decidido com o operador em 20/10/2026, com um pedido real que misturava bolsa e fundos):
  *
  *   bolsa          ações, FIIs listados, ETFs e BDRs — compra e venda juntas, no modelo de sempre
@@ -9,6 +9,8 @@
  *                  cotação de cada um
  *   tesouro        Tesouro Direto, no modelo de aplicação ("Confirmação aplicação Tesouro Direto"),
  *                  com o título, a taxa e o vencimento da lista do Hub
+ *   tesouro-resgate  o resgate do Tesouro, no modelo dele ("Confirmação resgate Tesouro Direto"), com
+ *                  o título e o vencimento da posição do cliente
  *
  * O e-mail em tabela, o Lote Simples e o TWAP são de bolsa: levam as
  * ordens de bolsa e os fundos escritos pelo ticker (`VGPR11`), que cabem na coluna `Ativo` e podem ser
@@ -18,26 +20,36 @@
  * contrato. As ordens são as mesmas (não cópias), e a ordem de digitação se mantém (invariante 9).
  */
 
-export const GRUPOS = ['bolsa', 'fundos-compra', 'fundos-venda', 'tesouro'];
+export const GRUPOS = ['bolsa', 'fundos-compra', 'fundos-venda', 'tesouro', 'tesouro-resgate'];
 
 export const ROTULOS_DOS_GRUPOS = {
   bolsa: 'Bolsa',
   'fundos-compra': 'Fundos · Compra',
   'fundos-venda': 'Fundos · Venda',
-  tesouro: 'Tesouro Direto'
+  tesouro: 'Tesouro · Aplicação',
+  'tesouro-resgate': 'Tesouro · Resgate'
 };
 
 /** O assunto do e-mail de cada grupo no Outlook: o Tesouro tem o dele (decisão do operador). */
 export const ASSUNTOS_DOS_GRUPOS = {
-  tesouro: 'Confirmação aplicação Tesouro Direto'
+  tesouro: 'Confirmação aplicação Tesouro Direto',
+  'tesouro-resgate': 'Confirmação resgate Tesouro Direto'
 };
 
 /** Fundo da prateleira escrito pelo ticker: o código cabe na coluna `Ativo` dos TSVs. */
 const peloTicker = (o) => Boolean(o.fundo?.fundo?.ticker) && o.ativo === o.fundo.fundo.ticker;
 
-/** @returns {'bolsa'|'fundos-compra'|'fundos-venda'|'tesouro'} */
+/** @returns {'bolsa'|'fundos-compra'|'fundos-venda'|'tesouro'|'tesouro-resgate'} */
 export const grupoDaOrdem = (ordem) =>
-  ordem.tesouro ? 'tesouro' : !ordem.fundo ? 'bolsa' : ordem.operacao === 'V' ? 'fundos-venda' : 'fundos-compra';
+  ordem.tesouro
+    ? ordem.operacao === 'V'
+      ? 'tesouro-resgate'
+      : 'tesouro'
+    : !ordem.fundo
+      ? 'bolsa'
+      : ordem.operacao === 'V'
+        ? 'fundos-venda'
+        : 'fundos-compra';
 
 /** @returns {string[]} os grupos que a solicitação tem, na ordem de `GRUPOS` */
 export const gruposDe = (solicitacao) => GRUPOS.filter((g) => (solicitacao.ordens ?? []).some((o) => grupoDaOrdem(o) === g));

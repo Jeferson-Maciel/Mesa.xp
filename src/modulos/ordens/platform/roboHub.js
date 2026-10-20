@@ -46,7 +46,8 @@ const MENSAGENS = {
   'sem-snapdom': 'o robô veio sem a biblioteca do print — copie o robô de novo',
   'falhou-o-print': 'o print falhou na aba do robô',
   'sem-print': 'o robô não trouxe o print',
-  'sem-tesouro': 'o Hub não mostrou a lista do Tesouro para essa conta — a conta é de um cliente seu?'
+  'sem-tesouro': 'o Hub não mostrou a lista do Tesouro para essa conta — a conta é de um cliente seu?',
+  'sem-posicoes-tesouro': 'o Hub não mostrou a posição no Tesouro dessa conta — a conta é de um cliente seu?'
 };
 
 export class ErroDoRobo extends Error {
@@ -131,14 +132,22 @@ export const criarRoboHub = ({ janela = window } = {}) => {
       pendente.resolver(Array.isArray(mensagem.entradas) ? mensagem.entradas : []);
     }
 
-    // A lista do Tesouro da conta pedida (1.6.0): os títulos, ou o erro do Hub como ele veio.
+    // A lista do Tesouro da conta pedida (1.6.0) ou a posição dela (1.7.0): os títulos, ou o erro do
+    // Hub como ele veio.
     if (mensagem.tipo === 'tesouro') {
       const pendente = mensagem.id ? pendentes.get(mensagem.id) : null;
       if (!pendente) return;
       clearTimeout(pendente.relogio);
       pendentes.delete(mensagem.id);
-      if (mensagem.erro === 'invalido' || mensagem.erro === 'sem-lista') pendente.rejeitar(new ErroDoRobo(mensagem.erro === 'invalido' ? 'invalido' : 'sem-tesouro'));
-      else pendente.resolver({ conta: mensagem.conta, itens: Array.isArray(mensagem.itens) ? mensagem.itens : null, erro: mensagem.erro ?? null });
+      const semNada = { invalido: 'invalido', 'sem-lista': 'sem-tesouro', 'sem-posicoes': 'sem-posicoes-tesouro' }[mensagem.erro];
+      if (semNada) pendente.rejeitar(new ErroDoRobo(semNada));
+      else
+        pendente.resolver({
+          conta: mensagem.conta,
+          itens: Array.isArray(mensagem.itens) ? mensagem.itens : null,
+          posicoes: Array.isArray(mensagem.posicoes) ? mensagem.posicoes : null,
+          erro: mensagem.erro ?? null
+        });
     }
 
     // O cliente pedido: os campos da ficha que o robô leu, ou o motivo de não ter lido.
@@ -245,11 +254,14 @@ export const criarRoboHub = ({ janela = window } = {}) => {
      * Produtos → Tesouro Direto, na aba dele do Tesouro, e devolve os títulos que o Hub mostrou (com a
      * taxa e o vencimento), ou o erro do Hub (conta não habilitada) em `erro`.
      *
-     * @returns {Promise<{conta: string, itens: object[]|null, erro: string|null}>}
+     * Com `leitura: 'posicoes'` (1.7.0), vai a Posições → Tesouro Direto e devolve, em `posicoes`, os
+     * títulos que o cliente tem — para o resgate.
+     *
+     * @returns {Promise<{conta: string, itens: object[]|null, posicoes: object[]|null, erro: string|null}>}
      */
-    pedirTesouro(conta, { prazo = 45000 } = {}) {
+    pedirTesouro(conta, { leitura = 'lista', prazo = 60000 } = {}) {
       if (!CONTA.test(String(conta ?? ''))) return Promise.reject(new ErroDoRobo('invalido'));
-      return pedir({ tipo: 'pedir-tesouro', conta: String(conta) }, prazo);
+      return pedir({ tipo: 'pedir-tesouro', conta: String(conta), leitura: leitura === 'posicoes' ? 'posicoes' : 'lista' }, prazo);
     },
 
     pedirCliente(conta, { prazo = 30000 } = {}) {

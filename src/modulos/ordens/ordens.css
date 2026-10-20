@@ -1819,7 +1819,8 @@ table.preview .seg-total.ativo {
 
 /* O Tesouro Direto: a água-marinha, a pedra da aba Renda Fixa, de onde o Tesouro é (categórica,
    reaproveitada como nas outras paletas). */
-.grupo-saidas[data-grupo='tesouro'] {
+.grupo-saidas[data-grupo='tesouro'],
+.grupo-saidas[data-grupo='tesouro-resgate'] {
   --cor-do-grupo: var(--agua);
 }
 

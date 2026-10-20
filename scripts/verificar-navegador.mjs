@@ -767,13 +767,27 @@ try {
     // 7654321 não está habilitada, como uma conta de verdade que tem outra conta XP no mesmo CPF.
     const TESOURO_API = 'https://api-advisor.xpi.com.br/rede-treasury';
     const pedidosDoTesouro = [];
+    const pedidosDasPosicoes = [];
+    // As cargas da página do Renda Fixa: o robô recarrega a aba dele para ler de novo.
+    let cargasDoRendaFixa = 0;
+    contexto.on('request', (pedido) => {
+      if (pedido.isNavigationRequest() && pedido.url().startsWith('https://hub.xpi.com.br/new/renda-fixa')) cargasDoRendaFixa++;
+    });
     await contexto.route(`${TESOURO_API}/**`, (r) => {
-      const conta = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/available-assets$/)?.[1];
-      pedidosDoTesouro.push(conta);
+      const [, conta, recurso] = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/(available-assets|positions)$/) ?? [];
+      (recurso === 'positions' ? pedidosDasPosicoes : pedidosDoTesouro).push(conta);
+      // A posição do cliente no Tesouro (robô 1.7.0): uma lista solta, como a do Hub. Os PUs de venda
+      // são os de 20/10/2026; as quantidades, inventadas. O preço médio e o líquido não podem sair.
+      const posicoes = [
+        { bondName: 'Tesouro Selic 2029', codeBonds: 178, expirateDate: '2029-03-01T00:00:00-03:00', quantityBuy: 0.5, quantityBalance: 0.5, blockedQuantity: 0, sellPrice: 20090.26, grossValue: 10045.13, buyPrice: 17777.77, netValue: 9999.99 },
+        { bondName: 'Tesouro Selic 2031', codeBonds: 212, expirateDate: '2031-03-01T00:00:00-03:00', quantityBuy: 4.2, quantityBalance: 4.2, blockedQuantity: 0, sellPrice: 20024.39, grossValue: 84102.44, buyPrice: 17777.77, netValue: 83333.33 }
+      ];
       const corpo =
         conta === '7654321'
           ? { statusCode: 400, message: 'A Conta 7654321 não está habilitada para operar no Tesouro Direto pois já existe outra conta XP Inc atrelada ao CPF do cliente.' }
-          : {
+          : recurso === 'positions'
+            ? posicoes
+            : {
               data: {
                 items: [
                   { codeBonds: 212, descTypeBond: 'LFT', expirateDate: '2031-03-01T00:00:00-03:00', buyValue: 20043.37, minimumInvestmentValue: 200.43, nickname: 'Tesouro Selic 2031', descIndex: 'SELIC', profitability: 'SELIC + 0,0992 %', indexBonds: 17, riskScore: 1, clienteQueNaoPodeSair: 'NÃO PODE SAIR' },
@@ -803,32 +817,70 @@ try {
         contentType: 'text/html',
         body: `<!doctype html><meta charset=utf-8><title>Hub</title><body>
           <script>
-            // O Renda Fixa: Produtos → Tesouro Direto. A lista só vem com um cliente escolhido no
-            // "Pesquisar cliente" (o resultado diz "Conta XP: <conta>"), e o cliente fica escolhido
-            // na página: voltar à tela do Tesouro pede a lista dele de novo.
+            // O Renda Fixa, como o Hub de verdade em 20/10/2026 (robô 1.7.0):
+            //  - o cliente escolhido no "Pesquisar cliente" (o resultado diz "Conta XP: <conta>") vale
+            //    para Produtos e Posições, e continua escolhido depois de recarregar;
+            //  - a lista e a posição de um cliente são pedidas uma vez só por carga da página: entrar
+            //    em Produtos → Tesouro Direto pede a lista; em Posições, o clique na aba Tesouro Direto
+            //    pede a posição; escolher o cliente pede a da tela em que se está;
+            //  - Posições abre na aba Renda Fixa e desfaz a troca de rota para a do Tesouro;
+            //  - o resultado da busca ignora o clique do primeiro segundo.
             if (location.pathname.startsWith('/new/renda-fixa')) {
-              let escolhido = null;
-              const pedirLista = () => {
-                if (escolhido && location.hash.startsWith('#/produtos/tesouro-direto')) fetch('${TESOURO_API}/v1/customers/' + escolhido + '/available-assets');
+              let escolhido = sessionStorage.getItem('cliente');
+              const pedidas = new Set();
+              const pedir = (recurso) => {
+                if (!escolhido || pedidas.has(recurso + ':' + escolhido)) return;
+                pedidas.add(recurso + ':' + escolhido);
+                fetch('${TESOURO_API}/v1/customers/' + escolhido + '/' + recurso);
               };
-              addEventListener('hashchange', pedirLista);
+              let abas = null;
+              let pelaAba = false;
+              let entradas = 0;
+              const naTela = () => {
+                const entrada = ++entradas;
+                if (location.hash.startsWith('#/produtos/tesouro-direto')) pedir('available-assets');
+                if (location.hash.startsWith('#/posicoes/cliente/tesouro-direto')) {
+                  if (pelaAba) pedir('positions');
+                  else setTimeout(() => entrada === entradas && location.replace('#/posicoes/cliente/renda-fixa'), 300);
+                }
+                pelaAba = false;
+                if (abas) abas.hidden = !location.hash.startsWith('#/posicoes/cliente');
+              };
+              addEventListener('hashchange', naTela);
               document.addEventListener('DOMContentLoaded', () => {
                 const busca = document.createElement('input');
                 busca.placeholder = 'Pesquisar cliente';
                 const resultados = document.createElement('div');
                 busca.addEventListener('input', () => {
+                  resultados.dataset.desde = Date.now();
                   resultados.innerHTML = /^\\d{5,8}$/.test(busca.value)
                     ? '<div role="menuitem"><span>FULANO</span><span>Conta XP: ' + busca.value + '</span></div>'
                     : '';
                 });
                 resultados.addEventListener('click', (e) => {
                   const item = e.target.closest('[role="menuitem"]');
-                  if (!item) return;
+                  if (!item || Date.now() - Number(resultados.dataset.desde) < 1000) return;
                   escolhido = item.textContent.match(/Conta XP: (\\d+)/)[1];
+                  sessionStorage.setItem('cliente', escolhido);
                   resultados.innerHTML = '';
-                  pedirLista();
+                  if (location.hash.startsWith('#/produtos/tesouro-direto')) pedir('available-assets');
+                  if (location.hash.startsWith('#/posicoes/cliente/tesouro-direto')) pedir('positions');
                 });
-                document.body.append(busca, resultados);
+                abas = document.createElement('div');
+                for (const nome of ['Renda Fixa', 'Tesouro Direto']) {
+                  const aba = document.createElement('soma-tab');
+                  aba.textContent = nome;
+                  aba.addEventListener('click', () => {
+                    const rota = nome === 'Tesouro Direto' ? '#/posicoes/cliente/tesouro-direto' : '#/posicoes/cliente/renda-fixa';
+                    if (location.hash !== rota) {
+                      pelaAba = true;
+                      location.hash = rota;
+                    } else if (nome === 'Tesouro Direto') pedir('positions');
+                  });
+                  abas.append(aba);
+                }
+                document.body.append(busca, resultados, abas);
+                naTela();
               });
             }
             if (location.pathname.startsWith('/new/posicao-consolidada')) {
@@ -1250,6 +1302,78 @@ try {
     ok(naoHabilitada, 'a conta não habilitada no Tesouro segura o e-mail, com a mensagem do Hub');
     const lojaDoTesouro = JSON.stringify(loja);
     ok(!lojaDoTesouro.includes('Tesouro Selic') && !lojaDoTesouro.includes('7654321'), 'a lista e a conta não ficam no armazenamento do robô');
+
+    // ── O resgate no Tesouro (robô 1.7.0) ──
+    // O robô vai a Posições → Tesouro Direto na mesma aba, é levado à aba Renda Fixa (sem cliente
+    // escolhido ali), escolhe o cliente, volta e traz a posição; o total é o valor disponível.
+    await mesa.fill('#entrada', '1234567\nvia email\nResgate\nTesouro Selic 2031 R$ 5.000,00\nTesouro Selic 2029 total');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    const resgatePronto = await mesa
+      .waitForFunction(() => document.querySelectorAll('.tesouro-resgate [data-resgate="pronto"]').length === 2, null, { timeout: 45_000 })
+      .then(() => true, () => false);
+    ok(resgatePronto && pedidosDasPosicoes.includes('1234567'), 'o robô escolhe o cliente em Posições → Tesouro Direto e traz a posição da conta');
+    const emailDoResgate = (await mesa.textContent('.saida[data-grupo="tesouro-resgate"] pre')) ?? '';
+    ok(
+      emailDoResgate.includes('as ordens para os resgates no Tesouro Direto abaixo na conta XP 1234567:') &&
+        emailDoResgate.includes('Título: Tesouro Selic 2031;\nVencimento: 01/03/2031;\nValor a ser resgatado: R$ 5.000,00') &&
+        emailDoResgate.includes('Título: Tesouro Selic 2029;\nVencimento: 01/03/2029;\nValor a ser resgatado: R$ 10.045,13') &&
+        emailDoResgate.trim().endsWith('atte,'),
+      'o e-mail de resgate sai no modelo, com o vencimento da posição e o total pelo valor disponível'
+    );
+    ok(!(await mesa.textContent('.secundario.tesouro-resgate')).includes('17.777,77'), 'da posição não sai o preço médio');
+    const [outlookDoResgate] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.saida[data-grupo="tesouro-resgate"] [data-outlook]')]);
+    ok(
+      decodeURIComponent(decodeURIComponent(outlookDoResgate.url())).includes('subject=Confirmação resgate Tesouro Direto'),
+      'o e-mail de resgate abre no Outlook com o assunto dele'
+    );
+    await outlookDoResgate.close();
+
+    // Acima do valor disponível bloqueia, com "Resgatar o total".
+    await mesa.fill('#entrada', '1234567\nvia email\nResgate Tesouro Selic 2031 R$ 90.000,00');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    const acima = await mesa
+      .waitForFunction(() => document.querySelector('.grupo-saidas[data-grupo="tesouro-resgate"]')?.textContent.includes('passa do valor disponível'), null, { timeout: 45_000 })
+      .then(() => true, () => false);
+    ok(acima, 'o resgate acima do valor disponível bloqueia');
+    await mesa.click('.grupo-saidas[data-grupo="tesouro-resgate"] [data-campo="usar-posicao"]');
+    ok(
+      ((await mesa.textContent('.saida[data-grupo="tesouro-resgate"] pre')) ?? '').includes('Valor a ser resgatado: R$ 84.102,44'),
+      '"Resgatar o total" põe o valor disponível no e-mail'
+    );
+    const lojaDoResgate = JSON.stringify(loja);
+    ok(!lojaDoResgate.includes('84102') && !lojaDoResgate.includes('Tesouro Selic'), 'a posição não fica no armazenamento do robô');
+
+    // A releitura (robô 1.7.0): o Hub não pede de novo, na mesma carga da página, a lista ou a posição
+    // que já pediu. O robô recarrega a aba dele e retoma o pedido, sem a Mesa abrir outra aba. O pedido
+    // vai ao robô pela mesma mensagem que a Mesa usa.
+    const pedirAoRobo = (leitura) =>
+      mesa.evaluate(
+        (leitura) =>
+          new Promise((resolver) => {
+            const id = `releitura-${leitura}-${Date.now()}`;
+            const ouvir = (e) => {
+              if (e.data?.origem !== 'robo-hub' || e.data.tipo !== 'tesouro' || e.data.id !== id) return;
+              removeEventListener('message', ouvir);
+              resolver({ itens: e.data.itens?.length ?? null, posicoes: e.data.posicoes?.length ?? null, erro: e.data.erro ?? null });
+            };
+            addEventListener('message', ouvir);
+            postMessage({ origem: 'mesa-xp', tipo: 'pedir-tesouro', id, conta: '1234567', leitura }, '*');
+            setTimeout(() => resolver({ erro: 'sem resposta em 60 s' }), 60_000);
+          }),
+        leitura
+      );
+    const abasDoRendaFixa = () => contexto.pages().filter((p) => p.url().startsWith('https://hub.xpi.com.br/new/renda-fixa')).length;
+    let cargas = cargasDoRendaFixa;
+    const relista = await pedirAoRobo('lista');
+    ok(relista.itens === 3 && cargasDoRendaFixa === cargas + 1, `a lista lida de novo: o robô recarrega a aba e retoma o pedido ${JSON.stringify(relista)}`);
+    cargas = cargasDoRendaFixa;
+    const primeiraPosicao = await pedirAoRobo('posicoes');
+    ok(primeiraPosicao.posicoes === 2 && cargasDoRendaFixa === cargas, `a posição ainda não lida nesta carga vem no clique da aba, sem recarregar ${JSON.stringify(primeiraPosicao)}`);
+    const reposicao = await pedirAoRobo('posicoes');
+    ok(reposicao.posicoes === 2 && cargasDoRendaFixa === cargas + 1, `a posição lida de novo: recarrega e clica na aba ${JSON.stringify(reposicao)}`);
+    ok(abasDoRendaFixa() === 1, `uma aba do Tesouro só, sem outra aberta pela Mesa (${abasDoRendaFixa()})`);
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

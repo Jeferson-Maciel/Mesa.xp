@@ -21,12 +21,14 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.080 testes (`npm test`), o build e 203
-  conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. As duas
+- A última verificação passou inteira (20/10): 1.104 testes (`npm test`), o build e 214
+  conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
+  agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
+  aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 14 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 15 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
@@ -34,7 +36,7 @@ cada sessão.
 Um grilling com o usuário, a partir de um pedido real que misturava bolsa, fundos comprados e
 fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão no `CLAUDE.md`,
 "Venda de fundo e Estoque clientes", e o literal novo em `docs/FORMATOS-DE-SAIDA.md`, seção 1b. O
-plano tinha 4 fases, e **as quatro estão feitas** (do Tesouro, só a aplicação):
+plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplicação e resgate):
 
 - **Fase 0:** o E-mail em tabela com a tabela em texto no corpo do Outlook (de 09/10), commitado.
 - **Fase 1:**
@@ -68,14 +70,26 @@ plano tinha 4 fases, e **as quatro estão feitas** (do Tesouro, só a aplicaçã
 - **Fase 3 (feita, robô 1.6.0): Tesouro Direto, a aplicação.** O quarto grupo de e-mail, no modelo do
   operador ("Confirmação aplicação Tesouro Direto"), com o título, a taxa e o vencimento da lista do
   Hub, lida pelo robô na hora, pela conta (regras no `CLAUDE.md`, "Tesouro Direto"; literal em
-  `FORMATOS-DE-SAIDA.md`, 1c). **Ficou em aberto:** o modelo do e-mail de **resgate** (T10 — até lá,
-  o resgate bloqueia, para fazer na mão; a página de posições e a boleta de resgate já foram vistas) e
-  o que é o número de 7 dígitos no fim da linha do pedido real (T3 — até lá, bloqueia como número não
-  explicado). No pedido real, "LFT - R$ 81.708,17" é o saldo inteiro da conta em Selic.
+  `FORMATOS-DE-SAIDA.md`, 1c).
+- **O resgate no Tesouro (feito, robô 1.7.0).** O modelo chegou (T10): um quinto grupo de e-mail,
+  "Confirmação resgate Tesouro Direto", com o título e o vencimento da posição do cliente, que o robô
+  lê em Posições → Tesouro Direto (literal em `FORMATOS-DE-SAIDA.md`, 1d). Valor em R$ ou o total (o
+  valor disponível). A posição foi vista no Hub de verdade em 20/10, só leitura, numa conta do
+  usuário. **O fluxo do robô foi testado no Hub de verdade** (só leitura, os passos dele repetidos à
+  mão pelo Claude in Chrome), e isso mudou a leitura: o Hub só pede a lista e a posição uma vez por
+  carga da página (a 1.6.0 falharia na segunda leitura da taxa), o clique no resultado da busca que
+  chega cedo é ignorado, e a posição só vem no clique da aba "Tesouro Direto" — ver o `CLAUDE.md`,
+  "Como o Hub de verdade se comporta". De quebra, um defeito antigo: a conferência de 3 s da Mesa
+  abria aba do robô à toa quando um pedido terminava rápido e outro vinha logo (no `verificar`, 8
+  aberturas viraram 4). **Ficou em aberto o T3:** o número de 7 dígitos depois do valor, na linha do pedido real.
+  Na mensagem, três espaços aparecem também onde havia uma quebra de linha ("Email   exemplos…"):
+  é quase certo que seja **a conta de um segundo pedido** ("Comprar 2k / Tesouro Selic 2031 /
+  Email"). Até o usuário confirmar, bloqueia como número não explicado. Nos testes e no histórico
+  local ele foi trocado por um número fictício.
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.6.0)
+### A testar no Hub e no Outlook de verdade (robô 1.7.0)
 
 1. Copiar robô → Tampermonkey (o script agora tem ~260 KB, com a SnapDOM); fechar as abas 🤖 antigas.
    Ao abrir o Outlook na web pela primeira vez com o robô novo, o Tampermonkey pode pedir permissão.
@@ -95,6 +109,11 @@ plano tinha 4 fases, e **as quatro estão feitas** (do Tesouro, só a aplicaçã
    na seção Tesouro Direto, o título, a taxa e o vencimento contra a página de Produtos → Tesouro
    Direto; a aba 🤖 Tesouro deve ter escolhido o cliente sozinha. Um cliente não habilitado deve
    mostrar a mensagem do Hub.
+8. **Resgate**: colar "Resgate / Tesouro Selic 20XX total" para um cliente com esse título e conferir,
+   na seção Tesouro · Resgate, o vencimento, o disponível e o valor contra Posições → Tesouro Direto
+   (e a coluna "Valor Disponível" da boleta de resgate, **sem enviar nada**). Depois, colar de novo um
+   pedido da mesma conta: a aba 🤖 Tesouro deve recarregar e trazer a posição outra vez. Se não
+   trouxer, copiar os tempos (Copiar tempos) e trazer o motivo.
 
 ## O cliente e o assessor no e-mail (07/10, robô 1.3.0 → 1.3.1)
 

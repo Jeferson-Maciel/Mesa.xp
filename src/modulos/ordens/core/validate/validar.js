@@ -80,12 +80,13 @@ export const validar = (solicitacao, formato) => {
 
     // A venda do total de um fundo não tem número escrito: a quantidade é a posição (`o.venda`), e o
     // bloqueio de venda sem posição diz o que falta.
-    const vendaDoTotal = o.total === true && o.operacao === 'V' && Boolean(o.venda);
+    // O resgate do total no Tesouro também: o valor é o disponível da posição (`o.resgateDoHub`).
+    const vendaDoTotal = o.total === true && o.operacao === 'V' && (Boolean(o.venda) || Boolean(o.tesouro));
     if ((o.quantidade === null || o.quantidade === undefined) && (o.financeiro === null || o.financeiro === undefined) && !vendaDoTotal) {
       diagnosticos.push(
         bloqueio(
           'valor-ausente',
-          o.total ? `${nome}: "total" só vale para a venda de fundo do secundário. Informe a quantidade.` : `${nome}: informe a quantidade ou o valor em R$.`,
+          o.total ? `${nome}: "total" só vale para a venda de fundo do secundário e o resgate de Tesouro. Informe a quantidade.` : `${nome}: informe a quantidade ou o valor em R$.`,
           i,
           false
         )
@@ -442,12 +443,73 @@ export const validar = (solicitacao, formato) => {
 
     // ── Tesouro Direto ───────────────────────────────────────────────────────────────────
     // A aplicação vai por valor em R$, com o título, a taxa e o vencimento da lista do Hub, que o robô
-    // lê pela conta, na hora (`o.tesouroDoHub`, de `core/tesouro`). O resgate ainda não tem modelo.
+    // lê pela conta, na hora (`o.tesouroDoHub`, de `core/tesouro`). O resgate, pela posição do cliente (`o.resgateDoHub`).
     const td = o.tesouroDoHub;
     if (o.tesouro && formato === 'email') {
       const lerDeNovo = { campo: 'ler-tesouro', rotulo: 'Ler o Tesouro no Hub' };
       if (o.operacao === 'V') {
-        diagnosticos.push(bloqueio('tesouro-resgate', `${nome}: o resgate de Tesouro ainda não tem o modelo de e-mail — fazer na mão.`, i, false));
+        // O resgate: por valor em R$ ou pelo total; o título e o valor conferidos contra a posição do
+        // cliente, que o robô lê no Hub (`o.resgateDoHub`).
+        const rg = o.resgateDoHub;
+        const lerPosicao = { campo: 'ler-tesouro', valor: 'posicoes', rotulo: 'Ler a posição no Hub' };
+        if (!o.total && !porFinanceiro) {
+          diagnosticos.push(
+            bloqueio('tesouro-resgate-por-quantidade', `${nome}: o resgate de Tesouro vai por valor em R$ ("Valor a ser resgatado"), ou pelo total.`, i, false)
+          );
+        } else if (!rg || rg.situacao === 'sem-posicoes') {
+          diagnosticos.push({
+            ...(o.total
+              ? bloqueio('tesouro-resgate-sem-posicao', `${nome}: resgate do total — falta a posição do cliente no Tesouro, que o robô lê no Hub. Sem ele, informe o valor.`, i, false)
+              : bloqueio(
+                  'tesouro-resgate-sem-posicao',
+                  `${nome}: o valor não foi conferido com a posição do cliente no Tesouro, que o robô lê no Hub. Confirme para gerar com o vencimento em branco.`,
+                  i
+                )),
+            acao: lerPosicao
+          });
+        } else if (rg.situacao === 'nao-habilitada') {
+          diagnosticos.push(bloqueio('tesouro-nao-habilitada', `${nome}: ${rg.mensagem}`, i, false));
+        } else if (rg.situacao === 'erro') {
+          diagnosticos.push({ ...bloqueio('tesouro-erro', `${nome}: o Hub não mostrou a posição no Tesouro (${rg.mensagem}).`, i, false), acao: lerPosicao });
+        } else if (rg.situacao === 'nao-tem') {
+          diagnosticos.push(bloqueio('tesouro-resgate-sem-titulo', `${nome}: o cliente não tem este título no Tesouro Direto.`, i, false));
+        } else if (rg.situacao === 'ambiguo') {
+          diagnosticos.push({
+            ...bloqueio('tesouro-ambiguo', `${nome}: o cliente tem ${rg.candidatos.length} títulos que cabem no pedido. Escolha qual é.`, i, false),
+            acoes: rg.candidatos.map((c) => ({ campo: 'ativo', valor: c.nome, rotulo: c.nome }))
+          });
+        } else if (rg.situacao === 'pronto') {
+          if (rg.unicoDoTipo) {
+            diagnosticos.push(aviso('tesouro-sem-vencimento', `${nome}: o pedido não diz o vencimento — vai o único da carteira: ${rg.posicao.nome}. Confira.`, i));
+          }
+          const disponivel = rg.posicao.valorDisponivel;
+          if (!o.total && disponivel !== null && rg.valor > disponivel + 0.005) {
+            diagnosticos.push({
+              ...bloqueio(
+                'tesouro-resgate-acima',
+                `${nome}: ${formatarFinanceiro(rg.valor)} passa do valor disponível do cliente (${formatarFinanceiro(disponivel)}).`,
+                i,
+                false
+              ),
+              acao: { campo: 'usar-posicao', rotulo: 'Resgatar o total' }
+            });
+          }
+          // O mínimo do resgate é 0,01 título.
+          if (rg.valor && rg.posicao.puVenda && rg.valor < rg.posicao.puVenda / 100) {
+            diagnosticos.push(
+              bloqueio('tesouro-resgate-abaixo-do-minimo', `${nome}: o resgate mínimo é 0,01 título (${formatarFinanceiro(rg.posicao.puVenda / 100)}).`, i, false)
+            );
+          }
+          if (rg.minutos > LIMITE_DA_TAXA_MIN) {
+            diagnosticos.push({
+              ...bloqueio('tesouro-posicao-velha', `${nome}: a posição no Tesouro foi lida há ${rg.minutos} min. Atualize, ou confirme.`, i),
+              acao: { campo: 'ler-tesouro', valor: 'posicoes', rotulo: 'Atualizar a posição' }
+            });
+          }
+        }
+        if (rg?.foraDoHorario) {
+          diagnosticos.push(aviso('tesouro-fora-do-horario', `${nome}: fora do horário do Tesouro Direto (dia útil, das 9h30 às 18h): o resgate entra no próximo.`, i));
+        }
       } else {
         if (!porFinanceiro && (o.quantidade !== null && o.quantidade !== undefined)) {
           diagnosticos.push(

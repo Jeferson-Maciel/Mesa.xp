@@ -937,6 +937,27 @@ describe('Tesouro Direto — o pedido real de 20/10 e as variações', () => {
     }
   });
 
+  // Os jeitos de pedir resgate de Tesouro (20/10/2026, com o modelo de resgate do operador).
+  it.each([
+    ['Resgatar R$ 5.000,00\nTesouro Selic 2029', { ativo: 'Tesouro Selic 2029', financeiro: 5000, total: false }],
+    ['V Tesouro Selic 2031 R$ 10.000,00', { ativo: 'Tesouro Selic 2031', financeiro: 10000, total: false }],
+    ['Resgate\nLFT 2031 - total', { ativo: 'LFT 2031', financeiro: null, total: true }],
+    ['Tesouro Selic 2031 - resgatar 10k', { ativo: 'Tesouro Selic 2031', financeiro: 10000, total: false }],
+    ['Venda total LFT', { ativo: 'LFT', financeiro: null, total: true }],
+    ['Resgate Tesouro IPCA+ 2035 R$ 15.000,00', { ativo: 'Tesouro IPCA+ 2035', financeiro: 15000 }],
+    ['Resgatar tudo do Tesouro Selic 2031', { ativo: 'Tesouro Selic 2031', financeiro: null, total: true }],
+    ['Resgatar tudo Tesouro Selic 2031', { ativo: 'Tesouro Selic 2031', financeiro: null, total: true }]
+  ])('resgate: %j', (pedido, esperado) => {
+    const o = uma('1234567\n' + pedido).ordens[0];
+    expect(o).toMatchObject({ operacao: 'V', quantidade: null, ...esperado });
+    expect(o.tesouro).toBeTruthy();
+  });
+
+  it('"tudo" sozinho não é total: "Tudo via email" não vende a posição de ninguém', () => {
+    const s = uma('1234567\nTudo via email\nVenda\nTesouro Selic 2031');
+    expect(s.ordens.some((o) => o.total)).toBe(false);
+  });
+
   it('o resgate é venda de Tesouro', () => {
     const o = uma('1234567\nResgate total Tesouro Selic 2031').ordens[0];
     expect(o).toMatchObject({ operacao: 'V', total: true, ativo: 'Tesouro Selic 2031' });

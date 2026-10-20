@@ -196,6 +196,41 @@ export const formatarEmailTesouro = (solicitacao) => {
   ].join('\n');
 };
 
+/**
+ * O resgate no Tesouro Direto, no modelo que o operador trouxe em 20/10/2026 (assunto "Confirmação
+ * resgate Tesouro Direto"): o título e o vencimento da posição do cliente, lida pelo robô
+ * (`ordem.resgateDoHub`), e o valor a ser resgatado — o pedido, ou, no total, o valor disponível. Sem
+ * taxa, uma linha em branco entre as partes, e o fecho "atte,". Plural como os outros.
+ */
+export const formatarEmailResgateTesouro = (solicitacao) => {
+  const varias = solicitacao.ordens.length > 1;
+  const blocos = solicitacao.ordens.map((o) => {
+    const rg = o.resgateDoHub;
+    const valor = rg?.situacao === 'pronto' ? rg.valor : o.financeiro;
+    return [
+      'Título: ' + (rg?.posicao?.nome ?? o.ativo) + ';',
+      'Vencimento: ' + (rg?.posicao?.vencimento ?? '') + ';',
+      'Valor a ser resgatado: ' + (valor === null || valor === undefined ? '' : formatarFinanceiro(valor))
+    ].join('\n');
+  });
+
+  return [
+    `Prezado(a) ${solicitacao.cliente?.nome || 'Cliente'},`,
+    '',
+    'Conforme conversado, gostaria de realizar ' +
+      (varias ? 'as ordens para os resgates' : 'a ordem para o resgate') +
+      ` no Tesouro Direto abaixo na conta XP ${solicitacao.conta}:`,
+    '',
+    blocos.join('\n\n'),
+    '',
+    'Observação importante: O valor financeiro total do resgate e o PU de venda dependem da cotação atual do mercado.',
+    '',
+    'Aguardo confirmação para realizar ' + (varias ? 'os resgates' : 'o resgate') + '.',
+    '',
+    'atte,'
+  ].join('\n');
+};
+
 const tsv = (cabecalho, linhas) =>
   [cabecalho.join('\t'), ...linhas.map((l) => l.join('\t'))].join('\n') + '\n';
 

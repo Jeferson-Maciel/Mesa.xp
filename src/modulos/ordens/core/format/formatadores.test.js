@@ -6,6 +6,7 @@ import {
   formatarEmailVenda,
   formatarEmailVendaHtml,
   formatarEmailTesouro,
+  formatarEmailResgateTesouro,
   formatarLoteSimples,
   formatarLoteTwap
 } from './formatadores.js';
@@ -552,6 +553,63 @@ describe('formatarEmailVenda — a auditoria de venda de fundo', () => {
     const o = venda('TG Renda Urbana Feeder FII RL', 598);
     const html = formatarEmailVendaHtml(solicitacao({ ordens: [o] }), { prints: new Map([[o, 'data:image/png;base64,AAAA']]) });
     expect(html).toMatch(/Condições:<br><img src="data:image\/png;base64,AAAA"/);
+  });
+});
+
+describe('formatarEmailResgateTesouro — o resgate no Tesouro Direto', () => {
+  const posicao = (nome, vencimento, valorDisponivel) => ({ nome, vencimento, valorDisponivel, disponivel: 1, puVenda: 20000 });
+  const resgate = (nome, vencimento, valor, extra = {}) => ({
+    ativo: nome,
+    operacao: 'V',
+    tesouro: { especies: ['selic'], ano: 2031 },
+    financeiro: extra.total ? null : valor,
+    quantidade: null,
+    total: false,
+    resgateDoHub: { situacao: 'pronto', posicao: posicao(nome, vencimento, 84102.44), valor },
+    ...extra
+  });
+
+  it('segue o modelo do operador: o título e o vencimento da posição, sem taxa, e "atte,"', () => {
+    const s = solicitacao({ conta: '1234567', cliente: { nome: 'FULANO DE TAL' }, ordens: [resgate('Tesouro Selic 2031', '01/03/2031', 10000)] });
+    expect(formatarEmailResgateTesouro(s)).toBe(
+      [
+        'Prezado(a) FULANO DE TAL,',
+        '',
+        'Conforme conversado, gostaria de realizar a ordem para o resgate no Tesouro Direto abaixo na conta XP 1234567:',
+        '',
+        'Título: Tesouro Selic 2031;',
+        'Vencimento: 01/03/2031;',
+        'Valor a ser resgatado: R$ 10.000,00',
+        '',
+        'Observação importante: O valor financeiro total do resgate e o PU de venda dependem da cotação atual do mercado.',
+        '',
+        'Aguardo confirmação para realizar o resgate.',
+        '',
+        'atte,'
+      ].join('\n')
+    );
+  });
+
+  it('o total vai com o valor disponível da posição', () => {
+    const s = solicitacao({ conta: '1234567', ordens: [resgate('Tesouro Selic 2031', '01/03/2031', 84102.44, { total: true })] });
+    expect(formatarEmailResgateTesouro(s)).toContain('Valor a ser resgatado: R$ 84.102,44');
+  });
+
+  it('dois títulos: um bloco cada, separados por uma linha, e o plural', () => {
+    const s = solicitacao({
+      conta: '1234567',
+      ordens: [resgate('Tesouro Selic 2029', '01/03/2029', 1000), resgate('Tesouro Selic 2031', '01/03/2031', 2000)]
+    });
+    const texto = formatarEmailResgateTesouro(s);
+    expect(texto).toContain('gostaria de realizar as ordens para os resgates no Tesouro Direto abaixo na conta XP 1234567:');
+    expect(texto).toContain('Valor a ser resgatado: R$ 1.000,00\n\nTítulo: Tesouro Selic 2031;');
+    expect(texto).toContain('Aguardo confirmação para realizar os resgates.');
+  });
+
+  it('sem a posição lida (confirmado), o vencimento fica em branco e o título é o do pedido', () => {
+    const o = { ativo: 'Tesouro Selic 2031', operacao: 'V', tesouro: {}, financeiro: 5000, quantidade: null, resgateDoHub: { situacao: 'sem-posicoes' } };
+    const texto = formatarEmailResgateTesouro(solicitacao({ conta: '1234567', ordens: [o] }));
+    expect(texto).toContain('Título: Tesouro Selic 2031;\nVencimento: ;\nValor a ser resgatado: R$ 5.000,00');
   });
 });
 

@@ -21,7 +21,7 @@ Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 
 ```bash
 npm install
-npm test            # Vitest — 1.080 testes
+npm test            # Vitest — 1.104 testes
 npm run build       # dist/index.html, um arquivo só
 npm run verificar   # Playwright: abre o dist/ e confere as cinco abas e o robô do Hub
 npm run verificar:supabase   # grava no banco da mesa — só fora do expediente e com o OK do usuário
@@ -51,13 +51,15 @@ Requer Node 22+. **Pronto só depois de `npm test`, `npm run build` e `npm run v
   - nunca passa da etapa 1 da boleta, e na boleta só preenche a quantidade e abre o detalhe para o
     print da cotação de venda (1.5.0) — os cliques ficam numa lista fechada, nunca Próximo;
   - no Outlook (1.5.0), só troca o corpo do e-mail que a Mesa acabou de abrir, e nunca envia;
-  - no Tesouro (1.6.0), só digita a conta do pedido no "Pesquisar cliente" e clica no resultado
-    daquela conta, para ler a lista dos títulos;
+  - no Tesouro (1.6.0 e 1.7.0), só digita a conta do pedido no "Pesquisar cliente" e clica no
+    resultado daquela conta, para ler a lista dos títulos (Produtos) e a posição do cliente
+    (Posições); da posição, só nome, vencimento, quantidade, bloqueada, PU de venda e valor bruto, e
+    nunca abre a boleta de resgate;
   - nunca põe parâmetro no endereço do Hub, porque isso o trava;
   - da ficha do cliente só traz nome, e-mail e assessor, e da boleta de venda (1.4.0) só a posição
     do cliente naquele fundo (quantidade, disponível, à venda); nada do cliente fica guardado: nem
     no Tampermonkey depois da busca, nem na Mesa fora da memória da página.
-- **Os e-mails do Ordens saem por grupo** (Bolsa, Fundos · Compra, Fundos · Venda, Tesouro Direto): ver "Venda de
+- **Os e-mails do Ordens saem por grupo** (Bolsa, Fundos · Compra, Fundos · Venda, Tesouro · Aplicação, Tesouro · Resgate): ver "Venda de
   fundo e Estoque clientes" no `CLAUDE.md`. O nome do cliente vai como o Hub manda, em maiúsculas.
 
   Mudou o comportamento dele, suba a `@version`: a Mesa compara a versão e pede a cópia nova.

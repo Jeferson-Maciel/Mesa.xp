@@ -673,8 +673,46 @@ describe('aplicação no Tesouro Direto', () => {
     expect(velha).toMatchObject({ confirmavel: true, acao: { campo: 'ler-tesouro', rotulo: 'Atualizar a taxa' } });
   });
 
-  it('o resgate ainda não tem modelo: fazer na mão', () => {
-    expect(bloqueios(aplicacao({ operacao: 'V' }))).toEqual(['tesouro-resgate']);
+  // O resgate: o título e o valor conferidos contra a posição do cliente, lida pelo robô.
+  const POSICAO = { nome: 'Tesouro Selic 2031', vencimento: '01/03/2031', disponivel: 4.2, puVenda: 20024.39, valorDisponivel: 84102.44 };
+  const resgate = (extra = {}, rg = {}) =>
+    aplicacao({
+      operacao: 'V',
+      financeiro: 10000,
+      resgateDoHub: { situacao: 'pronto', posicao: POSICAO, valor: extra.total ? POSICAO.valorDisponivel : (extra.financeiro ?? 10000), minutos: 1, ...rg },
+      ...extra
+    });
+
+  it('o resgate com a posição, na hora, não acusa nada; o total também não', () => {
+    expect(codigos(resgate())).toEqual([]);
+    expect(codigos(resgate({ total: true, financeiro: null }))).toEqual([]);
+  });
+
+  it('acima do valor disponível bloqueia, com "Resgatar o total"', () => {
+    const d = validar(resgate({ financeiro: 90000 }), 'email').find((x) => x.codigo === 'tesouro-resgate-acima');
+    expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'usar-posicao' } });
+  });
+
+  it('por quantidade de títulos bloqueia: o modelo pede o valor', () => {
+    expect(bloqueios(resgate({ financeiro: null, quantidade: 2 }))).toContain('tesouro-resgate-por-quantidade');
+  });
+
+  it('sem a posição: o valor escrito se confirma; o total, não', () => {
+    const escrito = validar(resgate({}, { situacao: 'sem-posicoes' }), 'email').find((x) => x.codigo === 'tesouro-resgate-sem-posicao');
+    expect(escrito).toMatchObject({ confirmavel: true, acao: { campo: 'ler-tesouro', valor: 'posicoes' } });
+    const total = validar(resgate({ total: true, financeiro: null }, { situacao: 'sem-posicoes' }), 'email');
+    expect(total.find((x) => x.codigo === 'tesouro-resgate-sem-posicao').confirmavel).toBe(false);
+    expect(total.map((x) => x.codigo)).not.toContain('valor-ausente');
+  });
+
+  it('o título que o cliente não tem bloqueia; a posição velha se confirma', () => {
+    expect(bloqueios(resgate({}, { situacao: 'nao-tem' }))).toEqual(['tesouro-resgate-sem-titulo']);
+    const velha = validar(resgate({}, { minutos: 25 }), 'email').find((x) => x.codigo === 'tesouro-posicao-velha');
+    expect(velha).toMatchObject({ confirmavel: true, acao: { campo: 'ler-tesouro', valor: 'posicoes' } });
+  });
+
+  it('abaixo de 0,01 título bloqueia', () => {
+    expect(bloqueios(resgate({ financeiro: 100 }))).toContain('tesouro-resgate-abaixo-do-minimo');
   });
 
   it('fora do horário do Tesouro, avisa', () => {

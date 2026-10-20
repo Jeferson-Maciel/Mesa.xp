@@ -137,6 +137,40 @@ Att,
   `Taxa: SELIC + 0,0992 %;`, `Vencimento: 01/03/2031;`. Sem a lista (sem o robô), confirmado o bloqueio,
   `Taxa: ;` e `Vencimento: ;` ficam em branco, para preencher no Outlook.
 
+## 1d. Resgate no Tesouro Direto (o e-mail "Tesouro · Resgate")
+
+O modelo que o operador trouxe em 20/10/2026 (o mesmo do post "Confirmação resgate Tesouro Direto" do
+Operacional). O Abrir no Outlook usa o assunto dele:
+
+```
+Confirmação resgate Tesouro Direto
+```
+
+```
+Prezado(a) [NOME],
+
+Conforme conversado, gostaria de realizar a ordem para o resgate no Tesouro Direto abaixo na conta XP [CONTA]:
+
+Título: [NOME DO TÍTULO NA POSIÇÃO];
+Vencimento: [DD/MM/AAAA];
+Valor a ser resgatado: R$ [VALOR]
+
+Observação importante: O valor financeiro total do resgate e o PU de venda dependem da cotação atual do mercado.
+
+Aguardo confirmação para realizar o resgate.
+
+atte,
+```
+
+- Diferente da aplicação: **sem taxa**, **uma** linha em branco antes e depois dos títulos, e o fecho
+  **`atte,`** em minúsculas, como no modelo. Os espaços que o modelo tinha no fim de algumas linhas
+  não entram.
+- **Um bloco por título**, na ordem digitada, separados por uma linha em branco. No plural: "as ordens
+  para os resgates" e "Aguardo confirmação para realizar os resgates.".
+- O título e o vencimento são os da posição do cliente, lida pelo robô; o valor é o pedido, ou, no
+  total, o valor disponível. Sem a posição (sem o robô), confirmado o bloqueio, o título é o do pedido
+  e `Vencimento: ;` fica em branco.
+
 ## 2. Auditoria por E-mail (na tela, "E-mail em tabela")
 
 O e-mail do formato 1, com a mesma abertura e o mesmo fecho, mas com uma **tabela das ordens** no

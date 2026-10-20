@@ -216,8 +216,12 @@ const semONome = (linha, nome) => {
  * Venda do total da posição: `Vendas | Quantidade Total`, `Venda total`, `(Total)`. Só para fundo
  * do secundário, cuja posição o robô lê na boleta de venda (decisão do operador em 20/10/2026).
  */
+// "Tudo" só com o que diz de quê ("tudo do Tesouro Selic 2031") ou com o verbo ("resgatar tudo"):
+// sozinho, "Tudo via email" num cabeçalho venderia a posição de quem não pediu.
 const TOTAL = new RegExp(
-  INICIO + String.raw`(?:quantidade\s+total|total(?:\s+da\s+posi[çc][ãa]o)?|posi[çc][ãa]o\s+(?:total|inteira)|zerar)` + FIM,
+  INICIO +
+    String.raw`(?:quantidade\s+total|total(?:\s+da\s+posi[çc][ãa]o)?|posi[çc][ãa]o\s+(?:total|inteira)|zerar|tudo\s+d[oa]s?|(?:vend[ae]r?|resgat(?:e|ar))\s+tudo)` +
+    FIM,
   'i'
 );
 

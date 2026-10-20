@@ -1,6 +1,6 @@
 # Contexto — onde paramos
 
-**Última atualização: 09/10/2026.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 20/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
 regras de negócio e de código estão no [`CLAUDE.md`](../CLAUDE.md), que é a fonte da verdade; o
 [`AGENTS.md`](../AGENTS.md) é o resumo delas para outros agentes. Atualize este arquivo no fim de
@@ -21,11 +21,60 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (07/10, tarde): 948 testes (`npm test`), o build e 178
-  conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
-  do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
-  07/10 e passaram na seguinte. Já são três vezes: vale olhar. Em 09/10, de novo (a quarta): falharam
-  na primeira rodada e a segunda passou inteira (948 testes, build e o `verificar`).
+- A última verificação passou inteira (20/10): 1.034 testes (`npm test`), o build e 188
+  conferências no navegador (`npm run verificar`), **três rodadas seguidas sem falha**. As duas
+  conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
+  vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
+  a condição.
+- **Em 20/10 foram 9 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+  do usuário.
+
+## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
+
+Um grilling com o usuário, a partir de um pedido real que misturava bolsa, fundos comprados e
+fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão no `CLAUDE.md`,
+"Venda de fundo e Estoque clientes", e o literal novo em `docs/FORMATOS-DE-SAIDA.md`, seção 1b. O
+plano tinha 4 fases; **a 0 e a 1 estão feitas**:
+
+- **Fase 0:** o E-mail em tabela com a tabela em texto no corpo do Outlook (de 09/10), commitado.
+- **Fase 1:**
+  - o parser lê o pedido real inteiro: `674qtds` colado, `V 590qtds <fundo>`, o "1" de
+    `Sênior A1`, a venda do total e o Estoque cliente / "o que for possível";
+  - **um e-mail por grupo**, cada grupo numa seção do cartão (Bolsa, Fundos · Compra, Fundos ·
+    Venda), com o e-mail de venda no modelo da auditoria aprovada;
+  - a venda: posição disponível lida na boleta de venda, conferência da quantidade, modalidade
+    (Estoque XP por padrão), a conta do painel da boleta e a cotação valendo um dia útil;
+  - a compra pelo Estoque clientes, no pior preço (+2%), sem ROA, limitada ao estoque;
+  - **o robô 1.4.0**: abre também `#/secundario/vender/<fundo>/<conta>`, e do pre-check traz os
+    estoques do fundo e, na venda, só a posição do cliente;
+  - o nome do cliente em maiúsculas, como o Hub manda, em todos os e-mails;
+  - botões de exemplo de cada grupo e do pedido misto.
+- **Visto no Hub de verdade (20/10, com o Claude in Chrome e a autorização do usuário):** a boleta de
+  venda, as duas modalidades no pre-check, as travas que mudam por fundo e por dia, o painel
+  "Visualizar mais detalhes da operação" (que é o print da auditoria) e o botão "Total de cotas". O
+  campo de quantidade tem máscara de 8 casas (os dígitos entram pela direita). Lidos só nomes de
+  campo e dados de fundo; nenhum dado de cliente foi guardado.
+- **Fase 2 (a fazer):** o print da cotação, gerado pelo robô na boleta de venda com a SnapDOM 3.2.0
+  (MIT) embutida no script — a boleta é feita de web components Soma, com 118 shadow roots, e o
+  html-to-image não copia shadow DOM —, e o **robô também no Outlook**, preenchendo o corpo com o
+  print logo abaixo de "Condições:" e a tabela em grade. Para o print, o robô precisa preencher a
+  quantidade (clicar em "Total de cotas" ou digitar) e abrir o detalhe, sem nunca clicar em
+  Próximo; o usuário pediu "o máximo automatizado", e a liberação está registrada no grilling. O
+  print é tirado na hora e vale um dia útil. O teste de injetar a SnapDOM do CDN no Hub pelo Claude
+  in Chrome foi **bloqueado pelo modo automático** ("código de fora") e não foi contornado.
+- **Fase 3 (a fazer): Tesouro.** Perguntas abertas ao usuário: Tesouro Direto (B3), títulos públicos
+  no secundário da XP ou os dois; exemplos reais de pedido; modelo próprio de e-mail; print na venda.
+- O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
+  auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
+
+### A testar no Hub de verdade (robô 1.4.0)
+
+1. Copiar robô → Tampermonkey; fechar as abas 🤖 antigas.
+2. Colar um pedido com venda do total de um fundo seu e conferir, no bloco "Venda no secundário",
+   a posição (com as casas), a modalidade e o deságio contra a boleta.
+3. Um pedido com "(Estoque cliente)": conferir o estoque e o deságio do Estoque clientes contra a
+   boleta.
+4. Conferir que a aba 🤖 não fica com a quantidade preenchida (ela não preenche nada na 1.4.0).
 
 ## O cliente e o assessor no e-mail (07/10, robô 1.3.0 → 1.3.1)
 
@@ -216,8 +265,8 @@ Ficou de fora, por ser conteúdo e não layout: os 15 posts do Operacional com "
 
 ## Pendências e decisões em aberto
 
-1. **O robô 1.3.2 no Hub de verdade**: instalar, fechar as abas 🤖 antigas e testar pela Mesa da
-   Vercel (cliente, assessor em cópia e Outlook).
+1. **O robô 1.4.0 no Hub de verdade** (passo a passo acima, em "A testar no Hub de verdade"), junto
+   com o que ficou da 1.3.2: cliente, assessor em cópia e Outlook.
 2. **Atualização sozinha do robô.** Publicar o script no próprio site (com `@updateURL`) permitiria
    que o Tampermonkey de cada colega se atualizasse sem colar de novo.
 3. **Proposta sem resposta:** atualizar a lista quando a pessoa volta para a aba da Mesa, se ela

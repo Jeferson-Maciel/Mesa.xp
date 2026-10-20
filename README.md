@@ -40,7 +40,7 @@ corpo, e a área de transferência fica como estava. No E-mail em tabela, o ende
 tabela: o e-mail vai copiado, e você o cola no corpo com Ctrl+V. Se o navegador bloquear a janela,
 permita janelas pop-up para a Mesa (o ícone na ponta da barra de endereço).
 
-Com o robô do Hub (versão 1.3.1) e a planilha dos assessores, o e-mail já sai **para o cliente**,
+Com o robô do Hub (versão 1.4.0) e a planilha dos assessores, o e-mail já sai **para o cliente**,
 com o **assessor responsável em cópia** e o **nome do cliente na saudação** ("Prezado(a) Ana Paula
 da Silva,"):
 
@@ -564,7 +564,7 @@ AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 948 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 1.034 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

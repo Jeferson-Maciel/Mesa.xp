@@ -252,7 +252,9 @@ Use estes termos no código, nos testes e nas conversas — eles são os mesmos 
 - **Conta** — código numérico da conta XP (5 a 8 dígitos). É o único valor aceito na coluna/campo
   `Cliente`. Nome digitado nunca entra na saída (`80000005 - Fulana` → `80000005`); o nome da
   ficha do Hub entra só na saudação do e-mail (ver "O cliente e o assessor").
-- **Quantidade** — número inteiro de ativos. Sem separador de milhar, sem `R$`.
+- **Quantidade** — número inteiro de ativos. Sem separador de milhar, sem `R$`. Na venda de fundo do
+  secundário a cota é fracionada, com até 8 casas (`123,45678910`, como o campo da boleta do Hub);
+  ver "Venda de fundo e Estoque clientes".
 - **Financeiro** — valor em reais a ser executado. Sempre formatado `R$ X.XXX,XX`. Chega com `R$`,
   mas também sem ele, e estas formas contam como financeiro (decidido com o operador): centavos
   (`3.000,00`, quando é o único número da linha), `3.000 reais`, `valor 3.000`, `3 mil`, `20k`.
@@ -284,7 +286,10 @@ O escritório já trata estes casos à mão, e automatizá-los exigiria justamen
 projeto existe para evitar. O sistema os reconhece e os **descarta com o motivo à vista**:
 
 - **Ordem sem quantidade nem financeiro** — `V - HGCR11 (Total)`, onde "Total" é a única indicação
-  de tamanho. Não há número a preservar, então não há ordem a gerar.
+  de tamanho. Não há número a preservar, então não há ordem a gerar. A exceção, desde 20/10/2026, é
+  a **venda do total de fundo do secundário**: a quantidade é a posição disponível do cliente, que o
+  robô lê na boleta de venda do Hub (ver "Venda de fundo e Estoque clientes"). Papel de bolsa
+  continua descartado, com o motivo.
 - **Push** — é canal do Hub da XP, alheio ao fluxo de e-mail e lote.
 - **Observações entre parênteses** coladas ao valor ("R$ 34.800(não ultrapassar esse valor)"): o
   valor é lido, a observação não é reproduzida.
@@ -440,7 +445,12 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
   de 5.085). O preço que a boleta usa vem no `pre-check` dela (`fund.quotaValue`: 8,337589), e o
   pre-check só sai com um cliente escolhido. O robô abre a boleta pela rota do próprio Hub,
   `#/secundario/comprar/<fundo>/<conta>` — que já carrega o cliente, sem digitar nem clicar nada —,
-  lê do pre-check **só** `id`, `quotaValue` e `quotaDate` do fundo. A conta usada é a do
+  lê do pre-check `id`, `quotaValue` e `quotaDate` do fundo e, desde a 1.4.0, os estoques dele
+  (`fund.stock`: as travas e os números de cada modalidade, só número e verdadeiro/falso) e, só na
+  boleta de **venda** (`#/secundario/vender/<fundo>/<conta>`), a posição do cliente naquele fundo
+  (`quotaQuantity`, `quotaQuantityAvailable`, `quotaQuantityOnSale` — o saldo, o preço médio e o
+  resto da posição não saem do Hub). A posição passa pelo Tampermonkey e é apagada assim que a Mesa
+  a recebe; o `verificar` confere. Da boleta que a pessoa abre, só o preço. A conta usada é a do
   próprio pedido, e não fica guardada. A Mesa guarda o preço com a hora da leitura
   (`ordens_secundario_cotas`), e ele vale (`precoExatoValido`): pelo mesmo dia de cota
   (`quotaDate`, que a prateleira também traz); enquanto arredondar para o PU que a Prateleira manda
@@ -506,9 +516,60 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
   saída. Sem os fundos carregados, ou com o fundo fora deles, o bloqueio é confirmável e o e-mail
   sai em R$, como antes.
 - **Fora da captura:** o incentivo do *Estoque Clientes* (0,50% em cetipados, 0,25% no Portfolio
-  Renda+, segundo o aviso da boleta) não vem na resposta, e o peer to peer não é tratado.
-- Só vale para **compra de fundo da prateleira**, reconhecido pelo nome ou pelo ticker
-  (`VGPR11`, `XPHF11`); venda não passa pela boleta.
+  Renda+, segundo o aviso da boleta) não vem na resposta.
+- O que está acima vale para a **compra de fundo da prateleira pelo Estoque XP**, reconhecido pelo
+  nome ou pelo ticker (`VGPR11`, `XPHF11`). A compra pelo Estoque clientes e a venda estão logo
+  abaixo.
+
+### Venda de fundo e Estoque clientes
+
+Decidido com o operador em 20/10/2026, com um pedido real que misturava bolsa, fundos comprados e
+fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão. Código em
+`core/secundario/{boletaDoHub,venda,secundario}.js` e `core/format/grupos.js`.
+
+- **As duas modalidades do secundário**, vistas no Hub de verdade em 20/10 (compra do IMOV11 e venda
+  de um FIP): **Estoque XP** (`treasury`, a operação é contra a posição da própria XP) e **Estoque
+  clientes** (`peerToPeer`, uma *intenção de ordem* que a Mesa de Fundos casa por ordem de chegada;
+  o que não casar até as 14:00 é cancelado, e o preço pode variar até 2%, com um "preço limite de
+  aceite"). A boleta de compra (`#/secundario/comprar/<fundo>/<conta>`) e a de venda
+  (`#/secundario/vender/<fundo>/<conta>`) chamam o mesmo `order-secondary/pre-check`, que traz em
+  `fund.stock` as duas modalidades, cada uma com `buy` e `sell` (deságio, corretagem, PU, cotas
+  disponíveis na compra) e as travas `canOperateBuyTreasury`, `canOperateBuyPeerToPeer`,
+  `canOperateSellTreasury`, `canOperateSellPeerToPeer`. **As travas mudam por fundo e por dia**: no
+  IMOV11 de 20/10 a XP não comprava, e o Estoque clientes não tinha cotas para vender. A captura da
+  Prateleira também traz o Estoque clientes (`canBuyPeerToPeer`, `peerToPeerBuyDiscount` — o deságio
+  do Estoque XP mais 0,15 —, `peerToPeerBuyCommissionFee`, `stockOfPeerToPeerQuotas`).
+- **"Estoque cliente" no pedido** (`(Estoque cliente)`, "estoque clientes", "P2P") compra ou vende no
+  Estoque clientes; sem nada escrito, vale o **Estoque XP**. "O que for possível" compra o que houver
+  no estoque, até o valor.
+- **Compra pelo Estoque clientes:** o deságio e a corretagem dele, **sem ROA** (não há barra) e
+  **sempre no pior preço** — o PU mais alto do arredondamento e mais os 2% que o preço pode subir —,
+  para as cotas nunca passarem do valor pedido. Vale a boleta lida pelo robô há até 10 minutos; sem
+  ela, o estoque da Prateleira, com um bloqueio confirmável e o conserto **Cotar na boleta**.
+  Estoque fechado ou vazio bloqueia com **Comprar no Estoque XP**; estoque menor que o pedido, com
+  **Comprar o que houver (N)** e **Comprar no Estoque XP**. Um aviso lembra que é intenção, cancelada
+  às 14:00 se não casar. Um cenário só, e um botão de copiar só.
+- **Venda:** a quantidade do "Total" é a **disponível** da posição do cliente, com todas as casas; a
+  escrita é conferida contra ela (acima dela bloqueia, com **Vender o total**); sem a posição lida,
+  a escrita se confirma, e o total não sai (digite a quantidade). A modalidade pedida fechada no dia
+  bloqueia e oferece a outra (**Vender no Estoque clientes** / **Vender no Estoque XP**): a decisão é
+  do operador, porque o preço muda e o Estoque clientes pode não executar. Venda em R$ não é tratada.
+  Cotas já à venda viram aviso. A conta do valor (`contaDaVenda`) é a do painel "Visualizar mais
+  detalhes da operação" da boleta, conferida centavo por centavo (posição = cotas × PU; deságio = %
+  da posição; o cliente recebe a posição com deságio, menos a corretagem).
+- **A cotação de venda vale um dia útil** (`core/util/diasUteis.js`, com a Páscoa calculada e os dias
+  sem pregão de 24/12 e 31/12): até o mesmo horário do próximo dia útil. O print dela também
+  (fase 2).
+- **A posição do cliente fica só na memória da página** (`estado.boletas`), como o cliente; nunca no
+  `localStorage`, no histórico ou no repositório.
+- **Os grupos de e-mail.** Cada conta sai em até três e-mails, um por grupo, cada um numa seção do
+  cartão com o que é dele: **Bolsa** (ações, FIIs listados, ETFs, BDRs; compra e venda juntas, no
+  modelo de sempre), **Fundos · Compra** (o modelo de sempre, com as cotas) e **Fundos · Venda** (o
+  modelo da auditoria de venda, em `docs/FORMATOS-DE-SAIDA.md`). O Tesouro vai ser o quarto. O
+  E-mail em tabela, o Lote Simples e o TWAP são só de bolsa — com os fundos escritos pelo ticker,
+  que seguem com o bloqueio confirmável de sempre. Um grupo é a própria solicitação com só as ordens
+  dele (`recorte`): o validador e os formatadores não mudaram de contrato. A confirmação de um
+  bloqueio vale para o grupo em que foi dada (`grupo:codigo`).
 
 ### O cliente e o assessor (robô 1.3.0)
 
@@ -556,10 +617,11 @@ responsável em cópia** e o **nome do cliente na saudação**. Código em `core
   sem ele na planilha, pelo nome escrito igual, sem acento e maiúscula (o cartão marca "achado pelo
   nome"). Dois e-mails para o mesmo assessor: vale o único entre os ativos (Status); sem isso, fica
   sem cópia. O que falta aparece em âmbar no cartão e no aviso do Outlook.
-- **O nome na saudação** (`nomeProprio`): cada palavra com a inicial maiúscula, partículas (da, de,
-  dos, e…) minúsculas no meio, numeral romano inteiro. O acento que o Hub não mandou não é posto.
-  Vale para os dois e-mails e para o Copiar — o que se vê é o que vai. É a exceção à regra de nome
-  nunca entrar na saída: o nome digitado no pedido continua fora; o da ficha do Hub entra na
+- **O nome na saudação** (`nomeDoHub`): **como o Hub o manda, em maiúsculas**, só sem os espaços a
+  mais (decidido com o operador em 20/10/2026, pelo e-mail de auditoria que o cliente aprovou; de
+  07/10 a 20/10 a Mesa o reescrevia com as iniciais maiúsculas). O acento que o Hub não mandou não é
+  posto. Vale para todos os e-mails e para o Copiar — o que se vê é o que vai. É a exceção à regra de
+  nome nunca entrar na saída: o nome digitado no pedido continua fora; o da ficha do Hub entra na
   saudação, e só nela.
 - **A linha do cliente no cartão**, logo abaixo da conta, é também conferência: um dígito trocado
   na conta mostra outro nome. O cliente é refeito a cada render pela conta do campo — **o nome de
@@ -599,7 +661,8 @@ Cada uma vale um teste. Violá-las é um bug de negócio, não de estilo.
 
 1. `Cliente` é sempre a conta numérica.
 2. Quantidade nunca vira financeiro, financeiro nunca vira quantidade. Exceção única: compra de
-   fundo no secundário, convertida pela planilha do dia (ver "Fundos no secundário").
+   fundo no secundário, convertida pela planilha do dia (ver "Fundos no secundário"). A venda do
+   total de fundo do secundário não converte nada: a quantidade é a posição lida na boleta.
 3. `Compra` → `C`, `Venda` → `V`.
 4. Preço informado é preservado literalmente; ausente é `A mercado`.
 5. Ticker suspeito de erro de digitação gera **aviso pedindo confirmação** — a correção automática
@@ -1128,7 +1191,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 948 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.034 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

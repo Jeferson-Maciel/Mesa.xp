@@ -28,10 +28,13 @@ Att,
 ```
 
 - **Saudação com o nome do cliente** (decidido com o operador em 07/10/2026): quando o robô trouxe
-  o cliente da ficha do Hub, a primeira linha é `Prezado(a) [NOME COMPLETO],`, com o nome arrumado —
-  `ANA PAULA DA SILVA` vira `Ana Paula da Silva` (partículas minúsculas no meio, sem pôr acento que
-  o Hub não mandou). Sem o cliente, `Prezado(a) Cliente,`. Vale também para o formato 2. O nome
-  digitado no pedido nunca entra.
+  o cliente da ficha do Hub, a primeira linha é `Prezado(a) [NOME COMPLETO],`, **em maiúsculas,
+  como o Hub manda** (`Prezado(a) ANA PAULA DA SILVA,` — decidido em 20/10/2026, pelo e-mail de
+  auditoria aprovado; até ali a Mesa o reescrevia como `Ana Paula da Silva`). Sem o cliente,
+  `Prezado(a) Cliente,`. Vale para todos os e-mails. O nome digitado no pedido nunca entra.
+- **Um e-mail por grupo** (20/10/2026): numa conta com bolsa e fundos, o formato 1 sai em até três
+  e-mails — **Bolsa** e **Fundos · Compra** neste modelo, cada um só com as ordens dele, e
+  **Fundos · Venda** no modelo da seção 1b.
 - **Pluralização**: com um ativo, `a ordem abaixo` / `realizar a ordem.`; com dois ou mais,
   `as ordens abaixo` / `realizar as ordens.`
 - **Bloco do ativo**: os quatro campos ficam em linhas consecutivas, **sem linha em branco entre
@@ -52,6 +55,49 @@ Att,
   Quantidade: 162;
   Preço: A mercado
   Operação: Compra
+  ```
+
+## 1b. Auditoria de venda de fundo do secundário (o e-mail "Fundos · Venda")
+
+O modelo que o operador trouxe em 20/10/2026 e que o cliente aprova; o Abrir no Outlook usa o mesmo
+assunto, **Confirmação de ordem**.
+
+```
+Prezado(a) [NOME],
+Conforme conversado, gostaria de realizar a[s] ordem[ns] abaixo na conta XP [CONTA], conforme condições abaixo:
+
+Ativo: [ATIVO];
+Quantidade: [QUANTIDADE];
+Operação: Venda;
+
+Condições:
+[PRINT DA COTAÇÃO]
+
+Ativo: [ATIVO];
+…
+Condições:
+[PRINT DA COTAÇÃO]
+
+atte,
+```
+
+- **Sem linha em branco** entre a saudação e a abertura; **sem** `Preço`, sem as observações do
+  leilão e sem "Aguardo confirmação". `Operação: Venda;` **com** ponto-e-vírgula. O fecho é `atte,`.
+- **Plural** como nos outros e-mails: `a ordem abaixo` com um fundo, `as ordens abaixo` com dois ou
+  mais.
+- **Um bloco por fundo**, na ordem digitada, cada um seguido de `Condições:` e do print da cotação
+  dele. No texto (o Copiar e o Abrir no Outlook) a linha depois de `Condições:` fica vazia; o print
+  entra no HTML, logo abaixo de `Condições:` (fase 2).
+- **A quantidade**: inteira sem separador de milhar (`5125`); fracionada com as 8 casas do campo de
+  quantidade da boleta (`123,45678910`). Na venda do total, é a posição disponível do cliente que o
+  robô leu na boleta de venda do Hub.
+
+  ```
+  Ativo: Riza Malls Feeder FII RL;
+  Quantidade: 123,45678910;
+  Operação: Venda;
+
+  Condições:
   ```
 
 ## 2. Auditoria por E-mail (na tela, "E-mail em tabela")

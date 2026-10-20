@@ -644,7 +644,7 @@ describe('aplicação no Tesouro Direto', () => {
 
   it('sem a lista do Hub, bloqueia com o conserto de ler', () => {
     const d = validar(aplicacao({ tesouroDoHub: { situacao: 'sem-lista' } }), 'email').find((x) => x.codigo === 'tesouro-sem-lista');
-    expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'ler-tesouro' } });
+    expect(d).toMatchObject({ confirmavel: true, acao: { campo: 'ler-tesouro' } });
   });
 
   it('conta não habilitada: a mensagem do Hub', () => {

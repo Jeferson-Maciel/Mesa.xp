@@ -763,6 +763,27 @@ try {
       const corpo = ehPreCheck ? preCheck(url.searchParams.get('f'), url.searchParams.get('l')) : resposta;
       r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(corpo) });
     });
+    // A lista do Tesouro Direto (robô 1.6.0), com dados de título como os do Hub em 20/10/2026. A conta
+    // 7654321 não está habilitada, como uma conta de verdade que tem outra conta XP no mesmo CPF.
+    const TESOURO_API = 'https://api-advisor.xpi.com.br/rede-treasury';
+    const pedidosDoTesouro = [];
+    await contexto.route(`${TESOURO_API}/**`, (r) => {
+      const conta = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/available-assets$/)?.[1];
+      pedidosDoTesouro.push(conta);
+      const corpo =
+        conta === '7654321'
+          ? { statusCode: 400, message: 'A Conta 7654321 não está habilitada para operar no Tesouro Direto pois já existe outra conta XP Inc atrelada ao CPF do cliente.' }
+          : {
+              data: {
+                items: [
+                  { codeBonds: 212, descTypeBond: 'LFT', expirateDate: '2031-03-01T00:00:00-03:00', buyValue: 20043.37, minimumInvestmentValue: 200.43, nickname: 'Tesouro Selic 2031', descIndex: 'SELIC', profitability: 'SELIC + 0,0992 %', indexBonds: 17, riskScore: 1, clienteQueNaoPodeSair: 'NÃO PODE SAIR' },
+                  { codeBonds: 174, descTypeBond: 'LTN', expirateDate: '2029-01-01T00:00:00-03:00', buyValue: 772.09, minimumInvestmentValue: 7.72, nickname: 'Tesouro Prefixado 2029', descIndex: 'prefixado', profitability: '12,63 %', indexBonds: 19 },
+                  { codeBonds: 214, descTypeBond: 'LTN', expirateDate: '2032-01-01T00:00:00-03:00', buyValue: 536.71, minimumInvestmentValue: 5.36, nickname: 'Tesouro Prefixado 2032', descIndex: 'prefixado', profitability: '12,81 %', indexBonds: 19 }
+                ]
+              }
+            };
+      r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(corpo) });
+    });
     await contexto.route(`${FICHA_API}/**`, (r) => {
       pedidosAoHub.ficha++;
       const conta = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/customer-info$/)?.[1];
@@ -782,6 +803,34 @@ try {
         contentType: 'text/html',
         body: `<!doctype html><meta charset=utf-8><title>Hub</title><body>
           <script>
+            // O Renda Fixa: Produtos → Tesouro Direto. A lista só vem com um cliente escolhido no
+            // "Pesquisar cliente" (o resultado diz "Conta XP: <conta>"), e o cliente fica escolhido
+            // na página: voltar à tela do Tesouro pede a lista dele de novo.
+            if (location.pathname.startsWith('/new/renda-fixa')) {
+              let escolhido = null;
+              const pedirLista = () => {
+                if (escolhido && location.hash.startsWith('#/produtos/tesouro-direto')) fetch('${TESOURO_API}/v1/customers/' + escolhido + '/available-assets');
+              };
+              addEventListener('hashchange', pedirLista);
+              document.addEventListener('DOMContentLoaded', () => {
+                const busca = document.createElement('input');
+                busca.placeholder = 'Pesquisar cliente';
+                const resultados = document.createElement('div');
+                busca.addEventListener('input', () => {
+                  resultados.innerHTML = /^\\d{5,8}$/.test(busca.value)
+                    ? '<div role="menuitem"><span>FULANO</span><span>Conta XP: ' + busca.value + '</span></div>'
+                    : '';
+                });
+                resultados.addEventListener('click', (e) => {
+                  const item = e.target.closest('[role="menuitem"]');
+                  if (!item) return;
+                  escolhido = item.textContent.match(/Conta XP: (\\d+)/)[1];
+                  resultados.innerHTML = '';
+                  pedirLista();
+                });
+                document.body.append(busca, resultados);
+              });
+            }
             if (location.pathname.startsWith('/new/posicao-consolidada')) {
               const pedirFicha = () => {
                 const x = new XMLHttpRequest();
@@ -1166,6 +1215,41 @@ try {
     ok(avisouQueColou, 'a Mesa avisa que os prints estão no e-mail');
     ok(!JSON.stringify(loja).includes('data:image'), 'o corpo em HTML não fica no armazenamento do robô depois de colado');
     await janelaDoOutlook.close();
+
+    // ── O Tesouro Direto (robô 1.6.0) ──
+    // O robô abre a aba dele no Renda Fixa, escolhe o cliente da conta e traz a lista que o Hub
+    // recebe; a Mesa acha o título e monta o e-mail do modelo, com a taxa e o vencimento.
+    await mesa.fill('#entrada', '1234567\nvia email\nCompra\nTesouro Selic 2031 R$ 2.000,00\nComprar 1k\nLFT');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    const tesouroPronto = await mesa
+      .waitForFunction(() => document.querySelectorAll('.tesouro [data-tesouro="pronto"]').length === 2, null, { timeout: 45_000 })
+      .then(() => true, () => false);
+    ok(tesouroPronto && pedidosDoTesouro.includes('1234567'), 'o robô escolhe o cliente na página do Tesouro e traz a lista da conta');
+    const emailDoTesouro = (await mesa.textContent('.saida[data-grupo="tesouro"] pre')) ?? '';
+    ok(
+      emailDoTesouro.includes('para a aplicação no Tesouro Direto abaixo na conta XP 1234567:') &&
+        emailDoTesouro.includes('Título: Tesouro Selic 2031;\nTaxa: SELIC + 0,0992 %;\nVencimento: 01/03/2031;\nValor a ser aplicado: R$ 2.000,00') &&
+        emailDoTesouro.includes('Valor a ser aplicado: R$ 1.000,00'),
+      'o e-mail do Tesouro sai no modelo, com a taxa e o vencimento do Hub, e o valor da linha de cima ("Comprar 1k")'
+    );
+    ok((await mesa.textContent('.grupo-saidas[data-grupo="tesouro"]')).includes('não diz o vencimento'), '"LFT" sem o ano vai no único Selic da lista, com o aviso');
+    ok(!(await mesa.textContent('.secundario.tesouro')).includes('NÃO PODE SAIR'), 'da lista do Tesouro só saem os dados dos títulos');
+    const [outlookDoTesouro] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.saida[data-grupo="tesouro"] [data-outlook]')]);
+    // Com o cliente no Para, o assunto vai dentro do mailto:, codificado duas vezes.
+    const enderecoDoTesouro = decodeURIComponent(decodeURIComponent(outlookDoTesouro.url()));
+    ok(enderecoDoTesouro.includes('subject=Confirmação aplicação Tesouro Direto'), 'o e-mail do Tesouro abre no Outlook com o assunto dele');
+    await outlookDoTesouro.close();
+
+    // Outra conta, não habilitada no Tesouro: o erro do Hub segura o e-mail, com a mensagem dele.
+    await mesa.fill('.campo-conta', '7654321');
+    await mesa.press('.campo-conta', 'Tab');
+    const naoHabilitada = await mesa
+      .waitForFunction(() => document.querySelector('.saida[data-grupo="tesouro"]')?.textContent.includes('não está habilitada'), null, { timeout: 45_000 })
+      .then(() => true, () => false);
+    ok(naoHabilitada, 'a conta não habilitada no Tesouro segura o e-mail, com a mensagem do Hub');
+    const lojaDoTesouro = JSON.stringify(loja);
+    ok(!lojaDoTesouro.includes('Tesouro Selic') && !lojaDoTesouro.includes('7654321'), 'a lista e a conta não ficam no armazenamento do robô');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

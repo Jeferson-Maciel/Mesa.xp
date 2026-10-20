@@ -456,7 +456,9 @@ export const validar = (solicitacao, formato) => {
         }
         if (!td || td.situacao === 'sem-lista') {
           diagnosticos.push({
-            ...bloqueio('tesouro-sem-lista', `${nome}: falta a lista do Tesouro no Hub (título, taxa e vencimento), que o robô lê pela conta.`, i, false),
+            // Sem o robô, confirmar gera o e-mail com a taxa e o vencimento em branco, para preencher no
+            // Outlook: nada é inventado, e o operador não fica sem saída.
+            ...bloqueio('tesouro-sem-lista', `${nome}: falta a lista do Tesouro no Hub (título, taxa e vencimento), que o robô lê pela conta. Sem o robô, confirme para gerar com a taxa e o vencimento em branco.`, i),
             acao: lerDeNovo
           });
         } else if (td.situacao === 'nao-habilitada') {

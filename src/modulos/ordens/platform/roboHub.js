@@ -45,7 +45,8 @@ const MENSAGENS = {
   'sem-regiao': 'não achei o painel do valor da operação na boleta',
   'sem-snapdom': 'o robô veio sem a biblioteca do print — copie o robô de novo',
   'falhou-o-print': 'o print falhou na aba do robô',
-  'sem-print': 'o robô não trouxe o print'
+  'sem-print': 'o robô não trouxe o print',
+  'sem-tesouro': 'o Hub não mostrou a lista do Tesouro para essa conta — a conta é de um cliente seu?'
 };
 
 export class ErroDoRobo extends Error {
@@ -128,6 +129,16 @@ export const criarRoboHub = ({ janela = window } = {}) => {
       clearTimeout(pendente.relogio);
       pendentes.delete(mensagem.id);
       pendente.resolver(Array.isArray(mensagem.entradas) ? mensagem.entradas : []);
+    }
+
+    // A lista do Tesouro da conta pedida (1.6.0): os títulos, ou o erro do Hub como ele veio.
+    if (mensagem.tipo === 'tesouro') {
+      const pendente = mensagem.id ? pendentes.get(mensagem.id) : null;
+      if (!pendente) return;
+      clearTimeout(pendente.relogio);
+      pendentes.delete(mensagem.id);
+      if (mensagem.erro === 'invalido' || mensagem.erro === 'sem-lista') pendente.rejeitar(new ErroDoRobo(mensagem.erro === 'invalido' ? 'invalido' : 'sem-tesouro'));
+      else pendente.resolver({ conta: mensagem.conta, itens: Array.isArray(mensagem.itens) ? mensagem.itens : null, erro: mensagem.erro ?? null });
     }
 
     // O cliente pedido: os campos da ficha que o robô leu, ou o motivo de não ter lido.
@@ -229,6 +240,18 @@ export const criarRoboHub = ({ janela = window } = {}) => {
      * @param {{prazo?: number}} [opcoes]
      * @returns {Promise<ClienteDoRobo>}
      */
+    /**
+     * Pede ao robô (1.6.0) a lista do Tesouro Direto para a conta: ele escolhe o cliente na página de
+     * Produtos → Tesouro Direto, na aba dele do Tesouro, e devolve os títulos que o Hub mostrou (com a
+     * taxa e o vencimento), ou o erro do Hub (conta não habilitada) em `erro`.
+     *
+     * @returns {Promise<{conta: string, itens: object[]|null, erro: string|null}>}
+     */
+    pedirTesouro(conta, { prazo = 45000 } = {}) {
+      if (!CONTA.test(String(conta ?? ''))) return Promise.reject(new ErroDoRobo('invalido'));
+      return pedir({ tipo: 'pedir-tesouro', conta: String(conta) }, prazo);
+    },
+
     pedirCliente(conta, { prazo = 30000 } = {}) {
       if (!CONTA.test(String(conta ?? ''))) return Promise.reject(new ErroDoRobo('invalido'));
       return pedir({ tipo: 'pedir-cliente', conta: String(conta) }, prazo);

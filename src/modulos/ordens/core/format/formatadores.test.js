@@ -601,3 +601,10 @@ describe('formatarEmailTesouro — a aplicação no Tesouro Direto', () => {
     expect(texto).toContain('Aguardo confirmação para realizar as ordens.');
   });
 });
+
+describe('formatarEmailTesouro sem a lista do Hub', () => {
+  it('a taxa e o vencimento ficam em branco, para preencher no Outlook — nada é inventado', () => {
+    const s = solicitacao({ conta: '1234567', ordens: [{ ativo: 'Tesouro Selic 2031', operacao: 'C', tesouro: { especies: ['selic'], ano: 2031 }, financeiro: 2000, quantidade: null }] });
+    expect(formatarEmailTesouro(s)).toContain('Título: Tesouro Selic 2031;\nTaxa: ;\nVencimento: ;\nValor a ser aplicado: R$ 2.000,00');
+  });
+});

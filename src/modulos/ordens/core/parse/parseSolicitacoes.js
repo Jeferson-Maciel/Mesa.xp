@@ -158,26 +158,76 @@ const VALOR_NO_FIM = new RegExp(
 );
 
 /**
- * Isola o nome do fundo numa linha, tirando a operação da frente e o valor do fim.
+ * A operação e a quantidade escritas **na frente** do nome do fundo: `V 590qtds XP Habitat…`,
+ * `Vender Riza Malls…`, `C - 10 cotas Brio…`. A letra solta só conta seguida de espaço ou traço —
+ * `V8 Capital` é nome. O número só sai com a unidade junto, que nome de fundo não começa por ela.
+ */
+const OPERACAO_NA_FRENTE = new RegExp(
+  String.raw`^\s*(?:[CV]|compra[rs]?|comprem?|vend[ae]r?|vendas?|resgat(?:e|ar))(?=[\s\-–—:])[\s\-–—:]*`,
+  'i'
+);
+const QUANTIDADE_NA_FRENTE = new RegExp(String.raw`^\s*\d[\d.,]*\s*${UNIDADE}${FIM}[\s\-–—:]*`, 'i');
+
+/** As anotações do pedido que não são do nome: `(Estoque cliente)`, `(o que for possível)`. */
+const ANOTACAO = /\((?=[^)]*(?:estoque|poss[íi]vel|p2p|peer))[^)]*\)/gi;
+
+/**
+ * Isola o nome do fundo numa linha, tirando a operação e a quantidade da frente e o valor do fim.
  *
  * Aqui **não** dá para limpar número solto como se faz com ticker: nome de fundo carrega dígito
  * no meio — `XP CDI 99 FOF Private Jun/27 FII RL` perderia o 99 e o 27 e não bateria com nada.
  * Por isso o corte é por posição: só cai o trecho final que é *inteiramente* um valor.
+ *
+ * O nome sai **como está na linha**, traços e espaços incluídos: é por ele que a linha é cortada
+ * depois (`semONome`). Remontá-lo com " - " fazia `AZ-AXS` virar `AZ - AXS`, o corte falhava, e o
+ * "1" de `Sênior A1` sobrava como número não explicado.
  */
 const textoDoAtivo = (linha) => {
-  const semOperacao = linha.replace(/^\s*([CV])\s*[-–—]\s*/i, '');
-  const semReais = semOperacao.replace(EM_REAIS, ' ');
+  let texto = linha.replace(ANOTACAO, ' ').replace(EM_REAIS, ' ');
+  for (let antes = ''; antes !== texto; ) {
+    antes = texto;
+    texto = texto.replace(OPERACAO_NA_FRENTE, '').replace(QUANTIDADE_NA_FRENTE, '');
+  }
 
-  const partes = semReais.split(/\s*[-–—]\s*/);
-  while (partes.length > 1 && SO_VALOR.test(partes[partes.length - 1].trim())) partes.pop();
+  // O último trecho depois de um traço sai se for inteiramente um valor.
+  for (let fim = texto.match(/\s*[-–—]\s*([^-–—]*)$/); fim && SO_VALOR.test(fim[1].trim()); fim = texto.match(/\s*[-–—]\s*([^-–—]*)$/)) {
+    texto = texto.slice(0, fim.index);
+  }
 
-  return partes
-    .join(' - ')
+  return texto
     .replace(VALOR_NO_FIM, '')
-    .replace(/\s{2,}/g, ' ')
     .replace(/[\s\-–—:;,]+$/, '')
     .trim();
 };
+
+/**
+ * A linha sem o nome do fundo, para ler o valor e a operação do que sobrou. Os espaços entre as
+ * palavras do nome podem ter sido vários na linha (`FII RL    R$50.000,00`, colado da planilha).
+ */
+const semONome = (linha, nome) => {
+  const palavras = nome.split(/\s+/).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return linha.replace(new RegExp(palavras.join(String.raw`\s+`)), ' ');
+};
+
+/* ── Total, estoque e "o que for possível" ────────────────────────────────────────────── */
+
+/**
+ * Venda do total da posição: `Vendas | Quantidade Total`, `Venda total`, `(Total)`. Só para fundo
+ * do secundário, cuja posição o robô lê na boleta de venda (decisão do operador em 20/10/2026).
+ */
+const TOTAL = new RegExp(
+  INICIO + String.raw`(?:quantidade\s+total|total(?:\s+da\s+posi[çc][ãa]o)?|posi[çc][ãa]o\s+(?:total|inteira)|zerar)` + FIM,
+  'i'
+);
+
+/** Estoque clientes é o peer to peer do secundário; estoque XP, a tesouraria. */
+const ESTOQUE_CLIENTES = /estoques?\s+(?:de\s+|dos\s+)?clientes?|(?:^|[^a-z0-9])p2p(?![a-z0-9])|peer\s*(?:to|2)\s*peer/i;
+const ESTOQUE_XP = /estoques?\s+(?:da\s+)?xp|tesouraria/i;
+
+/** Comprar o que houver no estoque, até o valor pedido. */
+const O_QUE_FOR_POSSIVEL = /o\s+que\s+(?:for|der)\s+poss[íi]vel|o\s+m[áa]ximo\s+(?:que\s+der|poss[íi]vel)|o\s+que\s+(?:tiver|houver)/i;
+
+const estoqueDe = (linha) => (ESTOQUE_CLIENTES.test(linha) ? 'clientes' : ESTOQUE_XP.test(linha) ? 'xp' : null);
 
 /* ── Contexto do bloco ────────────────────────────────────────────────────────────────── */
 
@@ -235,20 +285,28 @@ const lerValorGlobal = (linha) => {
  * Os cabeçalhos de operação do bloco ("Venda:", "COMPRA", "C"), cada um com a sua posição.
  * Um cabeçalho que diz as duas coisas ("compra e venda") fica com `operacao: null`.
  */
-const lerCabecalhos = (bloco) => {
+const lerCabecalhos = (bloco, leituras) => {
   const cabecalhos = [];
-  const registrar = (posicao, operacoes) => {
-    if (operacoes.size > 0) cabecalhos.push({ posicao, operacao: unica(operacoes) });
+  const registrar = (posicao, operacoes, linha) => {
+    if (operacoes.size > 0 || TOTAL.test(linha)) {
+      cabecalhos.push({ posicao, operacao: operacoes.size > 0 ? unica(operacoes) : undefined, total: TOTAL.test(linha) });
+    }
   };
 
-  if (bloco.restoDaConta) registrar(-1, operacoesDe(bloco.restoDaConta, { letraSolta: false }));
+  if (bloco.restoDaConta) registrar(-1, operacoesDe(bloco.restoDaConta, { letraSolta: false }), bloco.restoDaConta);
 
+  // A linha que virou ativo não é cabeçalho, mesmo com cara de contexto (`… - total`).
   bloco.linhas.forEach((linha, posicao) => {
-    if (tickersDe(linha).length === 0 && ehLinhaDeContexto(linha)) registrar(posicao, operacoesDe(linha));
+    if (!leituras[posicao] && tickersDe(linha).length === 0 && ehLinhaDeContexto(linha)) {
+      registrar(posicao, operacoesDe(linha), linha);
+    }
   });
 
   return cabecalhos;
 };
+
+/** Se a seção da linha é de venda do total: o último cabeçalho acima dela diz "total". */
+const totalDaSecao = (cabecalhos, posicao) => cabecalhos.filter((c) => c.posicao < posicao).at(-1)?.total === true;
 
 /**
  * A operação que vale para uma linha sem operação própria: a do cabeçalho logo acima dela.
@@ -258,10 +316,12 @@ const lerCabecalhos = (bloco) => {
  * saía com as duas como compra.
  */
 const operacaoDaSecao = (cabecalhos, posicao) => {
-  const acima = cabecalhos.filter((c) => c.posicao < posicao).at(-1);
+  // Um cabeçalho que só diz "Quantidade total" não diz a operação: vale o de antes dele.
+  const comOperacao = cabecalhos.filter((c) => c.operacao !== undefined);
+  const acima = comOperacao.filter((c) => c.posicao < posicao).at(-1);
   if (acima) return acima.operacao;
 
-  const distintas = new Set(cabecalhos.map((c) => c.operacao));
+  const distintas = new Set(comOperacao.map((c) => c.operacao));
   return distintas.size === 1 ? [...distintas][0] : null;
 };
 
@@ -286,10 +346,13 @@ const lerLinha = (linha) => {
 
   // Tirar o identificador antes de ler número evita que o `11` de `IVVB11`, ou o `99` de
   // `XP CDI 99 FOF`, virem quantidade.
-  const nomeDoFundo = ticker ? null : textoDoAtivo(linha);
-  if (!ticker && (ehLinhaDeContexto(linha) || !nomeDoFundo)) return null;
+  const nomeDoFundo = ticker ? null : textoDoAtivo(linha.replace(new RegExp(TOTAL.source, 'gi'), ' '));
+  if (!ticker && !nomeDoFundo) return null;
+  // `V - Riza Malls Feeder FII RL - total` tem cara de linha de contexto, pelo "total", mas é um
+  // fundo: a linha só fica como contexto se o que sobra dela não for um fundo da prateleira.
+  if (!ticker && ehLinhaDeContexto(linha) && procurarFundo(nomeDoFundo).situacao !== 'exato') return null;
 
-  const resto = ticker ? linha.replace(new RegExp(ticker, 'gi'), ' ') : linha.replace(nomeDoFundo, ' ');
+  const resto = ticker ? linha.replace(new RegExp(ticker, 'gi'), ' ') : semONome(linha, nomeDoFundo);
 
   // Preço antes do valor: em `PETR4 100 a R$ 39,50` o `R$` é preço unitário, e lido primeiro
   // ele não é confundido com o valor financeiro da ordem.
@@ -371,10 +434,11 @@ export const parseSolicitacoes = (texto) => {
 
     bloco.horario = bloco.linhas.map(lerHorario).find(Boolean) ?? null;
     bloco.valorGlobal = bloco.linhas.map(lerValorGlobal).find(Boolean) ?? null;
-    const cabecalhos = lerCabecalhos(bloco);
 
-    // 3. Lê cada linha: um ativo, um valor sozinho, ou contexto.
+    // 3. Lê cada linha: um ativo, um valor sozinho, ou contexto. Os cabeçalhos vêm depois, porque
+    //    a linha que virou ativo não é cabeçalho.
     const leituras = bloco.linhas.map(lerLinha);
+    const cabecalhos = lerCabecalhos(bloco, leituras);
     const { pares, cancelado } = casarValores(leituras);
 
     // 4. Cada linha vira uma ordem, ou um descarte justificado. Ticker e fundo cetipado são
@@ -419,10 +483,17 @@ export const parseSolicitacoes = (texto) => {
       const sobraDoPar = par ? par.linha.replace(par.valor.trecho, ' ') : '';
       const numerosSobrando = (sobra + ' ' + sobraDoPar).match(/\d[\d.]*(?:,\d+)?/g) ?? [];
 
-      if (quantidade === null && financeiro === null) {
+      // A venda do total não tem número a ler: a quantidade é a posição, que o robô lê na boleta de
+      // venda do Hub. Só fundo do secundário tem essa boleta; papel de bolsa segue para a mão.
+      const fundoDoTicker = ticker ? fundoPeloTicker(ticker) : null;
+      const total = quantidade === null && financeiro === null && (TOTAL.test(linha) || totalDaSecao(cabecalhos, posicao));
+
+      if (quantidade === null && financeiro === null && !(total && (fundoDoTicker || !ticker))) {
         bloco.descartadas.push({
           linha,
-          motivo: 'sem quantidade nem financeiro informado — fazer na mão'
+          motivo: total
+            ? 'venda do total sem quantidade — a posição só é lida para fundo do secundário; fazer na mão'
+            : 'sem quantidade nem financeiro informado — fazer na mão'
         });
         continue;
       }
@@ -439,7 +510,6 @@ export const parseSolicitacoes = (texto) => {
 
       // O ticker de um fundo da prateleira (`VGPR11`) é o fundo, e não papel de bolsa: decisão da
       // mesa em 06/10/2026. O ativo fica como foi escrito; o nome vem junto no fundo.
-      const fundoDoTicker = ticker ? fundoPeloTicker(ticker) : null;
       const fundo = fundoDoTicker ?? (ticker ? null : procurarFundo(nomeDoFundo));
       if (fundo && fundo.situacao === 'nenhum') {
         bloco.descartadas.push({
@@ -463,6 +533,10 @@ export const parseSolicitacoes = (texto) => {
         quantidade,
         financeiro,
         quantidadeSolta: quantidade !== null && Boolean(valor.quantidadeSolta),
+        total,
+        // De onde comprar ou para quem vender, no secundário; null é o padrão (o Estoque XP).
+        estoque: estoqueDe(linha),
+        oQueForPossivel: O_QUE_FOR_POSSIVEL.test(linha),
         preco,
         numerosSobrando,
         linha: par ? `${linha} / ${par.linha}` : linha

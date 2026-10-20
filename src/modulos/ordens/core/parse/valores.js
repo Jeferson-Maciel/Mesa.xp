@@ -40,7 +40,9 @@ const ESCALADO = new RegExp(String.raw`(${NUMERO})\s*(${ESCALA})(?:\s*(reais|${P
 const ROTULADO = new RegExp(String.raw`\b(?:valor|financeiro|vlr)\s*(?:de\s*)?[:=\-]?\s*(?:de\s*)?(${NUMERO})`, 'i');
 const COM_REAIS = new RegExp(String.raw`(${NUMERO})\s*reais${FIM}`, 'i');
 const COM_CENTAVOS = /^\d{1,3}(?:\.\d{3})*,\d{2}$|^\d+,\d{2}$/;
-const QUANTIDADE_EXPLICITA = new RegExp(String.raw`(?:^|[^a-zà-ÿ0-9])${PALAVRA_DE_QUANTIDADE}`, 'i');
+// O dígito pode vir colado: `674qtds` é quantidade escrita (pedido real de 20/10/2026), e sem isso a
+// cesta com um valor em R$ bloqueava como mista.
+const QUANTIDADE_EXPLICITA = new RegExp(String.raw`(?:^|[^a-zà-ÿ])${PALAVRA_DE_QUANTIDADE}`, 'i');
 
 const MULTIPLICADOR = { k: 1e3, mil: 1e3, m: 1e6, mi: 1e6, milhao: 1e6, milhoes: 1e6 };
 

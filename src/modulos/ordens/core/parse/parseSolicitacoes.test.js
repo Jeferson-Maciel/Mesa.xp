@@ -129,10 +129,18 @@ describe('fora de escopo — descartado, nunca adivinhado', () => {
     expect(s.descartadas[0].linha).toBe('V - HGCR11 (Total)');
   });
 
-  it('descarta o ativo sem ticker', () => {
-    const s = uma('80000004\nVenda total via e-mail\nBGR Galpões Logísticos I Feeder FII');
+  it('descarta o nome que não é ticker nem fundo da prateleira', () => {
+    const s = uma('80000004\nVenda total via e-mail\nFundo Que Não Existe Nenhum');
     expect(s.ordens).toHaveLength(0);
-    expect(s.descartadas.map((d) => d.linha)).toContain('BGR Galpões Logísticos I Feeder FII');
+    expect(s.descartadas.map((d) => d.linha)).toContain('Fundo Que Não Existe Nenhum');
+  });
+
+  // Decidido com o operador em 20/10/2026: a venda do total de um fundo do secundário vira ordem,
+  // e a quantidade é a posição que o robô lê na boleta de venda do Hub. Papel de bolsa, não.
+  it('a venda do total de um papel de bolsa continua descartada, com o motivo', () => {
+    const s = uma('700003\nV - HGCR11 (Total)');
+    expect(s.ordens).toHaveLength(0);
+    expect(s.descartadas[0].motivo).toMatch(/total/i);
   });
 
   it('descarta as dez vendas totais do pedido real, sem inventar quantidade', () => {
@@ -292,8 +300,8 @@ describe('fundos cetipados — identificados pelo nome', () => {
     expect(s.descartadas[0].motivo).toMatch(/prateleira|não encontrad/i);
   });
 
-  it('continua descartando fundo sem valor nenhum', () => {
-    const s = uma('80000004\nVenda total via e-mail\nBGR Galpões Logísticos I Feeder FII');
+  it('continua descartando fundo sem valor nenhum (e sem "total")', () => {
+    const s = uma('80000004\nVenda via e-mail\nBGR Galpões Logísticos I Feeder FII');
     expect(s.ordens).toHaveLength(0);
     expect(s.descartadas).toHaveLength(1);
   });
@@ -753,5 +761,140 @@ describe('fundo da prateleira escrito pelo ticker', () => {
     const o = uma('1234567\nCompra\nPETR4 100').ordens[0];
     expect(o.fundo).toBeNull();
     expect(o.ticker.ticker).toBe('PETR4');
+  });
+});
+
+describe('pedido real de 20/10 — bolsa, fundos comprados e vendidos', () => {
+  // O pedido como chegou, com a conta trocada por uma fictícia.
+  const PEDIDO = [
+    '1234567',
+    '',
+    'V KLBN11 674qtds',
+    'C VULC3 R$ 11.800,00',
+    '',
+    'Vendas | Quantidade Total',
+    'PAAG11 - Pátria Crédito Agrícola FiAgro',
+    'BGR Galpões Logísticos I Feeder FII',
+    'TG Renda Urbana Feeder FII RL',
+    'Riza Malls Feeder FII RL',
+    '',
+    'V 590qtds XP Habitat Renda Imobiliária II Feeder FII RL',
+    '',
+    'Compras',
+    'AZ AZ Quest Panorama Data Centers FII RL    R$50.000,00',
+    'Riza Renda Imobiliária Feeder FII RL - Subclasse I    R$50.000,00',
+    'IMOV11 - Navi Hedge Fund    R$52.832,35 (Estoque cliente)',
+    'AZ-AXS Energia FIP-IE RL - Subclasse Sênior A1    R$52.000,00',
+    'XPHF11 - XP Hedge Fund    R$52.000,00 (Estoque cliente o que for possível)',
+    'Brio Renda Mais FII RL    R$52.000,00'
+  ].join('\n');
+
+  const s = () => uma(PEDIDO);
+  const ordem = (ativo) => s().ordens.find((o) => o.ativo === ativo);
+
+  it('não descarta nenhuma linha: são 13 ordens, na ordem do pedido', () => {
+    expect(s().descartadas).toEqual([]);
+    expect(s().ordens.map((o) => o.ativo)).toEqual([
+      'KLBN11',
+      'VULC3',
+      'PAAG11',
+      'BGR Galpões Logísticos I Feeder FII',
+      'TG Renda Urbana Feeder FII RL',
+      'Riza Malls Feeder FII RL',
+      'XP Habitat Renda Imobiliária II Feeder FII RL',
+      'AZ Quest Panorama Data Centers FII RL',
+      'Riza Renda Imobiliária Feeder FII RL - Subclasse I',
+      'IMOV11',
+      'AZ-AXS Energia FIP-IE RL - Subclasse Sênior A1',
+      'XPHF11',
+      'Brio Renda Mais FII RL'
+    ]);
+  });
+
+  it('674qtds, colado, é quantidade escrita: não dispara a cesta mista', () => {
+    expect(ordem('KLBN11')).toMatchObject({ operacao: 'V', quantidade: 674, financeiro: null, quantidadeSolta: false });
+    expect(ordem('VULC3')).toMatchObject({ operacao: 'C', quantidade: null, financeiro: 11800 });
+  });
+
+  it('os quatro fundos abaixo de "Vendas | Quantidade Total" são a venda do total', () => {
+    for (const ativo of ['PAAG11', 'BGR Galpões Logísticos I Feeder FII', 'TG Renda Urbana Feeder FII RL', 'Riza Malls Feeder FII RL']) {
+      expect(ordem(ativo)).toMatchObject({ operacao: 'V', quantidade: null, financeiro: null, total: true });
+      expect(ordem(ativo).fundo.situacao).toBe('exato');
+    }
+  });
+
+  it('a quantidade e a operação antes do nome do fundo são lidas', () => {
+    const habitat = ordem('XP Habitat Renda Imobiliária II Feeder FII RL');
+    expect(habitat).toMatchObject({ operacao: 'V', quantidade: 590, financeiro: null, total: false, quantidadeSolta: false });
+    expect(habitat.fundo.situacao).toBe('exato');
+  });
+
+  it('o número do nome do fundo (A1) não é número sobrando', () => {
+    const axs = ordem('AZ-AXS Energia FIP-IE RL - Subclasse Sênior A1');
+    expect(axs.numerosSobrando).toEqual([]);
+    expect(axs).toMatchObject({ operacao: 'C', financeiro: 52000 });
+  });
+
+  it('lê o Estoque cliente e o "o que for possível" de cada linha', () => {
+    expect(ordem('IMOV11')).toMatchObject({ estoque: 'clientes', oQueForPossivel: false, financeiro: 52832.35 });
+    expect(ordem('XPHF11')).toMatchObject({ estoque: 'clientes', oQueForPossivel: true, financeiro: 52000 });
+    expect(ordem('Brio Renda Mais FII RL')).toMatchObject({ estoque: null, oQueForPossivel: false });
+  });
+});
+
+describe('venda do total de fundo do secundário', () => {
+  it('"Venda total" na linha de cima vale para o fundo de baixo', () => {
+    const s = uma('80000004\nVenda total via e-mail\nBGR Galpões Logísticos I Feeder FII');
+    expect(s.descartadas).toEqual([]);
+    expect(s.ordens[0]).toMatchObject({ ativo: 'BGR Galpões Logísticos I Feeder FII', operacao: 'V', total: true });
+  });
+
+  it('"total" na própria linha também', () => {
+    const s = uma('1234567\nV - Riza Malls Feeder FII RL - total');
+    expect(s.ordens[0]).toMatchObject({ ativo: 'Riza Malls Feeder FII RL', operacao: 'V', total: true });
+  });
+
+  it('o valor escrito na linha vale mais que o total do cabeçalho', () => {
+    const s = uma('1234567\nVendas | Quantidade Total\nRiza Malls Feeder FII RL 100 cotas');
+    expect(s.ordens[0]).toMatchObject({ quantidade: 100, total: false });
+  });
+
+  it('o cabeçalho seguinte encerra o total', () => {
+    const s = uma('1234567\nVenda total\nRiza Malls Feeder FII RL\nCompras\nBrio Renda Mais FII RL');
+    expect(s.ordens).toHaveLength(1);
+    expect(s.descartadas.map((d) => d.linha)).toEqual(['Brio Renda Mais FII RL']);
+  });
+});
+
+describe('operação e quantidade na frente do nome do fundo', () => {
+  it('lê "V 590 cotas" e "C 10 qtds" antes do nome', () => {
+    const v = uma('1234567\nV 590 cotas XP Habitat Renda Imobiliária II Feeder FII RL').ordens[0];
+    expect(v).toMatchObject({ operacao: 'V', quantidade: 590, ativo: 'XP Habitat Renda Imobiliária II Feeder FII RL' });
+    const c = uma('1234567\nC 10 qtds Riza Malls Feeder FII RL').ordens[0];
+    expect(c).toMatchObject({ operacao: 'C', quantidade: 10, ativo: 'Riza Malls Feeder FII RL' });
+  });
+
+  it('"V" sem traço antes do nome, com a quantidade no fim', () => {
+    const o = uma('1234567\nV XP Habitat Renda Imobiliária II Feeder FII RL 590 cotas').ordens[0];
+    expect(o).toMatchObject({ operacao: 'V', quantidade: 590, ativo: 'XP Habitat Renda Imobiliária II Feeder FII RL' });
+  });
+
+  it('a palavra da operação na frente também sai do nome', () => {
+    const o = uma('1234567\nVender Riza Malls Feeder FII RL 100 cotas').ordens[0];
+    expect(o).toMatchObject({ operacao: 'V', quantidade: 100, ativo: 'Riza Malls Feeder FII RL' });
+  });
+});
+
+describe('Estoque XP e Estoque clientes escritos no pedido', () => {
+  it('"estoque XP" e "estoque clientes" com e sem parênteses', () => {
+    const s = uma(
+      '1234567\nCompra\nRiza Malls Feeder FII RL R$ 10.000,00 estoque XP\nBrio Renda Mais FII RL (estoque clientes) R$ 5.000,00'
+    );
+    expect(s.ordens[0]).toMatchObject({ estoque: 'xp', financeiro: 10000 });
+    expect(s.ordens[1]).toMatchObject({ estoque: 'clientes', financeiro: 5000, ativo: 'Brio Renda Mais FII RL' });
+  });
+
+  it('P2P também é estoque de clientes', () => {
+    expect(uma('1234567\nC IMOV11 R$ 1.000,00 p2p').ordens[0].estoque).toBe('clientes');
   });
 });

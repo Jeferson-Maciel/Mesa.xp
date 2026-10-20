@@ -514,8 +514,12 @@ try {
     await pagina.goto(pathToFileURL(distLocal).href + '#anotacoes');
     await pagina.waitForSelector('[data-an="editor"]');
     await pagina.keyboard.press('n');
-    await pagina.waitForSelector('[data-campo="titulo"]');
-    ok(await pagina.evaluate(() => document.activeElement?.dataset.campo === 'titulo'), 'N abre uma anotação nova com o cursor no título');
+    // O título já está na tela antes do N (a aba abre com uma anotação nova pronta); o foco vai para ele
+    // no quadro seguinte à troca de endereço. Olhar uma vez só, logo depois, falhava de vez em quando.
+    const focouNoTitulo = await pagina
+      .waitForFunction(() => document.activeElement?.dataset.campo === 'titulo', null, { timeout: 5000 })
+      .then(() => true, () => false);
+    ok(focouNoTitulo, 'N abre uma anotação nova com o cursor no título');
     await pagina.keyboard.type('Estorno do dia 25 <img src=x onerror=window.__xss=1>');
     await pagina.fill('[data-campo="texto"]', 'Ver https://hub.xpi.com.br/relatorios?conta=1234567 e javascript:alert(1)\n[ ] pedir o estorno');
     await pagina.fill('[data-campo="etiqueta"]', 'estorno');
@@ -561,7 +565,17 @@ try {
 
     await pagina.reload();
     await pagina.waitForSelector('.an-editor:not(.an-editor-nova)');
-    ok((await pagina.inputValue('[data-campo="titulo"]')).startsWith('Estorno do dia 25') && (await pagina.$$eval('.an-miniatura', (l) => l.length)) === 1, 'depois de recarregar, a anotação e o print continuam lá');
+    // O print vem do IndexedDB depois do editor: espera os dois, em vez de contar as miniaturas cedo.
+    const voltouInteira = await pagina
+      .waitForFunction(
+        () =>
+          document.querySelector('[data-campo="titulo"]')?.value.startsWith('Estorno do dia 25') &&
+          document.querySelectorAll('.an-miniatura').length === 1,
+        null,
+        { timeout: 5000 }
+      )
+      .then(() => true, () => false);
+    ok(voltouInteira, 'depois de recarregar, a anotação e o print continuam lá');
     ok(!(await pagina.$('.an-alerta')), 'o alerta já visto não volta ao recarregar');
 
     await pagina.click('[data-acao="resolver"]');

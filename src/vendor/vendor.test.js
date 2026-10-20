@@ -38,3 +38,24 @@ describe('SheetJS vendorizado', () => {
     expect(Object.keys(todas)).not.toContain('xlsx');
   });
 });
+
+/**
+ * A SnapDOM vem vendorizada e entra no robô do Hub, que tira com ela o print da cotação de venda na
+ * boleta (fase 2 do grilling de 20/10/2026). A boleta é feita de web components com shadow DOM, que o
+ * html-to-image não copia; a SnapDOM copia. É a 3.2.0 do npm (`@zumer/snapdom`, MIT), o build IIFE
+ * (`dist/snapdom.js`), byte a byte: o pacote baixado bateu com o shasum do registro
+ * (002f53be2125365642e33a6c87574c4cfa9c1c0a). Nada é buscado de CDN.
+ */
+const SHA256_DA_SNAPDOM = '0109b0986f5ed6eb8881c3da9f57f328cb194c8551a4b34dbcab3ff755811cab';
+
+describe('SnapDOM vendorizada', () => {
+  it('é a 3.2.0, idêntica à do npm', () => {
+    const fonte = readFileSync(caminho('./snapdom.js'));
+    expect(fonte.toString('utf8').slice(0, 40)).toContain('v3.2.0');
+    expect(createHash('sha256').update(fonte).digest('hex')).toBe(SHA256_DA_SNAPDOM);
+  });
+
+  it('vem com a licença MIT', () => {
+    expect(readFileSync(caminho('./LICENSE-snapdom.txt'), 'utf8')).toMatch(/MIT License[\s\S]*ZumerLab/);
+  });
+});

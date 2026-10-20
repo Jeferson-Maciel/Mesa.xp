@@ -416,6 +416,18 @@ export const validar = (solicitacao, formato) => {
         );
       }
 
+      // O print da cotação vai abaixo de "Condições:". O robô o tira na hora de copiar ou de abrir no
+      // Outlook (e ele vale um dia útil); sem o robô, cola-se à mão.
+      if (lida && venda.condicoes?.aberta && !o.print) {
+        diagnosticos.push(
+          aviso(
+            'venda-sem-print',
+            `${o.ativo}: o print da cotação sai na hora de copiar ou abrir no Outlook, pelo robô. Sem ele, cole o print abaixo de "Condições:".`,
+            i
+          )
+        );
+      }
+
       if (lida && venda.modalidade === 'clientes' && venda.condicoes?.aberta) {
         diagnosticos.push(
           aviso(

@@ -1791,3 +1791,28 @@ table.preview .seg-total.ativo {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* O print da cotação de venda, tirado pelo robô na boleta: a miniatura, para conferir antes de mandar,
+   com a hora e até quando vale (um dia útil). A imagem é a da boleta, como vai no e-mail. */
+.secundario-print {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  margin: var(--esp-2) 0 0;
+}
+
+.secundario-print img {
+  width: min(100%, 420px);
+  height: auto;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+}
+
+.secundario-print figcaption {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+.secundario-cabeca .btn-prints {
+  margin-left: auto;
+}

@@ -190,6 +190,16 @@ const venda = (ordem, indice) => {
       celula('Cliente recebe', v.conta ? `≈ ${esc(formatarFinanceiro(v.conta.total))}` : '—')
     : `<span class="secundario-falta secundario-largo" role="cell">o ${modalidade} não está comprando este fundo hoje${v.outraAberta ? ' — o outro estoque está aberto' : ''}</span>`;
 
+  // O print da cotação: a miniatura, com a hora e a validade; ou o aviso de que está sendo tirado.
+  const print = ordem.print
+    ? `<figure class="secundario-print">
+        <img src="${esc(ordem.print.png)}" alt="Print da cotação de ${esc(ordem.ativo)}" />
+        <figcaption>print das ${hora(ordem.print.em)} · vale até ${diaEHora(new Date(ordem.print.validaAte))}</figcaption>
+      </figure>`
+    : ordem.buscandoPrint
+      ? '<span class="secundario-falta buscando">tirando o print na boleta…</span>'
+      : '';
+
   return `
     <div class="secundario-fundo" data-ordem="${indice}" data-venda="pronto" data-modalidade="${v.modalidade}">
       ${nome}
@@ -206,6 +216,7 @@ const venda = (ordem, indice) => {
           ${celulas}
         </div>
       </div>
+      ${print}
     </div>`;
 };
 
@@ -218,9 +229,14 @@ export const renderSecundario = (solicitacao, { so = null } = {}) => {
   const comFundo = so === 'venda' ? [] : (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.secundario);
   const vendas = so === 'compra' ? [] : (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.venda);
   if (comFundo.length === 0 && vendas.length === 0) return '';
+  // "Tirar prints" adianta o que o Copiar e o Abrir no Outlook fazem: o print de cada venda cotada.
+  const semPrint = vendas.some(([o]) => o.venda.situacao === 'pronto' && o.venda.condicoes?.aberta && !o.print && !o.buscandoPrint);
   const blocoDeVendas = vendas.length
     ? `<div class="secundario secundario-vendas">
-        <div class="secundario-cabeca"><span class="secundario-titulo">Venda no secundário</span></div>
+        <div class="secundario-cabeca">
+          <span class="secundario-titulo">Venda no secundário</span>
+          ${semPrint ? '<button type="button" class="btn-confirmar btn-prints" data-campo="tirar-prints" data-valor="">Tirar prints</button>' : ''}
+        </div>
         ${vendas.map(([o, i]) => venda(o, i)).join('')}
       </div>`
     : '';

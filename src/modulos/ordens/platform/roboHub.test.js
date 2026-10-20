@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ErroDoRobo, VERSAO_DO_ROBO, criarRoboHub, scriptDoRobo } from './roboHub.js';
+import { readFileSync } from 'node:fs';
+import { ErroDoRobo, VERSAO_DO_ROBO, criarRoboHub, fonteDoRobo, scriptDoRobo } from './roboHub.js';
 
 /**
  * Uma janela de mentira com um robô de mentira: o que a página manda pelo postMessage chega ao
@@ -296,9 +297,28 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
     expect(scriptDoRobo).toContain("const MESAS_NO_AR = ['mesa-xp.vercel.app'];");
   });
 
+  // O código do robô, sem a SnapDOM: a biblioteca do print tem `fetch` e `headers` dentro (traz as
+  // imagens da própria página para o print) e é conferida à parte, byte a byte, no teste do vendor.
   it('não lê senha, token nem cabeçalho, e não chama a API por conta própria', () => {
-    expect(scriptDoRobo).not.toMatch(/localStorage|sessionStorage|document\.cookie|authorization|headers/i);
-    expect(scriptDoRobo).not.toMatch(/api-advisor\.xpi\.com\.br/);
+    expect(fonteDoRobo).not.toMatch(/localStorage|sessionStorage|document\.cookie|authorization|headers/i);
+    expect(fonteDoRobo).not.toMatch(/api-advisor\.xpi\.com\.br/);
+    expect(fonteDoRobo).not.toMatch(/\bfetch\(|XMLHttpRequest\(\)/);
+  });
+
+  it('o script copiado é o robô com a SnapDOM vendorizada no marcador, e nada mais', () => {
+    const snapdom = readFileSync(new URL('../../../vendor/snapdom.js', import.meta.url), 'utf8');
+    expect(fonteDoRobo).toContain('/*@@SNAPDOM@@*/');
+    expect(scriptDoRobo).not.toContain('/*@@SNAPDOM@@*/');
+    expect(scriptDoRobo).toBe(fonteDoRobo.replace('/*@@SNAPDOM@@*/', () => snapdom));
+  });
+
+  it('nunca clica em Próximo: os cliques do print estão numa lista fechada', () => {
+    expect(fonteDoRobo).toContain("const CLIQUES_PERMITIDOS = ['Total de cotas', 'Visualizar mais detalhes da operação'];");
+    // O código sem os comentários: fora do `clicarSo`, o robô só clica no Atualizar da Prateleira, e
+    // nenhum botão de seguir adiante aparece nele.
+    const codigo = fonteDoRobo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(codigo.match(/\.click\(\)/g)).toHaveLength(2);
+    expect(codigo).not.toMatch(/Próximo|Enviar|Confirmar|Vender/);
   });
 });
 
@@ -339,5 +359,84 @@ describe('as boletas de compra e de venda (robô 1.4.0)', () => {
     const resultados = await robo.pedirBoletas({ itens: [{ fundoId: FUNDO, conta: '1234567', lado: 'xyz' }, { fundoId: 'x', conta: '1', lado: 'vender' }] });
     expect(recebidas.at(-1).itens).toEqual([{ fundoId: FUNDO, conta: '1234567', lado: 'comprar' }]);
     expect(resultados[1].erro).toMatchObject({ codigo: 'invalido' });
+  });
+});
+
+describe('o print da cotação de venda e o corpo no Outlook (robô 1.5.0)', () => {
+  const FUNDO = 'ce52be97-05e7-40d9-887a-215d7711bfc7';
+  const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+
+  // Um robô de mentira que tira os prints (o segundo não bate a quantidade) e cola no Outlook.
+  const janelaComPrints = () => {
+    const { janela, recebidas, entregar } = janelaComRobo();
+    const original = janela.postMessage;
+    janela.postMessage = (data) => {
+      original(data);
+      if (data.origem !== 'mesa-xp') return;
+      queueMicrotask(() => {
+        if (data.tipo === 'pedir-prints') {
+          data.itens.forEach(({ fundoId }, i) =>
+            entregar({ origem: 'robo-hub', tipo: 'print', id: data.id, indice: i, fundoId, png: i === 1 ? null : PNG, quantidade: 10.5, em: 1, erro: i === 1 ? 'quantidade-diferente' : null })
+          );
+          entregar({ origem: 'robo-hub', tipo: 'prints-fim', id: data.id });
+        }
+        if (data.tipo === 'preparar-outlook' && typeof data.html === 'string') entregar({ origem: 'robo-hub', tipo: 'corpo-colado', id: data.id, ok: true, motivo: null });
+      });
+    };
+    return { janela, recebidas };
+  };
+
+  it('pede os prints com a quantidade (null é o total) e recebe cada um, ou o motivo', async () => {
+    const { janela, recebidas } = janelaComPrints();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const itens = [
+      { fundoId: FUNDO, conta: '1234567', quantidade: null },
+      { fundoId: FUNDO, conta: '7654321', quantidade: 590 }
+    ];
+    const [primeiro, segundo] = await robo.pedirPrints({ itens });
+    expect(recebidas.find((m) => m.tipo === 'pedir-prints').itens).toEqual(itens);
+    expect(primeiro).toMatchObject({ indice: 0, png: PNG, quantidade: 10.5 });
+    expect(segundo.erro).toMatchObject({ codigo: 'quantidade-diferente' });
+    expect(segundo.erro.message).toContain('não bateu');
+  });
+
+  it('quantidade zero, negativa ou em texto nem chega ao robô', async () => {
+    const { janela, recebidas } = janelaComPrints();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const resultados = await robo.pedirPrints({ itens: [{ fundoId: FUNDO, conta: '1234567', quantidade: 0 }, { fundoId: FUNDO, conta: '1234567', quantidade: '5' }] });
+    expect(resultados.map((r) => r.erro?.codigo)).toEqual(['invalido', 'invalido']);
+    expect(recebidas.some((m) => m.tipo === 'pedir-prints')).toBe(false);
+  });
+
+  it('deixa o corpo em HTML com o robô e espera ele dizer que colou', async () => {
+    const { janela, recebidas } = janelaComPrints();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const r = await robo.prepararOutlook({ html: '<div>oi</div>', texto: 'oi', inicio: 'oi' });
+    expect(r).toEqual({ ok: true, motivo: null });
+    const mandadas = recebidas.filter((m) => m.tipo === 'preparar-outlook');
+    // Primeiro a reserva, sem o HTML; depois o HTML, com o mesmo id.
+    expect(mandadas.map((m) => m.html)).toEqual([null, '<div>oi</div>']);
+    expect(mandadas[0].id).toBe(mandadas[1].id);
+    expect(mandadas[1].inicio).toBe('oi');
+  });
+
+  it('a reserva cancelada deixa o corpo de texto e responde que foi cancelada', async () => {
+    const { janela, recebidas } = janelaComPrints();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const reserva = robo.reservarOutlook({ inicio: 'oi' });
+    reserva.cancelar();
+    expect(await reserva.resposta).toEqual({ ok: false, motivo: 'cancelado' });
+    await umInstante();
+    expect(recebidas.some((m) => m.tipo === 'cancelar-outlook')).toBe(true);
+  });
+
+  it('sem o robô, o Outlook fica sem o corpo em HTML, com o motivo', async () => {
+    const { janela } = janelaComRobo({ instalado: false });
+    const robo = criarRoboHub({ janela });
+    expect(await robo.prepararOutlook({ html: '<div></div>', texto: '' })).toEqual({ ok: false, motivo: 'sem-robo' });
   });
 });

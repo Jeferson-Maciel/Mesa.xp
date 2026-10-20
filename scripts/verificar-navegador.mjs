@@ -610,7 +610,11 @@ try {
     const TERRAX = '11111111-2222-4333-8444-555555555555';
     // O preço exato de cada fundo, a menos de meia casa do arredondado da prateleira.
     const PRECOS = { [VGPR]: 7.996321, [IMOV]: 8.9961, [TERRAX]: 98.9961 };
-    const robo = readFileSync(join(raiz, 'src/modulos/ordens/platform/robo-hub.user.js'), 'utf8');
+    // O robô como a Mesa o entrega no "Copiar robô": com a SnapDOM vendorizada no marcador do print.
+    const robo = readFileSync(join(raiz, 'src/modulos/ordens/platform/robo-hub.user.js'), 'utf8').replace(
+      '/*@@SNAPDOM@@*/',
+      () => readFileSync(join(raiz, 'src/vendor/snapdom.js'), 'utf8')
+    );
 
     // A resposta da prateleira e a do pre-check, com números inventados — o repositório é público.
     const fundo = (id, fundName, unityPrice, desagio, minimo) => ({
@@ -809,6 +813,90 @@ try {
             };
             addEventListener('hashchange', rota);
             rota();
+
+            // A boleta de venda (robô 1.5.0), como a do Hub: o campo de quantidade num componente com
+            // shadow DOM e máscara de 8 casas (os dígitos entram pela direita); "Total de cotas"; a caixa
+            // do total e o detalhe que abre e fecha; e um Próximo que conta cliques — tem de ficar em zero.
+            if (!customElements.get('campo-falso')) {
+              customElements.define('campo-falso', class extends HTMLElement {
+                constructor() {
+                  super();
+                  this.attachShadow({ mode: 'open' }).innerHTML = '<input placeholder="Adicione a quantidade de cotas">';
+                }
+              });
+            }
+            const POSICOES_DA_PAGINA = ${JSON.stringify(Object.fromEntries(Object.entries(POSICOES).map(([k, v]) => [k, v.quotaQuantityAvailable])))};
+            const PUS_DA_PAGINA = ${JSON.stringify(PRECOS)};
+            window.__proximo = 0;
+            const montarVenda = (fundo) => {
+              document.getElementById('boleta-venda')?.remove();
+              const b = document.createElement('div');
+              b.id = 'boleta-venda';
+              b.innerHTML =
+                '<campo-falso></campo-falso><span class="total">Total de cotas</span>' +
+                '<div class="info"><div class="caixa"><span>Valor total da operação</span><span class="vt">R$ 0,00</span></div>' +
+                '<div class="det"><span>Visualizar mais detalhes da operação</span></div>' +
+                '<div class="linhas" hidden><div><span>Quantidade de cotas</span><span class="q">0</span></div>' +
+                '<div><span>Preço unitário da cota</span><span>R$ 9,00</span></div>' +
+                '<div><span>Valor total da operação</span><span class="vt2">R$ 0,00</span></div></div></div>' +
+                '<button class="proximo">Próximo</button>';
+              document.body.append(b);
+              const campo = b.querySelector('campo-falso').shadowRoot.querySelector('input');
+              const conta = () => {
+                const digitos = campo.value.replace(/\\D/g, '');
+                const n = digitos ? Number(digitos) / 1e8 : 0;
+                if (digitos) campo.value = n.toFixed(8).replace('.', ',');
+                const total = 'R$ ' + (n * (PUS_DA_PAGINA[fundo] || 9)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                b.querySelector('.vt').textContent = total;
+                b.querySelector('.vt2').textContent = total;
+                b.querySelector('.q').textContent = String(Number(n.toFixed(8)));
+              };
+              campo.addEventListener('input', conta);
+              b.querySelector('.total').addEventListener('click', () => {
+                campo.value = String(Math.round((POSICOES_DA_PAGINA[fundo] || 0) * 1e8));
+                conta();
+              });
+              b.querySelector('.det').addEventListener('click', () => {
+                b.querySelector('.linhas').hidden = !b.querySelector('.linhas').hidden;
+              });
+              b.querySelector('.proximo').addEventListener('click', () => { window.__proximo++; });
+            };
+            const boletaDaRota = () => {
+              const m = location.hash.match(/^#\\/secundario\\/vender\\/([0-9a-f-]{36})\\/(\\d+)$/);
+              if (m) montarVenda(m[1]);
+              else document.getElementById('boleta-venda')?.remove();
+            };
+            addEventListener('hashchange', boletaDaRota);
+            boletaDaRota();
+          </script></body>`
+      })
+    );
+
+    // O Outlook na web de mentira: o compor abre com o texto do endereço (o `body` do `mailto:` dentro
+    // do `to`, ou o solto) num corpo editável, uns instantes depois, e trata o colar como o editor dele:
+    // o HTML colado entra no corpo.
+    await contexto.route('https://outlook.cloud.microsoft/**', (r) =>
+      r.fulfill({
+        contentType: 'text/html',
+        body: `<!doctype html><meta charset=utf-8><title>Outlook</title><body>
+          <script>
+            const endereco = new URL(location.href);
+            const para = endereco.searchParams.get('to') || '';
+            const corpo = para.startsWith('mailto:') ? new URLSearchParams(para.split('?')[1] || '').get('body') || '' : endereco.searchParams.get('body') || '';
+            setTimeout(() => {
+              const editor = document.createElement('div');
+              editor.setAttribute('role', 'textbox');
+              editor.setAttribute('contenteditable', 'true');
+              editor.setAttribute('aria-label', 'Corpo da mensagem');
+              editor.innerText = corpo;
+              editor.addEventListener('paste', (e) => {
+                const html = e.clipboardData && e.clipboardData.getData('text/html');
+                if (!html) return;
+                e.preventDefault();
+                editor.innerHTML = html;
+              });
+              document.body.append(editor);
+            }, 400);
           </script></body>`
       })
     );
@@ -1043,6 +1131,41 @@ try {
     ok((await mesa.textContent('.saida[data-grupo="fundos-compra"] pre')).includes('Ativo: VGPR11;\nQuantidade: 500;'), '"Comprar o que houver" leva o e-mail às 500 cotas do Estoque clientes');
     const lojaDepois = JSON.stringify(loja);
     ok(!lojaDepois.includes('1234.5678') && !lojaDepois.includes('99999') && !lojaDepois.includes('1234567'), 'nem a posição nem a conta ficam no armazenamento do robô depois da busca');
+
+    // ── O print da cotação de venda e o corpo no Outlook (robô 1.5.0) ──
+    // "Tirar prints": o robô abre a boleta de venda de cada fundo, preenche a quantidade (o total), abre
+    // o detalhe e tira o print do painel.
+    await mesa.click('.secundario-vendas [data-campo="tirar-prints"]');
+    const prints = await mesa
+      .waitForFunction(() => document.querySelectorAll('.secundario-print img').length === 2, null, { timeout: 60_000 })
+      .then(() => true, () => false);
+    await terminarBusca();
+    const fontes = await mesa.$$eval('.secundario-print img', (l) => l.map((i) => i.getAttribute('src')));
+    ok(prints && fontes.every((f) => /^data:image\/png;base64,.{200,}/.test(f)), 'o robô tira o print da cotação de cada venda na boleta, e a miniatura aparece na venda');
+    ok((await mesa.textContent('.secundario-vendas')).includes('vale até'), 'cada print diz até quando vale (um dia útil)');
+    const roboAgora = await abaDoRobo();
+    ok((await roboAgora.evaluate(() => window.__proximo)) === 0, 'o robô nunca clica em Próximo na boleta');
+    ok((await roboAgora.evaluate(() => location.hash)) === '#/secundario/prateleira', 'depois dos prints, a aba do robô volta à Prateleira, sem a boleta preenchida');
+    const lojaDosPrints = JSON.stringify(loja);
+    ok(!lojaDosPrints.includes('data:image') && !lojaDosPrints.includes('1234567'), 'os prints e a conta não ficam no armazenamento do robô');
+
+    // Abrir no Outlook a venda: a janela abre já, com o texto; o robô no Outlook troca o corpo pelo HTML,
+    // com os prints abaixo de "Condições:".
+    const [janelaDoOutlook] = await Promise.all([
+      contexto.waitForEvent('page'),
+      mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]')
+    ]);
+    const colou = await janelaDoOutlook
+      .waitForFunction(() => document.querySelectorAll('[role="textbox"] img').length === 2, null, { timeout: 30_000 })
+      .then(() => true, () => false);
+    const corpoNoOutlook = await janelaDoOutlook.evaluate(() => document.querySelector('[role="textbox"]')?.innerText ?? '');
+    ok(colou && corpoNoOutlook.includes('Condições:') && corpoNoOutlook.trim().endsWith('atte,'), 'o robô põe no Outlook o e-mail de venda com os dois prints, abaixo de "Condições:"');
+    const avisouQueColou = await mesa
+      .waitForFunction(() => document.body.textContent.includes('Os prints da cotação estão no e-mail'), null, { timeout: 10_000 })
+      .then(() => true, () => false);
+    ok(avisouQueColou, 'a Mesa avisa que os prints estão no e-mail');
+    ok(!JSON.stringify(loja).includes('data:image'), 'o corpo em HTML não fica no armazenamento do robô depois de colado');
+    await janelaDoOutlook.close();
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

@@ -1,4 +1,5 @@
 import fonte from './robo-hub.user.js?raw';
+import snapdom from '../../../vendor/snapdom.js?raw';
 
 /**
  * A ponte entre o Ordens e o robô do Hub (`robo-hub.user.js`, que roda no Tampermonkey).
@@ -11,8 +12,19 @@ import fonte from './robo-hub.user.js?raw';
  * Prateleira à mão, a Mesa também fica com a cotação nova.
  */
 
-/** O script que a Mesa oferece para copiar e colar no Tampermonkey. */
-export const scriptDoRobo = fonte;
+/**
+ * O código do robô, como está no repositório — sem a SnapDOM. É ele que os testes de segurança leem
+ * (sem token, senha, cabeçalho nem API do Hub): a biblioteca tem `fetch` e `headers` dentro, para
+ * trazer as imagens da própria página para o print, e é conferida à parte, byte a byte.
+ */
+export const fonteDoRobo = fonte;
+
+/**
+ * O script que a Mesa oferece para copiar e colar no Tampermonkey: o robô, com a SnapDOM 3.2.0
+ * (`src/vendor/snapdom.js`) no marcador do print. A troca é feita por uma função, e não por um texto,
+ * para que um cifrão do código da biblioteca não seja lido como padrão de substituição.
+ */
+export const scriptDoRobo = fonte.replace('/*@@SNAPDOM@@*/', () => snapdom);
 
 /** A versão do robô que esta Mesa espera; outra versão instalada pede a cópia nova. */
 export const VERSAO_DO_ROBO = fonte.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? null;
@@ -23,7 +35,17 @@ const MENSAGENS = {
   'sem-boleta': 'a boleta não carregou na aba do robô — a conta é de um cliente seu?',
   'sem-cliente': 'o Hub não mostrou esse cliente — a conta é de um cliente seu?',
   'ficha-desconhecida': 'a ficha do cliente veio do Hub num formato que o robô não conhece — o robô precisa ser atualizado',
-  invalido: 'fundo ou conta numa forma que o robô não aceita'
+  invalido: 'fundo ou conta numa forma que o robô não aceita',
+  // O print da cotação de venda (1.5.0): cada passo que pode não sair, com o que a pessoa vê.
+  'sem-campo': 'a boleta de venda não mostrou o campo de quantidade',
+  'sem-total': 'a boleta de venda não mostrou o botão "Total de cotas"',
+  'sem-conta': 'a boleta não fez a conta da venda com a quantidade',
+  'sem-detalhe': 'o detalhe da operação não abriu na boleta',
+  'quantidade-diferente': 'a quantidade da boleta não bateu com a do pedido — o print não foi tirado',
+  'sem-regiao': 'não achei o painel do valor da operação na boleta',
+  'sem-snapdom': 'o robô veio sem a biblioteca do print — copie o robô de novo',
+  'falhou-o-print': 'o print falhou na aba do robô',
+  'sem-print': 'o robô não trouxe o print'
 };
 
 export class ErroDoRobo extends Error {
@@ -55,6 +77,7 @@ export const criarRoboHub = ({ janela = window } = {}) => {
   const aoCotar = new Set();
   const pendentes = new Map();
   const lotes = new Map();
+  const lotesDePrints = new Map();
 
   const enviar = (mensagem) => janela.postMessage({ origem: 'mesa-xp', ...mensagem }, '*');
   const avisarMudanca = () => aoMudar.forEach((fn) => fn());
@@ -84,6 +107,20 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     const lote = mensagem.id ? lotes.get(mensagem.id) : null;
     if (lote && (mensagem.tipo === 'cota' || mensagem.tipo === 'cota-falhou')) lote.chegou(mensagem);
     if (lote && mensagem.tipo === 'cotas-fim') lote.terminar();
+
+    // Os prints de um pedido, um a um, e o fim.
+    const loteDePrints = mensagem.id ? lotesDePrints.get(mensagem.id) : null;
+    if (loteDePrints && mensagem.tipo === 'print') loteDePrints.chegou(mensagem);
+    if (loteDePrints && mensagem.tipo === 'prints-fim') loteDePrints.terminar();
+
+    // O Outlook disse se colou o corpo do e-mail.
+    if (mensagem.tipo === 'corpo-colado') {
+      const pendente = mensagem.id ? pendentes.get(mensagem.id) : null;
+      if (!pendente) return;
+      clearTimeout(pendente.relogio);
+      pendentes.delete(mensagem.id);
+      pendente.resolver({ ok: mensagem.ok === true, motivo: mensagem.motivo ?? null });
+    }
 
     if (mensagem.tipo === 'registro') {
       const pendente = mensagem.id ? pendentes.get(mensagem.id) : null;
@@ -228,6 +265,115 @@ export const criarRoboHub = ({ janela = window } = {}) => {
      *   aoChegar?: (resultado: ResultadoDaBoleta) => void, prazo?: number}} pedido
      * @returns {Promise<ResultadoDaBoleta[]>} na ordem dos itens
      */
+    /**
+     * Pede ao robô (1.5.0) o print da cotação de venda de cada fundo: ele abre a boleta de venda para
+     * a conta, preenche a quantidade (o "Total de cotas", com `quantidade: null`, ou a do pedido),
+     * abre o detalhe da operação, confere a quantidade e tira o print do painel. Cada um chega assim
+     * que sai (`aoChegar`); nunca falha inteiro.
+     *
+     * @param {{itens: Array<{fundoId: string, conta: string|number, quantidade: number|null}>,
+     *   aoChegar?: (r: {indice: number, fundoId: string, png?: string, quantidade?: number|null,
+     *   em?: number, erro?: ErroDoRobo}) => void, prazo?: number}} pedido
+     */
+    pedirPrints({ itens, aoChegar = () => {}, prazo = 45000 }) {
+      const resultados = new Array(itens.length).fill(null);
+      const validos = [];
+      itens.forEach((item, indice) => {
+        const quantidadeBoa = item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0);
+        if (FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)) && quantidadeBoa) {
+          validos.push({ fundoId: item.fundoId, conta: String(item.conta), quantidade: item.quantidade, indice });
+        } else resultados[indice] = { indice, fundoId: item.fundoId, erro: new ErroDoRobo('invalido') };
+      });
+      if (validos.length === 0) return Promise.resolve(resultados);
+      if (versao === null) {
+        for (const v of validos) resultados[v.indice] = { indice: v.indice, fundoId: v.fundoId, erro: new ErroDoRobo('sem-robo') };
+        return Promise.resolve(resultados);
+      }
+
+      const id = novoId();
+      return new Promise((resolver) => {
+        let relogio = null;
+        const terminar = () => {
+          clearTimeout(relogio);
+          lotesDePrints.delete(id);
+          for (const v of validos) {
+            if (!resultados[v.indice]) resultados[v.indice] = { indice: v.indice, fundoId: v.fundoId, erro: new ErroDoRobo('sem-resposta') };
+          }
+          resolver(resultados);
+        };
+        const esperar = () => {
+          clearTimeout(relogio);
+          relogio = setTimeout(terminar, prazo);
+        };
+        lotesDePrints.set(id, {
+          chegou(mensagem) {
+            const item = Number.isInteger(mensagem.indice) ? validos[mensagem.indice] : null;
+            if (!item || item.fundoId !== mensagem.fundoId || resultados[item.indice]) return;
+            const png = typeof mensagem.png === 'string' && /^data:image\/png;base64,/.test(mensagem.png) ? mensagem.png : null;
+            const resultado =
+              png && !mensagem.erro
+                ? { indice: item.indice, fundoId: item.fundoId, png, quantidade: mensagem.quantidade ?? null, em: mensagem.em ?? Date.now() }
+                : { indice: item.indice, fundoId: item.fundoId, erro: new ErroDoRobo(mensagem.erro || 'sem-print') };
+            resultados[item.indice] = resultado;
+            aoChegar(resultado);
+            if (validos.every((v) => resultados[v.indice])) terminar();
+            else esperar();
+          },
+          terminar
+        });
+        esperar();
+        enviar({ tipo: 'pedir-prints', id, itens: validos.map(({ fundoId, conta, quantidade }) => ({ fundoId, conta, quantidade })) });
+      });
+    },
+
+    /**
+     * Deixa com o robô (1.5.0) o corpo em HTML do e-mail que a Mesa vai abrir no Outlook, e espera
+     * ele dizer se colou. `inicio` é o começo do texto que vai no link: é por ele que o robô sabe que
+     * o e-mail aberto é este. Sem resposta no prazo, vem `{ok: false, motivo: 'sem-resposta'}`.
+     *
+     * @returns {Promise<{ok: boolean, motivo: string|null}>}
+     */
+    prepararOutlook({ html, texto, inicio, prazo = 40000 }) {
+      const reserva = this.reservarOutlook({ texto, inicio, prazo });
+      if (!reserva) return Promise.resolve({ ok: false, motivo: 'sem-robo' });
+      reserva.mandar(html);
+      return reserva.resposta;
+    },
+
+    /**
+     * Reserva o e-mail que a Mesa vai abrir no Outlook, antes de o HTML ficar pronto: a janela tem de
+     * abrir no clique (senão o navegador a bloqueia), e os prints levam segundos. O robô no Outlook
+     * espera o HTML (\`mandar\`), com o mesmo id; \`cancelar\` deixa o corpo de texto como está.
+     *
+     * @returns {null | {resposta: Promise<{ok: boolean, motivo: string|null}>, mandar: (html: string) => void,
+     *   cancelar: () => void}}
+     */
+    reservarOutlook({ texto = '', inicio = '', prazo = 120000 } = {}) {
+      if (versao === null) return null;
+      const id = novoId();
+      const resposta = new Promise((resolver) => {
+        const desistir = () => {
+          pendentes.delete(id);
+          resolver({ ok: false, motivo: 'sem-resposta' });
+        };
+        pendentes.set(id, { resolver, rejeitar: desistir, relogio: setTimeout(desistir, prazo) });
+      });
+      enviar({ tipo: 'preparar-outlook', id, html: null, texto, inicio });
+      return {
+        resposta,
+        mandar: (html) => enviar({ tipo: 'preparar-outlook', id, html, texto, inicio }),
+        cancelar: () => {
+          enviar({ tipo: 'cancelar-outlook', id });
+          const pendente = pendentes.get(id);
+          if (pendente) {
+            clearTimeout(pendente.relogio);
+            pendentes.delete(id);
+            pendente.resolver({ ok: false, motivo: 'cancelado' });
+          }
+        }
+      };
+    },
+
     pedirBoletas({ itens, aoChegar = () => {}, prazo = 40000 }) {
       return pedirLote(
         itens.map(({ fundoId, conta, lado }) => ({ fundoId, conta, lado: lado === 'vender' ? 'vender' : 'comprar' })),

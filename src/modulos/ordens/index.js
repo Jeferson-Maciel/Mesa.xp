@@ -7,6 +7,7 @@ import { ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
 import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
 import { vendaDaOrdem } from './core/secundario/venda.js';
+import { umDiaUtilDepois } from './core/util/diasUteis.js';
 import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
 import { copiar, colar } from './platform/clipboard.js';
@@ -73,7 +74,10 @@ export const iniciarOrdens = (secao) => {
     assessores: guardadoDosAssessores.carregar(),
     // As boletas do secundário lidas pelo robô (`core/secundario/boletaDoHub.js`): as de venda trazem a
     // posição do cliente, e por isso ficam só na memória desta página, como o cliente.
-    boletas: {}
+    boletas: {},
+    // Os prints da cotação de venda, tirados pelo robô na boleta: valem um dia útil, e também ficam
+    // só na memória da página.
+    prints: new Map()
   };
 
   const formatosDe = (indice) => estado.escolhaManual ?? estado.detectados[indice] ?? [];
@@ -193,8 +197,67 @@ export const iniciarOrdens = (secao) => {
         ordem.secundario = secundarioDaOrdem(ordem, { ...contexto, semRoa: s.semRoa === true });
         // A venda: a posição e a cotação da boleta de venda, pela conta do cartão.
         ordem.venda = vendaDaOrdem(ordem, { estoque: estado.estoque, boletas: estado.boletas, conta: s.conta, hoje });
+        ordem.print = printValido(s.conta, ordem, hoje);
       }
+      s.prints = printsDa(s);
     }
+  }
+
+  /* ── Os prints da cotação de venda ──────────────────────────────────────────────────── */
+
+  // Um print é da conta, do fundo e da quantidade: o total, ou a quantidade escrita.
+  const chaveDoPrint = (conta, ordem) => `${ordem.venda?.fundoId}|${conta}|${ordem.total ? 'total' : ordem.quantidade}`;
+  const mesmoNumero = (a, b) => typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 1e-7;
+
+  /**
+   * O print de uma venda, se ainda vale: até o mesmo horário do próximo dia útil (decisão do operador
+   * em 20/10/2026), e com a quantidade que a venda tem agora — a posição pode ter mudado.
+   */
+  function printValido(conta, ordem, hoje = new Date()) {
+    if (!ordem.venda || ordem.venda.situacao !== 'pronto') return null;
+    const print = estado.prints.get(chaveDoPrint(conta, ordem));
+    if (!print || hoje > print.validaAte) return null;
+    const esperada = ordem.total ? ordem.venda.quantidade : ordem.quantidade;
+    return mesmoNumero(print.quantidade, esperada) ? print : null;
+  }
+
+  // O print de cada venda, para o e-mail em HTML: ordem → imagem.
+  const printsDa = (s) => new Map(s.ordens.filter((o) => o.print).map((o) => [o, o.print.png]));
+
+  /**
+   * Os prints que faltam numa solicitação, pelo robô: ele abre a boleta de venda, preenche a
+   * quantidade, abre o detalhe da operação, confere a quantidade e tira o print. Cada um entra no
+   * cartão assim que sai.
+   *
+   * @returns {Promise<string[]>} os motivos dos que não saíram
+   */
+  async function garantirPrints(solicitacao) {
+    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) return [];
+    calcularSecundario([solicitacao]);
+    const faltam = solicitacao.ordens.filter(
+      (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print && !o.buscandoPrint
+    );
+    if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
+
+    for (const o of faltam) o.buscandoPrint = true;
+    marcarBusca('tirando os prints na boleta…');
+    anotar('pediu os prints', { quantos: faltam.length });
+    const motivos = [];
+    await robo.pedirPrints({
+      itens: faltam.map((o) => ({ fundoId: o.venda.fundoId, conta: solicitacao.conta, quantidade: o.total ? null : o.quantidade })),
+      aoChegar: (r) => {
+        const o = faltam[r.indice];
+        o.buscandoPrint = false;
+        if (r.png) {
+          estado.prints.set(chaveDoPrint(solicitacao.conta, o), { png: r.png, quantidade: r.quantidade, em: r.em, validaAte: umDiaUtilDepois(r.em) });
+        } else motivos.push(`${o.ativo}: ${r.erro?.message ?? 'o print não saiu'}`);
+        render();
+      }
+    });
+    for (const o of faltam) o.buscandoPrint = false;
+    marcarBusca('');
+    if (motivos.length > 0) aviso(`Sem o print de ${motivos.join('; ')}.`, { tipo: 'erro' });
+    return motivos;
   }
 
   /**
@@ -289,6 +352,7 @@ export const iniciarOrdens = (secao) => {
     // do Estoque clientes sem a boleta lida pede a boleta.
     if (segmento?.dataset.campo === 'atualizar-cotacoes') return atualizarCotacoes();
     if (segmento?.dataset.campo === 'cotar-estoque-clientes') return buscarBoletas({ forcar: true });
+    if (segmento?.dataset.campo === 'tirar-prints') return garantirPrints(solicitacao);
     if (segmento) {
       aplicarEdicao(solicitacao, segmento.dataset.campo, segmento.dataset.valor, indiceDo(segmento, 'ordem'));
       render();
@@ -336,6 +400,14 @@ export const iniciarOrdens = (secao) => {
       const cliente = solicitacao.cliente?.situacao === 'achado' ? solicitacao.cliente : null;
       const enderecos = { para: cliente?.email ?? null, cc: cliente?.assessor.email ?? null };
       const comCorpo = enderecoDoEmail({ ...enderecos, corpo: saida.texto });
+
+      // Com o robô, o corpo em HTML entra no e-mail aberto: os prints da venda (tirados agora, se
+      // faltam) e a tabela em grade. A janela abre já, no clique — senão o navegador a bloqueia —, e o
+      // robô no Outlook espera o HTML. Sem o robô, fica o corpo de texto do endereço.
+      const comRobo = robo.presente && robo.versao === VERSAO_DO_ROBO && comCorpo;
+      const comPrints = comRobo && formato === 'email' && grupo === 'fundos-venda';
+      const comGrade = comRobo && formato === 'auditoria' && saida.html;
+      const reserva = comPrints || comGrade ? robo.reservarOutlook({ texto: saida.texto, inicio: saida.texto.split('\n')[0] }) : null;
       if (!comCorpo && !(await copiar(saida.texto, saida.html))) {
         return aviso('Não consegui copiar o e-mail para colar no Outlook.', { tipo: 'erro' });
       }
@@ -349,8 +421,25 @@ export const iniciarOrdens = (secao) => {
         enderecos.para && !enderecos.cc && 'sem o assessor em cópia'
       ].filter(Boolean);
       const resto = faltou.length ? ` — ${faltou.join('; ')}` : '';
-      if (comCorpo) aviso(`E-mail aberto no Outlook${resto}.`);
-      else aviso(`O texto é longo para ir junto: cole-o no corpo do e-mail (Ctrl+V)${resto}.`);
+      if (reserva) {
+        aviso(`E-mail aberto no Outlook${resto}. ${comPrints ? 'O robô vai pôr os prints da cotação no corpo.' : 'O robô vai pôr a tabela em grade no corpo.'}`);
+        (async () => {
+          if (comPrints) await garantirPrints(solicitacao);
+          const comHtml = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo });
+          if (comHtml?.html) reserva.mandar(comHtml.html);
+          else reserva.cancelar();
+          const r = await reserva.resposta;
+          if (r.ok) aviso(comPrints ? 'Os prints da cotação estão no e-mail, abaixo de "Condições:". Confira e envie.' : 'A tabela em grade está no e-mail. Confira e envie.');
+          else if (r.motivo !== 'cancelado') {
+            aviso(
+              `O robô não pôs o corpo em HTML no Outlook (${r.motivo}). Use o Copiar deste e-mail e cole no corpo com Ctrl+V.`,
+              { tipo: 'erro' }
+            );
+          }
+        })();
+      } else if (comCorpo) {
+        aviso(`E-mail aberto no Outlook${resto}.${formato === 'email' && grupo === 'fundos-venda' ? ' Cole o print de cada cotação abaixo de "Condições:".' : ''}`);
+      } else aviso(`O texto é longo para ir junto: cole-o no corpo do e-mail (Ctrl+V)${resto}.`);
 
       if (outlookBotao) {
         outlookBotao.classList.add('copiado');
@@ -375,6 +464,7 @@ export const iniciarOrdens = (secao) => {
       // copiar — com a conta e a idade da cotação de agora, porque a página pode ter ficado aberta
       // —, para o texto à vista ser o copiado; o botão novo é que recebe o visto.
       if (roa) aplicarEdicao(solicitacao, roa === 'zerado' ? 'roa-zerado' : 'roa-maximo', '');
+      if (formato === 'email' && grupo === 'fundos-venda') await garantirPrints(solicitacao);
       renderSaidasDe(iSolicitacao);
       copiarBotao = container.querySelector(
         `[data-solicitacao="${iSolicitacao}"] [data-copiar="${formato}"]${roa ? `[data-roa="${roa}"]` : ''}${grupo ? `[data-grupo="${grupo}"]` : ''}`

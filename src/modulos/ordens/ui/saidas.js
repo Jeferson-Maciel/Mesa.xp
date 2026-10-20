@@ -83,7 +83,7 @@ const pendentesDe = (diagnosticos, confirmados, grupo) =>
  * @returns {{texto: string, html: string|null}|null} a saída de um formato, ou null enquanto
  * ele estiver bloqueado.
  */
-export const gerar = (solicitacao, formato, confirmados, { grupo = null, prints } = {}) => {
+export const gerar = (solicitacao, formato, confirmados, { grupo = null, prints = solicitacao.prints } = {}) => {
   const doGrupo = grupoDaSaida(solicitacao, formato, grupo);
   const parte = recorte(solicitacao, doGrupo, formato);
   if (parte.ordens.length === 0) return null;
@@ -204,7 +204,7 @@ const renderSemBolsa = (formato) => `
  * @param {Set<string>} confirmados  códigos de bloqueio já confirmados nesta solicitação
  * @returns {string} HTML da área de diagnósticos e saídas
  */
-export const renderSaidas = (solicitacao, formatos, confirmados, { prints } = {}) => {
+export const renderSaidas = (solicitacao, formatos, confirmados, { prints = solicitacao.prints } = {}) => {
   // Sem formato escolhido, ou sem ordem nenhuma, a área é a de sempre: o secundário e o que falta.
   if (formatos.length === 0) {
     return renderSecundario(solicitacao) + '<div class="empty-state pequeno"><p>Escolha um formato de saída acima.</p></div>';

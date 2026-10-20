@@ -525,8 +525,12 @@ describe('venda de fundo do secundário', () => {
       ordens: [ordem({ ativo: 'Riza Malls Feeder FII RL', ticker: null, fundo, operacao: 'V', quantidade: 100, venda: lida(vendaExtra), ...extra })]
     });
 
-  it('a venda conferida com a posição não acusa nada', () => {
-    expect(codigos(venda())).toEqual([]);
+  it('a venda conferida com a posição só avisa que o print ainda vai ser tirado', () => {
+    expect(codigos(venda())).toEqual(['venda-sem-print']);
+  });
+
+  it('com o print tirado, não acusa nada', () => {
+    expect(codigos(venda({ print: { png: 'data:image/png;base64,AAAA' } }))).toEqual([]);
   });
 
   it('o total sem a posição bloqueia, sem confirmação: falta a quantidade', () => {

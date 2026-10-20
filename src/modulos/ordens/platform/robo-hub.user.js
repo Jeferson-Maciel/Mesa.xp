@@ -1,10 +1,13 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.4.0
+// @version      1.5.0
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, e na ficha dele o nome, o e-mail e o assessor, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
+// @match        https://outlook.cloud.microsoft/*
+// @match        https://outlook.office.com/*
+// @match        https://outlook.office365.com/*
 // @match        file:///*/mesa-xp/dist/index.html
 // @match        http://localhost/*
 // @match        http://127.0.0.1/*
@@ -38,6 +41,11 @@
  *                          (#/<conta em base64>) e lê a resposta de customer-info
  *   aba da Mesa  ←── só o nome, o e-mail e o assessor do cliente
  *
+ *   aba da Mesa   pede ──→ o e-mail novo do Outlook na web que a Mesa acabou de abrir (1.5.0): o
+ *                          robô troca o corpo de texto pelo HTML — o print de cada cotação de venda
+ *                          logo abaixo de "Condições:", ou a tabela em grade —, como se fosse colado.
+ *                          Não envia nada: quem confere e clica em Enviar é a pessoa
+ *
  *   São duas abas porque a Posição Consolidada é outro módulo do Hub: ir e voltar da Prateleira
  *   recarregaria a página inteira a cada cliente, e a Prateleira deixaria de estar pronta para a
  *   cotação. Na aba de clientes, trocar de cliente é só trocar o fim do endereço.
@@ -46,7 +54,11 @@
  *  - não lê senha, token nem cabeçalho, não chama a API por conta própria e não manda nada para
  *    fora do Chrome: só escuta o `fetch` do próprio app e muda a rota da aba dele;
  *  - na boleta, não digita nem clica em nada: abrir o endereço já carrega o cliente. Nunca passa da
- *    etapa 1. Vai de uma boleta direto para a próxima — voltar à Prateleira entre elas custava uns
+ *    etapa 1. A exceção (1.5.0) é o print da cotação de venda, pedido pela Mesa: na boleta de venda o
+ *    robô preenche a quantidade (o botão "Total de cotas", ou a quantidade do pedido no campo) e abre
+ *    "Visualizar mais detalhes da operação", e só isso — um clique em qualquer outra coisa é recusado
+ *    (`clicarSo`), e Próximo nunca. Confere que a quantidade do painel é a pedida antes de tirar o
+ *    print, apaga o campo e sai da boleta. Vai de uma boleta direto para a próxima — voltar à Prateleira entre elas custava uns
  *    4 s de desenho, mais 2 a 3 s da lista que ela baixa de novo — e volta uma vez só, no fim. Se a
  *    troca direta não disparar o pre-check, passa pela Prateleira entre as boletas, como antes;
  *  - do pre-check da boleta que ele abriu saem o preço e o dia da cota, os estoques do fundo (Estoque
@@ -80,7 +92,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.4.0';
+  const VERSAO = '1.5.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -464,6 +476,187 @@
     const ondeEsta = () =>
       papel === 'clientes' ? 'ficha do cliente' : naPrateleira() ? 'Prateleira' : naBoleta() ? 'boleta' : 'outra página';
 
+    /* ── O print da cotação de venda (1.5.0) ─────────────────────────────────────────────
+       A boleta do Hub é feita de web components (Soma) com shadow DOM aberto: a busca desce por eles.
+       O print é o painel do fim da etapa 1 — a caixa "Valor total da operação" e "Visualizar mais
+       detalhes da operação" aberto —, que só aparece com a quantidade preenchida. É o que vai no
+       e-mail de auditoria de venda, logo abaixo de "Condições:" (decidido com o operador em 20/10). */
+
+    // A SnapDOM (src/vendor/snapdom.js, 3.2.0, MIT) entra no marcador abaixo quando a Mesa monta o
+    // "Copiar robô" (roboHub.js). Só é carregada na aba do robô, no primeiro print.
+    let snapdom = null;
+    const carregarSnapdom = () => {
+      if (snapdom) return snapdom;
+      try {
+        /*@@SNAPDOM@@*/
+      } catch {
+        /* sem a biblioteca, o print falha com o motivo */
+      }
+      snapdom = (typeof window !== 'undefined' && window.snapdom) || pagina.snapdom || null;
+      return snapdom;
+    };
+
+    // Todos os elementos da página na ordem do documento, descendo pelos shadow roots abertos.
+    const elementosDe = (raiz) => {
+      const achados = [];
+      const visitar = (no) => {
+        if (no.nodeType === 1) achados.push(no);
+        if (no.shadowRoot) for (const filho of no.shadowRoot.children) visitar(filho);
+        for (const filho of no.children || []) visitar(filho);
+      };
+      visitar(raiz);
+      return achados;
+    };
+    const textoProprio = (el) =>
+      [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ').replace(/\s+/g, ' ').trim();
+    const visivel = (el) => el.getClientRects().length > 0;
+    // O valor de um rótulo: o primeiro texto depois dele que não é outro rótulo.
+    const valorDoRotulo = (todos, rotulo, padrao) => {
+      const i = todos.indexOf(rotulo);
+      return i < 0 ? null : todos.slice(i + 1, i + 40).find((el) => padrao.test(textoProprio(el))) || null;
+    };
+    const paiComposto = (el) => el.parentElement || (el.parentNode && el.parentNode.host) || null;
+    const ancestrais = (el) => {
+      const lista = [];
+      for (let a = el; a; a = paiComposto(a)) lista.push(a);
+      return lista;
+    };
+    const ancestralComum = (a, b) => {
+      const deA = new Set(ancestrais(a));
+      return ancestrais(b).find((x) => deA.has(x)) || null;
+    };
+    // O número da tela: "54.36585" no painel, "54,36585000" no campo, "R$ 1.234,56" no total.
+    const numeroDaTela = (texto) => {
+      const t = String(texto || '').replace(/[^\d.,]/g, '');
+      if (!t) return null;
+      const brasileiro = t.includes(',');
+      const n = Number(brasileiro ? t.replace(/\./g, '').replace(',', '.') : t);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    // O robô só clica no que está nesta lista — e no que estiver em volta do rótulo, para o clique
+    // chegar ao componente. Próximo, Cancelar, Vender e a caixa de notificação ficam de fora.
+    const CLIQUES_PERMITIDOS = ['Total de cotas', 'Visualizar mais detalhes da operação'];
+    const clicarSo = (el) => {
+      if (!el || !CLIQUES_PERMITIDOS.includes(textoProprio(el))) return false;
+      el.click();
+      return true;
+    };
+
+    const preencher = (campo, texto) => {
+      const definir = Object.getOwnPropertyDescriptor(pagina.HTMLInputElement.prototype, 'value').set;
+      campo.focus();
+      definir.call(campo, texto);
+      campo.dispatchEvent(new pagina.InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: texto }));
+      campo.dispatchEvent(new pagina.Event('change', { bubbles: true, composed: true }));
+    };
+    const campoDeQuantidade = () => {
+      const campos = elementosDe(document).filter((el) => el.tagName === 'INPUT');
+      return (
+        campos.find((el) => /quantidade de cotas/i.test(el.placeholder || '')) ||
+        campos.find((el) => /^quantidade$/i.test((el.getAttribute('aria-label') || el.name || '').trim())) ||
+        null
+      );
+    };
+    const mesmoNumero = (a, b) => a !== null && b !== null && Math.abs(a - b) < 1e-7;
+
+    /**
+     * O print de uma venda, na boleta de venda que está aberta: `quantidade` é a do pedido, ou null
+     * para o total da posição. Devolve o PNG (data URL) e a quantidade que o painel mostrou.
+     */
+    const tirarPrint = async ({ quantidade, posicao }) => {
+      const campo = await esperar(campoDeQuantidade, 10000);
+      if (!campo) return { erro: 'sem-campo' };
+
+      if (quantidade === null) {
+        const total = elementosDe(document).find((el) => textoProprio(el) === 'Total de cotas');
+        if (!clicarSo(total)) return { erro: 'sem-total' };
+      } else {
+        // A máscara do campo tem 8 casas, e os dígitos entram pela direita: 590 cotas são 59000000000.
+        preencher(campo, String(Math.round(quantidade * 1e8)));
+        if (!mesmoNumero(numeroDaTela(campo.value), quantidade)) preencher(campo, quantidade.toFixed(8).replace('.', ','));
+      }
+      const esperada = quantidade === null ? posicao : quantidade;
+      registrar('preencheu a quantidade', { total: quantidade === null });
+
+      // O total da operação deixa de ser zero quando a boleta faz a conta.
+      const rotuloDoTotal = () => elementosDe(document).find((el) => textoProprio(el) === 'Valor total da operação');
+      const fez = await esperar(() => {
+        const todos = elementosDe(document);
+        const valor = rotuloDoTotal() && valorDoRotulo(todos, rotuloDoTotal(), /^R\$/);
+        return valor && numeroDaTela(textoProprio(valor)) > 0 ? valor : null;
+      }, 10000);
+      if (!fez) return { erro: 'sem-conta' };
+
+      // Abre o detalhe, se estiver fechado.
+      const linhaDaQuantidade = () => elementosDe(document).find((el) => textoProprio(el) === 'Quantidade de cotas' && visivel(el));
+      if (!linhaDaQuantidade()) {
+        const detalhe = elementosDe(document).find((el) => textoProprio(el) === 'Visualizar mais detalhes da operação');
+        clicarSo(detalhe);
+      }
+      const rotuloDaQuantidade = await esperar(linhaDaQuantidade, 5000);
+      if (!rotuloDaQuantidade) return { erro: 'sem-detalhe' };
+
+      // A quantidade do painel tem de ser a esperada: sem isso, nada de print.
+      const todos = elementosDe(document);
+      const quantidadeNoPainel = numeroDaTela(textoProprio(valorDoRotulo(todos, rotuloDaQuantidade, /^[\d.,]+$/) || { childNodes: [] }));
+      if (esperada !== null && esperada !== undefined && !mesmoNumero(quantidadeNoPainel, esperada)) {
+        registrar('a quantidade do painel não bateu');
+        return { erro: 'quantidade-diferente' };
+      }
+
+      // A região: da caixa do total ao último valor do detalhe, recortada no lugar exato.
+      const rotulosDoTotal = todos.filter((el) => textoProprio(el) === 'Valor total da operação' && visivel(el));
+      const primeiro = rotulosDoTotal[0];
+      const ultimo = valorDoRotulo(todos, rotulosDoTotal[rotulosDoTotal.length - 1], /^R\$/);
+      const regiao = primeiro && ultimo ? ancestralComum(primeiro, ultimo) : null;
+      if (!regiao) return { erro: 'sem-regiao' };
+
+      const biblioteca = carregarSnapdom();
+      if (!biblioteca) return { erro: 'sem-snapdom' };
+      const tela = await biblioteca.toCanvas(regiao, { scale: 2, backgroundColor: '#ffffff' });
+      const caixa = regiao.getBoundingClientRect();
+      const escala = tela.width / Math.max(1, caixa.width);
+      const topo = Math.max(0, (primeiro.getBoundingClientRect().top - caixa.top - 28) * escala);
+      const fim = Math.min(tela.height, (ultimo.getBoundingClientRect().bottom - caixa.top + 16) * escala);
+      const recorte = document.createElement('canvas');
+      recorte.width = tela.width;
+      recorte.height = Math.max(1, Math.round(fim - topo));
+      recorte.getContext('2d').drawImage(tela, 0, topo, tela.width, recorte.height, 0, 0, tela.width, recorte.height);
+      const png = recorte.toDataURL('image/png');
+
+      // O campo volta a ficar vazio: a boleta não fica preenchida na aba do robô.
+      preencher(campo, '');
+      registrar('tirou o print');
+      return { png, quantidade: quantidadeNoPainel, em: Date.now() };
+    };
+
+    // Os prints de um pedido: as boletas de venda uma atrás da outra, e cada print segue para a Mesa
+    // assim que sai.
+    const lerPrints = async ({ id, itens }) => {
+      const resultados = [];
+      for (const [i, { fundoId, conta, quantidade }] of itens.entries()) {
+        if (naBoleta()) await passarPelaPrateleira();
+        const cota = await abrirBoleta(fundoId, conta, PRE_CHECK_MS, false, 'vender');
+        let resultado = { fundoId, indice: i, erro: 'sem-boleta' };
+        if (cota) {
+          const posicao = cota.posicao ? cota.posicao.quotaQuantityAvailable : null;
+          try {
+            resultado = { fundoId, indice: i, ...(await tirarPrint({ quantidade, posicao })) };
+          } catch {
+            resultado = { fundoId, indice: i, erro: 'falhou-o-print' };
+          }
+        }
+        registrar(resultado.erro ? 'o print não saiu' : 'print pronto', { fundoId, motivo: resultado.erro || null });
+        resultados.push(resultado);
+        gravarRegistro();
+        GM_setValue('prints', { id, resultados: resultados.slice(), fim: i === itens.length - 1 });
+      }
+      GM_setValue('pedidoPrints', null);
+      await trocarDeTela(PRATELEIRA);
+      registrar('voltou à Prateleira');
+    };
+
     // As tarefas do robô, uma por vez.
 
     // A cotação. A Prateleira que acaba de montar — a aba recém-aberta, a volta de uma boleta — pede
@@ -605,7 +798,7 @@
 
       vistos.add(pedido.id);
       GM_setValue(atendendo, { id: pedido.id, em: Date.now() });
-      const tipo = trabalho === atualizar ? 'cotação' : trabalho === lerCliente ? 'cliente' : 'preços exatos';
+      const tipo = trabalho === atualizar ? 'cotação' : trabalho === lerCliente ? 'cliente' : trabalho === lerPrints ? 'prints' : 'preços exatos';
       registrar('pedido recebido', { tipo });
       fila = fila
         .then(() => {
@@ -631,6 +824,16 @@
       if (itens.length > 0) receber({ ...pedido, itens }, lerCotas);
     };
 
+    // Os prints: fundo e conta na forma exata; a quantidade é número positivo, ou null para o total.
+    const receberPrints = (pedido) => {
+      if (papel !== 'prateleira' || !pedido || !Array.isArray(pedido.itens)) return;
+      const itens = pedido.itens
+        .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
+        .filter((item) => item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0))
+        .map((item) => ({ fundoId: item.fundoId, conta: String(item.conta), quantidade: item.quantidade }));
+      if (itens.length > 0) receber({ ...pedido, itens }, lerPrints);
+    };
+
     // A conta vai para o endereço da ficha: só passa na forma exata.
     const receberCliente = (pedido) => {
       if (papel !== 'clientes' || !pedido || !CONTA.test(String(pedido.conta))) return;
@@ -641,11 +844,13 @@
       receberCotacao(GM_getValue('pedido', null));
       receberCotas(GM_getValue('pedidoCotas', null));
       receberCliente(GM_getValue('pedidoCliente', null));
+      receberPrints(GM_getValue('pedidoPrints', null));
     };
 
     GM_addValueChangeListener('pedido', (_chave, _antigo, novo) => receberCotacao(novo));
     GM_addValueChangeListener('pedidoCotas', (_chave, _antigo, novo) => receberCotas(novo));
     GM_addValueChangeListener('pedidoCliente', (_chave, _antigo, novo) => receberCliente(novo));
+    GM_addValueChangeListener('pedidoPrints', (_chave, _antigo, novo) => receberPrints(novo));
     document.addEventListener('DOMContentLoaded', () => {
       darSinal();
       // A aba que o robô acabou de abrir chega depois do pedido: confere se há um esperando.
@@ -654,6 +859,98 @@
     pagina.addEventListener('hashchange', darSinal);
     pagina.addEventListener('pagehide', sair);
     setInterval(darSinal, 30000);
+  };
+
+  /* ── No e-mail novo do Outlook (1.5.0) ─────────────────────────────────────────────── */
+
+  // O Outlook na web: o endereço novo do Microsoft 365 e os dois antigos.
+  const ehOOutlook = () => /^outlook\.(cloud\.microsoft|office\.com|office365\.com)$/.test(location.hostname);
+
+  /*
+   * O corpo do e-mail que a Mesa abriu, trocado pelo HTML. Só age:
+   *  - no compor aberto pelo link (`/deeplink/compose`), a janela que a Mesa abre;
+   *  - com o pedido da Mesa de menos de 2 minutos, que vale uma vez só;
+   *  - quando o corpo já tem o começo do texto que a Mesa mandou no link — é o sinal de que este é o
+   *    e-mail certo, e de que o Outlook terminou de pôr o texto nele.
+   * Cola como a pessoa colaria (o evento de colar, com o HTML), e o Outlook trata as imagens e a
+   * tabela como trata as dele. Nunca clica em Enviar, nem em nada.
+   */
+  const naAbaDoOutlook = () => {
+    if (!location.pathname.includes('/deeplink/compose')) return;
+    const reservado = GM_getValue('corpoParaOutlook', null);
+    if (!reservado || Date.now() - reservado.em > 2 * 60 * 1000) return;
+    // A Mesa abre a janela no clique, antes de os prints ficarem prontos — senão o navegador a
+    // bloqueia —, e manda o HTML depois: até lá o pedido chega reservado, sem ele. Espera até 90 s.
+    if (typeof reservado.html !== 'string') {
+      let esperou = false;
+      const relogio = setTimeout(() => {
+        esperou = true;
+        GM_setValue('corpoColado', { id: reservado.id, ok: false, motivo: 'sem-html', em: Date.now() });
+      }, 90 * 1000);
+      GM_addValueChangeListener('corpoParaOutlook', (_chave, _antigo, novo) => {
+        if (esperou || !novo || novo.id !== reservado.id) return;
+        if (novo.cancelado) {
+          esperou = true;
+          clearTimeout(relogio);
+          return;
+        }
+        if (typeof novo.html !== 'string') return;
+        esperou = true;
+        clearTimeout(relogio);
+        naAbaDoOutlook();
+      });
+      return;
+    }
+    const pedido = reservado;
+
+    const responder = (ok, motivo = null) => {
+      GM_setValue('corpoParaOutlook', null);
+      GM_setValue('corpoColado', { id: pedido.id, ok, motivo, em: Date.now() });
+    };
+    const acharCorpo = () =>
+      [...document.querySelectorAll('div[role="textbox"][contenteditable="true"]')].find((el) =>
+        /corpo|body|mensagem|message/i.test(el.getAttribute('aria-label') || '')
+      ) || null;
+    const normalizar = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+
+    const colar = (corpo) => {
+      corpo.focus();
+      const selecao = pagina.getSelection();
+      const faixa = document.createRange();
+      faixa.selectNodeContents(corpo);
+      selecao.removeAllRanges();
+      selecao.addRange(faixa);
+      const dados = new pagina.DataTransfer();
+      dados.setData('text/html', pedido.html);
+      dados.setData('text/plain', pedido.texto || '');
+      const evento = new pagina.ClipboardEvent('paste', { clipboardData: dados, bubbles: true, cancelable: true });
+      corpo.dispatchEvent(evento);
+      // Um editor que não trata o colar deixa o evento passar: o HTML entra pelo próprio navegador.
+      if (!evento.defaultPrevented) document.execCommand('insertHTML', false, pedido.html);
+    };
+
+    const inicio = normalizar(pedido.inicio);
+    let tentativas = 0;
+    const tentar = () => {
+      const corpo = acharCorpo();
+      const pronto = corpo && (!inicio || normalizar(corpo.innerText).startsWith(inicio));
+      if (!pronto) {
+        if (++tentativas < 100) return setTimeout(tentar, 300);
+        return responder(false, corpo ? 'outro-email' : 'sem-corpo');
+      }
+      try {
+        colar(corpo);
+      } catch {
+        return responder(false, 'nao-colou');
+      }
+      // Confere o que entrou: as imagens e a tabela que o HTML trazia.
+      setTimeout(() => {
+        const queria = { imagens: (pedido.html.match(/<img\b/g) || []).length, tabelas: (pedido.html.match(/<table\b/g) || []).length };
+        const tem = { imagens: corpo.querySelectorAll('img').length, tabelas: corpo.querySelectorAll('table').length };
+        responder(tem.imagens >= queria.imagens && tem.tabelas >= queria.tabelas, tem.imagens < queria.imagens ? 'sem-imagens' : tem.tabelas < queria.tabelas ? 'sem-tabela' : null);
+      }, 800);
+    };
+    tentar();
   };
 
   /* ── Na aba da Mesa ─────────────────────────────────────────────────────────────────── */
@@ -741,6 +1038,35 @@
         enviar({ tipo: 'pedido-recebido', id, abriuHub });
       }
 
+      // Os prints da cotação de venda, na aba do robô.
+      if (mensagem.tipo === 'pedir-prints') {
+        const { id } = mensagem;
+        const itens = (Array.isArray(mensagem.itens) ? mensagem.itens : [])
+          .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
+          .filter((item) => item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0))
+          .map(({ fundoId, conta, quantidade }) => ({ fundoId, conta: String(conta), quantidade }));
+        if (itens.length === 0) {
+          enviar({ tipo: 'prints-fim', id });
+          return;
+        }
+        const abriuHub = encaminhar('pedidoPrints', { id, itens, em: Date.now() });
+        enviar({ tipo: 'pedido-recebido', id, abriuHub });
+      }
+
+      // O corpo em HTML para o e-mail que a Mesa vai abrir no Outlook: vale por 2 minutos, uma vez.
+      // Sem o HTML (null), é a reserva: a janela abre já, e o HTML vem depois, com o mesmo id.
+      if (mensagem.tipo === 'preparar-outlook' && (typeof mensagem.html === 'string' || mensagem.html === null)) {
+        if (mensagem.html === null) GM_setValue('corpoColado', null);
+        GM_setValue('corpoParaOutlook', { id: mensagem.id, html: mensagem.html, texto: String(mensagem.texto || ''), inicio: String(mensagem.inicio || ''), em: Date.now() });
+        enviar({ tipo: 'pedido-recebido', id: mensagem.id, abriuHub: false });
+      }
+
+      // O print não saiu: o e-mail aberto fica com o corpo de texto, como está.
+      if (mensagem.tipo === 'cancelar-outlook') {
+        const atual = GM_getValue('corpoParaOutlook', null);
+        if (atual && atual.id === mensagem.id) GM_setValue('corpoParaOutlook', { id: mensagem.id, cancelado: true, em: Date.now() });
+      }
+
       // O cliente da conta, na aba de clientes. A primeira vez ela abre direto na ficha pedida.
       if (mensagem.tipo === 'pedir-cliente') {
         const { id } = mensagem;
@@ -793,11 +1119,29 @@
         GM_setValue('cotas', null);
       }
     });
+    // Os prints: cada um segue para a Mesa assim que sai, e o armazenamento é limpo no fim.
+    let printsEntregues = { id: null, quantos: 0 };
+    GM_addValueChangeListener('prints', (_chave, _antiga, nova) => {
+      if (!nova || !Array.isArray(nova.resultados)) return;
+      if (printsEntregues.id !== nova.id) printsEntregues = { id: nova.id, quantos: 0 };
+      for (const r of nova.resultados.slice(printsEntregues.quantos)) {
+        enviar({ tipo: 'print', id: nova.id, indice: r.indice, fundoId: r.fundoId, png: r.png || null, quantidade: r.quantidade ?? null, em: r.em || null, erro: r.erro || null });
+      }
+      printsEntregues.quantos = nova.resultados.length;
+      if (nova.fim) {
+        enviar({ tipo: 'prints-fim', id: nova.id });
+        GM_setValue('prints', null);
+      }
+    });
     // A boleta que a pessoa abriu para executar também deixa o preço exato do fundo, com a hora.
     GM_addValueChangeListener('cotaVista', (_chave, _antiga, nova) => {
       if (nova) enviar({ tipo: 'cota', id: null, fundoId: nova.fundoId, valor: nova.valor, dataDaCota: nova.dataDaCota });
     });
     GM_addValueChangeListener('abas', () => enviar({ tipo: 'estado', versao: VERSAO, hub: estadoDoHub() }));
+    // O Outlook disse se colou o corpo.
+    GM_addValueChangeListener('corpoColado', (_chave, _antiga, nova) => {
+      if (nova) enviar({ tipo: 'corpo-colado', id: nova.id, ok: nova.ok === true, motivo: nova.motivo || null });
+    });
 
     apresentar();
     document.addEventListener('DOMContentLoaded', apresentar);
@@ -810,4 +1154,5 @@
 
   if (ehOHub()) naAbaDoHub();
   else if (ehAMesa()) naAbaDaMesa();
+  else if (ehOOutlook()) document.addEventListener('DOMContentLoaded', naAbaDoOutlook);
 })();

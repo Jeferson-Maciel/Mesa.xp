@@ -87,7 +87,9 @@ atte,
   mais.
 - **Um bloco por fundo**, na ordem digitada, cada um seguido de `Condições:` e do print da cotação
   dele. No texto (o Copiar e o Abrir no Outlook) a linha depois de `Condições:` fica vazia; o print
-  entra no HTML, logo abaixo de `Condições:` (fase 2).
+  entra no HTML, logo abaixo de `Condições:`: `<img>` com o PNG que o robô tirou do painel "Visualizar
+  mais detalhes da operação" da boleta de venda (robô 1.5.0). É esse HTML que o Copiar leva e que o
+  robô põe no Outlook.
 - **A quantidade**: inteira sem separador de milhar (`5125`); fracionada com as 8 casas do campo de
   quantidade da boleta (`123,45678910`). Na venda do total, é a posição disponível do cliente que o
   robô leu na boleta de venda do Hub.

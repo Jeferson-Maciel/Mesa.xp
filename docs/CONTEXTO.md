@@ -21,12 +21,12 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.034 testes (`npm test`), o build e 188
+- A última verificação passou inteira (20/10): 1.044 testes (`npm test`), o build e 196
   conferências no navegador (`npm run verificar`), **três rodadas seguidas sem falha**. As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 9 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 12 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
@@ -34,7 +34,7 @@ cada sessão.
 Um grilling com o usuário, a partir de um pedido real que misturava bolsa, fundos comprados e
 fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão no `CLAUDE.md`,
 "Venda de fundo e Estoque clientes", e o literal novo em `docs/FORMATOS-DE-SAIDA.md`, seção 1b. O
-plano tinha 4 fases; **a 0 e a 1 estão feitas**:
+plano tinha 4 fases; **a 0, a 1 e a 2 estão feitas**, e a 3 (Tesouro) espera as respostas do usuário:
 
 - **Fase 0:** o E-mail em tabela com a tabela em texto no corpo do Outlook (de 09/10), commitado.
 - **Fase 1:**
@@ -54,27 +54,38 @@ plano tinha 4 fases; **a 0 e a 1 estão feitas**:
   "Visualizar mais detalhes da operação" (que é o print da auditoria) e o botão "Total de cotas". O
   campo de quantidade tem máscara de 8 casas (os dígitos entram pela direita). Lidos só nomes de
   campo e dados de fundo; nenhum dado de cliente foi guardado.
-- **Fase 2 (a fazer):** o print da cotação, gerado pelo robô na boleta de venda com a SnapDOM 3.2.0
-  (MIT) embutida no script — a boleta é feita de web components Soma, com 118 shadow roots, e o
-  html-to-image não copia shadow DOM —, e o **robô também no Outlook**, preenchendo o corpo com o
-  print logo abaixo de "Condições:" e a tabela em grade. Para o print, o robô precisa preencher a
-  quantidade (clicar em "Total de cotas" ou digitar) e abrir o detalhe, sem nunca clicar em
-  Próximo; o usuário pediu "o máximo automatizado", e a liberação está registrada no grilling. O
-  print é tirado na hora e vale um dia útil. O teste de injetar a SnapDOM do CDN no Hub pelo Claude
-  in Chrome foi **bloqueado pelo modo automático** ("código de fora") e não foi contornado.
+- **Fase 2 (feita, robô 1.5.0):** o print da cotação, tirado pelo robô na boleta de venda com a
+  SnapDOM 3.2.0 (MIT, vendorizada em `src/vendor`) — a boleta é feita de web components Soma, com
+  118 shadow roots, e o html-to-image não copia shadow DOM —, e o **robô também no Outlook**, trocando
+  o corpo do e-mail que a Mesa abriu pelo HTML: os prints abaixo de "Condições:" e a tabela em grade.
+  Para o print, o robô preenche a quantidade ("Total de cotas" ou o campo) e abre o detalhe, com os
+  cliques numa lista fechada (nunca Próximo); o usuário pediu "o máximo automatizado", e a liberação
+  está registrada no grilling. O print é tirado na hora de copiar ou abrir no Outlook (ou em "Tirar
+  prints") e vale um dia útil. **Conferido só no Hub e no Outlook de mentira** do `verificar`: no
+  Hub de verdade, o jeito de preencher o campo (a máscara) e de achar o painel pode precisar de
+  ajuste. O teste de injetar a SnapDOM do CDN no Hub pelo Claude in Chrome foi **bloqueado pelo modo
+  automático** ("código de fora") e não foi contornado.
 - **Fase 3 (a fazer): Tesouro.** Perguntas abertas ao usuário: Tesouro Direto (B3), títulos públicos
   no secundário da XP ou os dois; exemplos reais de pedido; modelo próprio de e-mail; print na venda.
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub de verdade (robô 1.4.0)
+### A testar no Hub e no Outlook de verdade (robô 1.5.0)
 
-1. Copiar robô → Tampermonkey; fechar as abas 🤖 antigas.
+1. Copiar robô → Tampermonkey (o script agora tem ~260 KB, com a SnapDOM); fechar as abas 🤖 antigas.
+   Ao abrir o Outlook na web pela primeira vez com o robô novo, o Tampermonkey pode pedir permissão.
 2. Colar um pedido com venda do total de um fundo seu e conferir, no bloco "Venda no secundário",
    a posição (com as casas), a modalidade e o deságio contra a boleta.
-3. Um pedido com "(Estoque cliente)": conferir o estoque e o deságio do Estoque clientes contra a
+3. **Tirar prints**: conferir a miniatura contra o painel da boleta (a quantidade, o deságio e o
+   total) e que a aba 🤖 volta à Prateleira sem a boleta preenchida. Se der "o campo de quantidade não
+   apareceu" ou "a quantidade não bateu", o jeito de preencher a máscara do Hub precisa de ajuste:
+   copiar os tempos (Copiar tempos) e trazer o motivo.
+4. **Abrir no Outlook** a venda: o e-mail abre com o texto e, em seguida, o corpo vira o HTML com os
+   prints abaixo de "Condições:". Se o Outlook recusar as imagens coladas, o aviso diz, e o caminho é
+   o Copiar e colar com Ctrl+V. **Não enviar o e-mail de teste.**
+5. Um pedido com "(Estoque cliente)": conferir o estoque e o deságio do Estoque clientes contra a
    boleta.
-4. Conferir que a aba 🤖 não fica com a quantidade preenchida (ela não preenche nada na 1.4.0).
+6. O E-mail em tabela no Outlook: o corpo deve virar a tabela em grade.
 
 ## O cliente e o assessor no e-mail (07/10, robô 1.3.0 → 1.3.1)
 

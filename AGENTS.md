@@ -21,7 +21,7 @@ Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 
 ```bash
 npm install
-npm test            # Vitest — 1.034 testes
+npm test            # Vitest — 1.044 testes
 npm run build       # dist/index.html, um arquivo só
 npm run verificar   # Playwright: abre o dist/ e confere as cinco abas e o robô do Hub
 npm run verificar:supabase   # grava no banco da mesa — só fora do expediente e com o OK do usuário
@@ -48,7 +48,9 @@ Requer Node 22+. **Pronto só depois de `npm test`, `npm run build` e `npm run v
   - não lê token, senha nem cabeçalho;
   - não chama a API do Hub por conta própria: só escuta o `fetch` (e, na aba de clientes, o XHR) do
     próprio app e troca a rota das abas dele;
-  - nunca passa da etapa 1 da boleta;
+  - nunca passa da etapa 1 da boleta, e na boleta só preenche a quantidade e abre o detalhe para o
+    print da cotação de venda (1.5.0) — os cliques ficam numa lista fechada, nunca Próximo;
+  - no Outlook (1.5.0), só troca o corpo do e-mail que a Mesa acabou de abrir, e nunca envia;
   - nunca põe parâmetro no endereço do Hub, porque isso o trava;
   - da ficha do cliente só traz nome, e-mail e assessor, e da boleta de venda (1.4.0) só a posição
     do cliente naquele fundo (quantidade, disponível, à venda); nada do cliente fica guardado: nem

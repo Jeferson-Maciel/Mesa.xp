@@ -86,8 +86,9 @@ exigem rede**: sem conexão mostram o erro na tela, e as outras abas seguem func
 Calendário e Operacional, por uma conexão única (`src/dados/banco.js`): o primeiro que abre cria o
 cliente, o segundo reaproveita — um cliente por módulo abriria duas conexões do Realtime. O SheetJS não é dependência npm (ver Renda Fixa). Vite e Vitest são ferramentas de
 desenvolvimento. O Netlify roda Node 22 (`netlify.toml`): supabase-js e Vitest 5 exigem Node 22+.
+A SnapDOM também é vendorizada, e só entra no script do robô (ver "SnapDOM vendorizada").
 
-`dist/index.html` fica em torno de 1,4 MB, quase todo do SheetJS.
+`dist/index.html` fica em torno de 1,9 MB: o SheetJS e o script do robô, com a SnapDOM dentro.
 
 ## Sistema visual
 
@@ -558,8 +559,31 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   detalhes da operação" da boleta, conferida centavo por centavo (posição = cotas × PU; deságio = %
   da posição; o cliente recebe a posição com deságio, menos a corretagem).
 - **A cotação de venda vale um dia útil** (`core/util/diasUteis.js`, com a Páscoa calculada e os dias
-  sem pregão de 24/12 e 31/12): até o mesmo horário do próximo dia útil. O print dela também
-  (fase 2).
+  sem pregão de 24/12 e 31/12): até o mesmo horário do próximo dia útil. O print dela também.
+- **O print da cotação** (robô 1.5.0, decidido com o operador em 20/10: "o máximo automatizado"). É
+  o painel do fim da **etapa 1** da boleta de venda — a caixa "Valor total da operação" e
+  "Visualizar mais detalhes da operação" aberto —, o mesmo que vai nos e-mails de auditoria aprovados.
+  Ele só existe com a quantidade preenchida, e por isso, **só para o print**, o robô:
+  - preenche a quantidade: clica em "Total de cotas" na venda do total, ou põe a quantidade do pedido
+    no campo (máscara de 8 casas, os dígitos entram pela direita: 590 cotas são `59000000000`);
+  - abre "Visualizar mais detalhes da operação";
+  - confere que a quantidade do painel é a esperada (a pedida, ou a posição disponível) — sem isso,
+    não há print (`quantidade-diferente`);
+  - tira o print do painel, recortado da caixa do total ao último valor do detalhe, com a SnapDOM;
+  - apaga o campo e volta à Prateleira.
+  Os cliques ficam numa lista fechada (`CLIQUES_PERMITIDOS`, conferida por teste): **nunca Próximo**,
+  nem a caixa de notificação ao cliente. A Mesa tira os prints que faltam na hora de copiar ou de abrir
+  no Outlook o e-mail de venda ("atualizado em tempo real", pedido do operador), ou no botão **Tirar
+  prints** da venda; cada um vale um dia útil, preso à conta, ao fundo e à quantidade — se a posição
+  mudar, o print velho não serve —, e fica **só na memória da página**. A miniatura aparece na venda.
+  Sem o robô, o e-mail sai sem o print, com um aviso para colá-lo abaixo de "Condições:".
+- **O corpo no Outlook** (robô 1.5.0, @match no Outlook na web): a janela abre no clique, com o texto
+  — senão o navegador a bloqueia como pop-up —, e o robô, **só no compor que a Mesa acabou de abrir**
+  (`/deeplink/compose`, pedido de menos de 2 minutos, corpo começando pelo texto que a Mesa mandou),
+  troca o corpo pelo HTML como se fosse colado: os prints abaixo de "Condições:" na venda, a tabela em
+  grade no E-mail em tabela. A Mesa reserva o e-mail antes de abrir e manda o HTML depois, com o mesmo
+  id (`reservarOutlook`); se o print falhar, cancela, e o corpo de texto fica. **Nunca envia** nem
+  clica em nada. Sem resposta, a Mesa avisa para usar o Copiar e colar com Ctrl+V.
 - **A posição do cliente fica só na memória da página** (`estado.boletas`), como o cliente; nunca no
   `localStorage`, no histórico ou no repositório.
 - **Os grupos de e-mail.** Cada conta sai em até três e-mails, um por grupo, cada um numa seção do
@@ -845,6 +869,19 @@ atualize o README junto.
   viraram caracteres invisíveis.
 - Sem Tax.Mín nem Tax.Máx, o motor lê como taxa a primeira célula da linha com "%" — que pode ser o
   ROA. É comportamento do original, registrado no golden da planilha sintética e no roadmap.
+
+### SnapDOM vendorizada (o print do robô)
+
+`src/vendor/snapdom.js` é a SnapDOM **3.2.0** do npm (`@zumer/snapdom`, MIT, o build IIFE), byte a
+byte — o pacote bateu com o shasum do registro, e um teste confere o sha256 —, com
+`LICENSE-snapdom.txt`. Ela tira o print da boleta, que é feita de web components (Soma) com shadow
+DOM: o html-to-image não copia shadow DOM, a SnapDOM copia. **Não vai para a Mesa**: entra só no
+script do robô, no marcador `/*@@SNAPDOM@@*/`, quando `roboHub.js` monta o "Copiar robô"
+(`scriptDoRobo`), e só é carregada na aba do robô, no primeiro print. Os testes de segurança do robô
+(sem token, senha, cabeçalho, `fetch` nem API do Hub) leem o código dele sem a biblioteca
+(`fonteDoRobo`), e outro confere que o script copiado é o robô com a biblioteca no marcador, e nada
+mais. Injetar a biblioteca do CDN no Hub pelo Claude in Chrome foi bloqueado pelo modo automático do
+Claude Code, com razão: no robô ela vai embutida, sem buscar nada fora.
 
 ### SheetJS vendorizado
 
@@ -1191,7 +1228,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.034 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.044 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

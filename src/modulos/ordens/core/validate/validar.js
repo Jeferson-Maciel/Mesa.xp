@@ -126,11 +126,34 @@ export const validar = (solicitacao, formato) => {
     // Número que sobrou na linha depois de explicados o ativo, o preço e o valor. O caso que
     // trouxe isto: `PETR4 100 a 39,50` saía como ordem a mercado, porque o 39,50 era descartado
     // sem que nada notasse — uma ordem limite virando ordem a mercado, em silêncio.
-    if (o.numerosSobrando?.length > 0) {
+    //
+    // Um número com cara de conta no fim da linha (`LFT - R$ 81.708,17   <conta>`, num pedido real de
+    // 20/10/2026) era a conta do pedido seguinte, colada pela quebra de linha perdida. Confirmar como
+    // ruído poria o que vem abaixo na conta deste cartão — o pior erro do sistema —, e por isso a
+    // saída é dizer o que o número é: outra conta (separa o pedido) ou nada.
+    const contaNoFim = (o.numerosSobrando ?? []).find(
+      (n) => /^\d{5,8}$/.test(n) && String(o.linha ?? '').split(' / ').some((trecho) => new RegExp(String.raw`\s${n}\s*$`).test(trecho))
+    );
+    if (contaNoFim) {
+      diagnosticos.push({
+        ...bloqueio(
+          'conta-no-fim-da-linha',
+          `${o.ativo}: ${contaNoFim}, no fim da linha, parece a conta de outro pedido. Sem separar, o que vem abaixo fica na conta ${conta ?? 'deste cartão'}.`,
+          i,
+          false
+        ),
+        acoes: [
+          { campo: 'separar-conta', valor: contaNoFim, rotulo: `Separar: ${contaNoFim} é outra conta` },
+          { campo: 'ignorar-numero', valor: contaNoFim, rotulo: 'Não é conta: ignorar' }
+        ]
+      });
+    }
+    const sobrando = (o.numerosSobrando ?? []).filter((n) => n !== contaNoFim);
+    if (sobrando.length > 0) {
       diagnosticos.push(
         bloqueio(
           'numero-nao-explicado',
-          `${o.ativo}: o número ${o.numerosSobrando.join(' e ')} está na linha e não foi usado. ` +
+          `${o.ativo}: o número ${sobrando.join(' e ')} está na linha e não foi usado. ` +
             'Se for preço, preencha o campo Preço; se for ruído, confirme.',
           i
         )

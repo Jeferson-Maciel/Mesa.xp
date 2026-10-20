@@ -1374,6 +1374,23 @@ try {
     const reposicao = await pedirAoRobo('posicoes');
     ok(reposicao.posicoes === 2 && cargasDoRendaFixa === cargas + 1, `a posição lida de novo: recarrega e clica na aba ${JSON.stringify(reposicao)}`);
     ok(abasDoRendaFixa() === 1, `uma aba do Tesouro só, sem outra aberta pela Mesa (${abasDoRendaFixa()})`);
+
+    // A conta do pedido seguinte colada no fim da linha (pedido real de 20/10/2026, contas fictícias):
+    // bloqueia sem confirmar, e "Separar" devolve a quebra de linha e faz dois cartões.
+    await mesa.fill('#entrada', '1234567\n\nCompra\nLFT - R$ 81.708,17   7654321 \nComprar 2k\nTesouro Selic 2031\nEmail');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    await mesa.waitForSelector('[data-campo="separar-conta"]');
+    ok(
+      (await mesa.textContent('#solicitacoes')).includes('parece a conta de outro pedido') && (await mesa.$$('.campo-conta')).length === 1,
+      'a conta colada no fim da linha segura o cartão, sem confirmar'
+    );
+    await mesa.click('[data-campo="separar-conta"]');
+    const contasSeparadas = await mesa.$$eval('.campo-conta', (campos) => campos.map((c) => c.value));
+    ok(
+      JSON.stringify(contasSeparadas) === JSON.stringify(['1234567', '7654321']) && (await mesa.inputValue('#entrada')).includes('81.708,17\n7654321'),
+      `"Separar" faz dois pedidos, e o de baixo fica na conta dele (${contasSeparadas.join(', ')})`
+    );
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

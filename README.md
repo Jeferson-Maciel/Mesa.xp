@@ -564,7 +564,7 @@ AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 1.104 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 1.110 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

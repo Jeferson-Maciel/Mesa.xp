@@ -352,6 +352,10 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
   if (!ordem) return;
 
   switch (campo) {
+    // "Não é conta": o número com cara de conta no fim da linha é ruído, e deixa de segurar o cartão.
+    case 'ignorar-numero':
+      ordem.numerosSobrando = (ordem.numerosSobrando ?? []).filter((n) => n !== valor);
+      return;
     // De onde comprar, ou para quem vender, no secundário: os consertos dos bloqueios de estoque.
     case 'estoque-xp':
     case 'estoque-clientes':

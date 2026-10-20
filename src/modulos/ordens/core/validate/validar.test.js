@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { podeGerar, validar } from './validar.js';
 import { analisarTicker } from './ticker.js';
+import { parseSolicitacoes } from '../parse/parseSolicitacoes.js';
 
 const ordem = (extra = {}) => ({
   ativo: 'PETR4',
@@ -719,3 +720,23 @@ describe('aplicação no Tesouro Direto', () => {
     expect(codigos(aplicacao({}, { foraDoHorario: true }))).toContain('tesouro-fora-do-horario');
   });
 });
+
+describe('a conta de outro pedido colada no fim da linha', () => {
+  // Do pedido real de 20/10/2026, com contas fictícias.
+  const colado = () => parseSolicitacoes('1234567\n\nCompra\nLFT - R$ 81.708,17   7654321 \nComprar 2k\nTesouro Selic 2031\nEmail').solicitacoes[0];
+
+  it('bloqueia sem confirmar, com "Separar" e "Não é conta", e não acusa o número como solto', () => {
+    const d = validar(colado(), 'email').find((x) => x.codigo === 'conta-no-fim-da-linha');
+    expect(d).toMatchObject({ nivel: 'bloqueio', confirmavel: false });
+    expect(d.mensagem).toContain('fica na conta 1234567');
+    expect(d.acoes.map((a) => [a.campo, a.valor])).toEqual([['separar-conta', '7654321'], ['ignorar-numero', '7654321']]);
+    expect(codigos(colado())).not.toContain('numero-nao-explicado');
+  });
+
+  it('número que não tem cara de conta segue como número solto', () => {
+    const s = parseSolicitacoes('1234567\nPETR4 100 a 39,50 7').solicitacoes[0];
+    expect(codigos(s)).toContain('numero-nao-explicado');
+    expect(codigos(s)).not.toContain('conta-no-fim-da-linha');
+  });
+});
+

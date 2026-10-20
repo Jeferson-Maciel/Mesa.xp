@@ -2,6 +2,7 @@ import XLSX from '../../vendor/xlsx.full.min.js';
 import { ErroDosAssessores, lerPlanilhaDosAssessores } from './core/cliente/assessores.js';
 import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
+import { separarConta } from './core/texto/separarConta.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
 import { ASSUNTOS_DOS_GRUPOS, ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
 import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } from './core/tesouro/tesouro.js';
@@ -372,6 +373,7 @@ export const iniciarOrdens = (secao) => {
     if (segmento?.dataset.campo === 'atualizar-cotacoes') return atualizarCotacoes();
     if (segmento?.dataset.campo === 'cotar-estoque-clientes') return buscarBoletas({ forcar: true });
     if (segmento?.dataset.campo === 'tirar-prints') return garantirPrints(solicitacao);
+    if (segmento?.dataset.campo === 'separar-conta') return separarContaColada(segmento.dataset.valor);
     if (segmento?.dataset.campo === 'ler-tesouro')
       return buscarTesouro([solicitacao.conta], { forcar: true, leitura: segmento.dataset.valor === 'posicoes' ? 'posicoes' : 'lista' });
     if (segmento) {
@@ -878,6 +880,19 @@ export const iniciarOrdens = (secao) => {
     } finally {
       marcarBusca('');
     }
+  }
+
+  /*
+   * "Separar: <conta> é outra conta": a conta do pedido seguinte veio colada no fim de uma linha. A
+   * quebra de linha volta ao texto colado, e o pedido é lido de novo — o que foi editado nos cartões
+   * se perde, e por isso o aviso pede para conferir.
+   */
+  function separarContaColada(conta) {
+    const texto = separarConta(estado.textoOriginal, conta);
+    if (texto === null) return aviso(`Não achei ${conta} no fim de uma linha do texto colado.`, { tipo: 'erro' });
+    entrada.value = texto;
+    analisar();
+    aviso(`${conta} virou outro pedido, com o que vinha abaixo dele. Confira os cartões.`);
   }
 
   /* ── O Tesouro Direto ─────────────────────────────────────────────────────────────────── */

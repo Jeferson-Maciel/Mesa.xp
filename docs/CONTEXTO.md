@@ -21,14 +21,14 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.104 testes (`npm test`), o build e 214
+- A última verificação passou inteira (20/10): 1.110 testes (`npm test`), o build e 216
   conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 15 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 16 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
@@ -81,11 +81,12 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
   chega cedo é ignorado, e a posição só vem no clique da aba "Tesouro Direto" — ver o `CLAUDE.md`,
   "Como o Hub de verdade se comporta". De quebra, um defeito antigo: a conferência de 3 s da Mesa
   abria aba do robô à toa quando um pedido terminava rápido e outro vinha logo (no `verificar`, 8
-  aberturas viraram 4). **Ficou em aberto o T3:** o número de 7 dígitos depois do valor, na linha do pedido real.
-  Na mensagem, três espaços aparecem também onde havia uma quebra de linha ("Email   exemplos…"):
-  é quase certo que seja **a conta de um segundo pedido** ("Comprar 2k / Tesouro Selic 2031 /
-  Email"). Até o usuário confirmar, bloqueia como número não explicado. Nos testes e no histórico
-  local ele foi trocado por um número fictício.
+  aberturas viraram 4). **T3, resolvido:** o número de 7 dígitos depois do valor, na linha do pedido real, era **a
+  conta de um segundo pedido** (confirmado pelo usuário), colada pela quebra de linha perdida. A
+  Mesa agora segura esse caso sem confirmar e oferece "Separar" (ver o `CLAUDE.md`, "A entrada
+  real"). A conta saiu dos testes e da documentação, e o histórico local foi reescrito sem ela
+  (`filter-branch`; a cópia antiga e os objetos soltos foram apagados com `gc`): nada disso foi
+  para o GitHub.
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 

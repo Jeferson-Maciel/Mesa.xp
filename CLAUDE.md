@@ -751,6 +751,16 @@ Linha com ticker ou unidade depois do número (`10000 - PETR4`, `50000 reais cad
 Numeração de lista, marcadores e negrito do WhatsApp são tirados na limpeza; o tachado (`~`) não,
 porque riscar costuma ser cancelar.
 
+**A conta do pedido seguinte colada no fim da linha.** Num pedido real de 20/10/2026, a quebra de
+linha se perdeu na colagem: "LFT - R$ 81.708,17   <conta>" juntou a ordem de um cliente com a conta
+do pedido de outro (o operador confirmou que o número era a conta). Lido assim, o que vinha abaixo
+("Comprar 2k / Tesouro Selic 2031") ficava na conta do primeiro, e o bloqueio de número solto, se
+confirmado como ruído, mandava o pedido de um cliente na conta de outro. Por isso um número de 5 a 8
+dígitos no fim da linha, que sobrou depois de lidos o ativo e o valor, vira o bloqueio
+`conta-no-fim-da-linha`, **sem confirmar**, com dois botões: **Separar: <conta> é outra conta** — a
+quebra de linha volta ao texto colado (`core/texto/separarConta.js`) e o pedido é lido de novo — e
+**Não é conta: ignorar**. A separação não é automática: a conta é o dado mais caro do sistema.
+
 O valor às vezes vem **na linha de baixo** do ativo (`Riza Malls` / `R$ 16.000,00`), sobretudo em
 fundo cetipado, cujo nome já ocupa a linha. `casarValores` liga cada valor sozinho ao ativo logo
 acima, se ele não trouxe valor próprio. Um valor sem ativo logo acima **cancela o casamento do
@@ -1307,7 +1317,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.104 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.110 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

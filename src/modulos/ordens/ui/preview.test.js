@@ -502,3 +502,12 @@ describe('venda de fundo e Estoque clientes no cartão', () => {
     expect(html).toContain('Estoque clientes');
   });
 });
+
+describe('"Não é conta: ignorar"', () => {
+  it('tira só aquele número dos que sobraram na linha', () => {
+    const s = solicitacao({ ordens: [ordem({ numerosSobrando: ['7654321', '39,50'] })] });
+    aplicarEdicao(s, 'ignorar-numero', '7654321', 0);
+    expect(s.ordens[0].numerosSobrando).toEqual(['39,50']);
+  });
+});
+

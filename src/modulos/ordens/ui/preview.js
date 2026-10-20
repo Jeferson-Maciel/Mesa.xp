@@ -1,5 +1,6 @@
 import { analisarTicker, temFormatoDeTicker } from '../core/validate/ticker.js';
 import { fundoPeloTicker, procurarFundo } from '../core/validate/fundo.js';
+import { formatarCotas } from '../core/secundario/venda.js';
 import { formatarFinanceiro, lerFinanceiro } from '../core/util/dinheiro.js';
 import { renderCliente } from './cliente.js';
 import { esc, renderSaidas } from './saidas.js';
@@ -35,11 +36,20 @@ const rotuloDeClasse = {
  *
  * Uma ordem traz `ticker` **ou** `fundo`, nunca os dois: fundo cetipado não tem código.
  */
+const seloDoEstoque = (ordem) =>
+  !ordem.fundo
+    ? ''
+    : ordem.estoque === 'clientes'
+      ? `<span class="selo estoque-clientes" title="Estoque clientes: o peer to peer do secundário, intenção de ordem casada pela Mesa de Fundos">Estoque clientes${ordem.oQueForPossivel ? ' · o que houver' : ''}</span>`
+      : ordem.estoque === 'xp'
+        ? '<span class="selo estoque-xp" title="Estoque XP: contra a posição da própria XP">Estoque XP</span>'
+        : '';
+
 const selo = (ordem) => {
   const { ticker, fundo } = ordem;
 
   if (fundo) {
-    if (fundo.situacao === 'exato') return '<span class="selo ok classe-cetipado">Fundo</span>';
+    if (fundo.situacao === 'exato') return '<span class="selo ok classe-cetipado">Fundo</span>' + seloDoEstoque(ordem);
     if (fundo.situacao === 'ambiguo') return '<span class="selo suspeito">escolha</span>';
     return '<span class="selo desconhecido">confirme</span>';
   }
@@ -83,8 +93,22 @@ const porFinanceiro = (ordem) => ordem.financeiro !== null && ordem.financeiro !
  */
 const tipoDe = (ordem) => ordem.tipo ?? (porFinanceiro(ordem) ? 'financeiro' : 'quantidade');
 
-const valorVisivel = (ordem) =>
-  porFinanceiro(ordem) ? formatarFinanceiro(ordem.financeiro) : (ordem.quantidade ?? '');
+/** Venda de fundo do secundário: a cota é fracionada, e o total da posição vale como quantidade. */
+const vendaDeFundo = (ordem) => Boolean(ordem.fundo) && ordem.operacao === 'V';
+
+const valorVisivel = (ordem) => {
+  if (porFinanceiro(ordem)) return formatarFinanceiro(ordem.financeiro);
+  if (ordem.total) return ordem.venda?.quantidade ? formatarCotas(ordem.venda.quantidade) : '';
+  if (vendaDeFundo(ordem) && ordem.quantidade !== null && !Number.isInteger(ordem.quantidade)) return formatarCotas(ordem.quantidade);
+  return ordem.quantidade ?? '';
+};
+
+// O "Total" da venda de fundo: a quantidade é a posição disponível do cliente, lida na boleta.
+const botaoDoTotal = (ordem) =>
+  vendaDeFundo(ordem)
+    ? `<button type="button" class="seg seg-total${ordem.total ? ' ativo' : ''}" data-campo="usar-posicao" data-valor=""
+              aria-pressed="${ordem.total === true}" title="Vender a posição disponível inteira, lida na boleta de venda do Hub">Total</button>`
+    : '';
 
 /** A linha que o botão + acrescenta: tudo em branco, para o operador preencher. */
 const ordemVazia = () => ({
@@ -168,7 +192,8 @@ const linha = (ordem, i) => `
           tipoDe(ordem)
         )}
         <input class="campo campo-valor" value="${esc(valorVisivel(ordem))}" size="11"
-               placeholder="${tipoDe(ordem) === 'financeiro' ? 'R$ 0,00' : '0'}" />
+               placeholder="${tipoDe(ordem) === 'financeiro' ? 'R$ 0,00' : ordem.total ? 'posição' : '0'}" />
+        ${botaoDoTotal(ordem)}
       </div>
     </td>
     <td><input class="campo campo-preco" value="${esc(ordem.preco ?? '')}" placeholder="A mercado" size="10" /></td>
@@ -319,6 +344,21 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
   if (!ordem) return;
 
   switch (campo) {
+    // De onde comprar, ou para quem vender, no secundário: os consertos dos bloqueios de estoque.
+    case 'estoque-xp':
+    case 'estoque-clientes':
+      ordem.estoque = campo === 'estoque-clientes' ? 'clientes' : 'xp';
+      return;
+    case 'o-que-for-possivel':
+      ordem.oQueForPossivel = true;
+      return;
+    // Vender a posição disponível inteira: a quantidade é a que o robô lê na boleta de venda.
+    case 'usar-posicao':
+      ordem.total = true;
+      ordem.quantidade = null;
+      ordem.financeiro = null;
+      ordem.tipo = 'quantidade';
+      return;
     case 'ativo': {
       const texto = valor.trim();
 
@@ -361,8 +401,15 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
       // O tipo fica fixo antes de o valor poder ficar vazio: apagar o campo de reais para
       // redigitar mandava o número seguinte para a quantidade.
       ordem.tipo = tipoDe(ordem);
+      // Digitar a quantidade deixa de ser o total da posição.
+      ordem.total = false;
       if (ordem.tipo === 'financeiro') {
         ordem.financeiro = lerFinanceiro(valor);
+      } else if (vendaDeFundo(ordem)) {
+        // A cota de fundo é fracionada (`123,4567891`), com até 8 casas: ponto é milhar, vírgula é casa.
+        const texto = String(valor).trim().replace(/\./g, '').replace(',', '.');
+        const n = /^\d+(\.\d{1,8})?$/.test(texto) ? Number(texto) : NaN;
+        ordem.quantidade = Number.isFinite(n) && n > 0 ? n : null;
       } else {
         const n = parseInt(String(valor).replace(/\D/g, ''), 10);
         ordem.quantidade = Number.isFinite(n) ? n : null;

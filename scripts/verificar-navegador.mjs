@@ -879,7 +879,7 @@ try {
     await mesa.fill('.campo-conta', '7654321');
     ok((await email()).startsWith('Prezado(a) Cliente,\n'), 'com a conta mudada, o nome do cliente anterior sai do e-mail na hora');
     await mesa.press('.campo-conta', 'Tab');
-    await esperarCliente('Ciclano dos Santos');
+    await esperarCliente('CICLANO DOS SANTOS');
     ok(
       pedidosAoHub.ficha === fichasAntes + 1 && (await abaDeClientes()) === clientes1 && (await mesa.textContent('.linha-cliente')).includes('fora da planilha'),
       'outra conta: a mesma aba troca de cliente, e o assessor fora da planilha fica sem cópia, com o motivo à vista'
@@ -890,7 +890,7 @@ try {
     await clientes1.reload();
     await mesa.fill('.campo-conta', '3141592');
     await mesa.press('.campo-conta', 'Tab');
-    await esperarCliente("Maria-Clara D'Avila");
+    await esperarCliente("MARIA-CLARA D'AVILA");
     ok(true, 'se trocar de cliente não traz a ficha, o robô recarrega a aba e traz o cliente do mesmo jeito');
     fichaSoAoAbrir = false;
     await clientes1.reload();

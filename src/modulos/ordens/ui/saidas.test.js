@@ -66,7 +66,7 @@ describe('Abrir no Outlook', () => {
   it('fica ao lado do Copiar nos dois e-mails', () => {
     for (const formato of ['email', 'auditoria']) {
       const html = renderSaidas(solicitacaoSimples, [formato], new Set());
-      expect(html).toContain(`<button class="copy-btn" data-copiar="${formato}">Copiar</button><button class="copy-btn btn-outlook" data-outlook="${formato}"`);
+      expect(html).toContain(`<button class="copy-btn" data-copiar="${formato}" data-grupo="bolsa">Copiar</button><button class="copy-btn btn-outlook" data-outlook="${formato}"`);
       expect(html).toContain('>Abrir no Outlook</button>');
     }
   });
@@ -114,5 +114,63 @@ describe('gerar', () => {
     const saida = gerar(solicitacao({ quantidade: null, financeiro: 50000 }), 'auditoria', new Set());
     expect(saida.texto).toContain('\nIVVB11\tC\tA mercado\tR$ 50.000,00\n');
     expect(saida.html).toContain('Financeiro');
+  });
+});
+
+describe("um e-mail por grupo", () => {
+  const fundo = (nome, ticker = null) => ({ situacao: "exato", fundo: { nome, ticker } });
+  const misto = () => ({
+    conta: "1234567",
+    descartadas: [],
+    horario: null,
+    ordens: [
+      { ativo: "KLBN11", ticker: { situacao: "conhecido" }, fundo: null, operacao: "V", quantidade: 674, financeiro: null, preco: null },
+      { ativo: "Brio Renda Mais FII RL", ticker: null, fundo: fundo("Brio Renda Mais FII RL"), operacao: "C", quantidade: 10, financeiro: null, preco: null },
+      { ativo: "Riza Malls Feeder FII RL", ticker: null, fundo: fundo("Riza Malls Feeder FII RL"), operacao: "V", quantidade: 100, financeiro: null, preco: null, venda: { situacao: "pronto", modalidade: "xp", quantidade: 100, posicao: { disponivel: 200, aVenda: 0 }, condicoes: { aberta: true }, outraAberta: false } }
+    ]
+  });
+
+  it("o pedido misto sai em três e-mails, cada um com o grupo no título", () => {
+    const html = renderSaidas(misto(), ["email"], new Set());
+    expect(html.match(/class="saida" data-formato="email" data-grupo="[a-z-]+"/g)).toEqual([
+      "class=\"saida\" data-formato=\"email\" data-grupo=\"bolsa\"",
+      "class=\"saida\" data-formato=\"email\" data-grupo=\"fundos-compra\"",
+      "class=\"saida\" data-formato=\"email\" data-grupo=\"fundos-venda\""
+    ]);
+    expect(html).toContain(">Fundos · Venda</span>");
+  });
+
+  it("cada e-mail leva só as ordens dele, e o de venda no modelo da auditoria", () => {
+    expect(gerar(misto(), "email", new Set(), { grupo: "bolsa" }).texto).toContain("Ativo: KLBN11;");
+    expect(gerar(misto(), "email", new Set(), { grupo: "bolsa" }).texto).not.toContain("Brio");
+    const venda = gerar(misto(), "email", new Set(), { grupo: "fundos-venda" }).texto;
+    expect(venda).toContain("Operação: Venda;\n\nCondições:");
+    expect(venda.endsWith("atte,")).toBe(true);
+  });
+
+  it("o lote é só de bolsa: os fundos pelo nome ficam de fora", () => {
+    const texto = gerar(misto(), "lote", new Set()).texto;
+    expect(texto).toContain("KLBN11");
+    expect(texto).not.toContain("Riza");
+  });
+
+  it("lote num pedido só de fundos diz por que não sai", () => {
+    const s = { ...misto(), ordens: misto().ordens.slice(1) };
+    expect(renderSaidas(s, ["lote"], new Set())).toContain("sem ordem de bolsa");
+  });
+
+  it("a confirmação vale para o grupo em que foi dada", () => {
+    const s = misto();
+    s.ordens[0].operacao = null;
+    s.ordens[1].operacao = null;
+    expect(gerar(s, "email", new Set(["bolsa:operacao-ausente"]), { grupo: "bolsa" })).not.toBeNull();
+    expect(gerar(s, "email", new Set(["bolsa:operacao-ausente"]), { grupo: "fundos-compra" })).toBeNull();
+  });
+
+  it("o conserto de uma ordem leva o índice dela na solicitação, não no grupo", () => {
+    const s = misto();
+    s.ordens[2].venda = { ...s.ordens[2].venda, condicoes: { aberta: false }, outraAberta: true };
+    const html = renderSaidas(s, ["email"], new Set());
+    expect(html).toContain("data-campo=\"estoque-clientes\" data-valor=\"\" data-ordem=\"2\"");
   });
 });

@@ -23,10 +23,14 @@ const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', h
     // O robô lê as boletas uma atrás da outra e entrega cada preço assim que o lê. Com 'falha', a
     // segunda boleta não carrega; com 'mudo', ele entrega a primeira e para de responder.
     if (m.tipo === 'pedir-cotas') {
-      m.itens.forEach(({ fundoId }, i) => {
+      m.itens.forEach(({ fundoId, lado }, i) => {
         if (cota === 'mudo' && i > 0) return;
-        if (cota === 'falha' && i === 1) entregar({ origem: 'robo-hub', tipo: 'cota-falhou', id: m.id, fundoId, motivo: 'sem-boleta' });
-        else entregar({ origem: 'robo-hub', tipo: 'cota', id: m.id, fundoId, valor: 8.337589, dataDaCota: '2026-10-01' });
+        // A 1.4.0 diz de qual item é a resposta (`indice`) e, da boleta lida, o estoque e a posição.
+        const daBoleta = lado
+          ? { indice: i, lado, stock: { canOperateSellTreasury: true }, posicao: lado === 'vender' ? { quotaQuantityAvailable: 10.5 } : null }
+          : {};
+        if (cota === 'falha' && i === 1) entregar({ origem: 'robo-hub', tipo: 'cota-falhou', id: m.id, fundoId, motivo: 'sem-boleta', ...(lado ? { indice: i } : {}) });
+        else entregar({ origem: 'robo-hub', tipo: 'cota', id: m.id, fundoId, valor: 8.337589, dataDaCota: '2026-10-01', ...daBoleta });
       });
       if (cota !== 'mudo') entregar({ origem: 'robo-hub', tipo: 'cotas-fim', id: m.id });
     }
@@ -295,5 +299,45 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
   it('não lê senha, token nem cabeçalho, e não chama a API por conta própria', () => {
     expect(scriptDoRobo).not.toMatch(/localStorage|sessionStorage|document\.cookie|authorization|headers/i);
     expect(scriptDoRobo).not.toMatch(/api-advisor\.xpi\.com\.br/);
+  });
+});
+
+describe('as boletas de compra e de venda (robô 1.4.0)', () => {
+  const FUNDO = 'ce52be97-05e7-40d9-887a-215d7711bfc7';
+
+  it('pede cada boleta com o lado, e o mesmo fundo em duas contas volta separado', async () => {
+    const { janela, recebidas } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const itens = [
+      { fundoId: FUNDO, conta: '1234567', lado: 'vender' },
+      { fundoId: FUNDO, conta: '7654321', lado: 'vender' },
+      { fundoId: FUNDO, conta: '1234567', lado: 'comprar' }
+    ];
+    const resultados = await robo.pedirBoletas({ itens });
+    expect(recebidas.at(-1).itens).toEqual(itens);
+    expect(resultados.map((r) => [r.indice, r.lado, r.boleta?.posicao?.quotaQuantityAvailable ?? null])).toEqual([
+      [0, 'vender', 10.5],
+      [1, 'vender', 10.5],
+      [2, 'comprar', null]
+    ]);
+    expect(resultados[0].boleta).toMatchObject({ fundoId: FUNDO, lado: 'vender', quotaValue: 8.337589, quotaDate: '2026-10-01' });
+  });
+
+  it('a falha de uma boleta vem com o motivo, no lugar dela', async () => {
+    const { janela } = janelaComRobo({ cota: 'falha' });
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const [, segundo] = await robo.pedirBoletas({ itens: [{ fundoId: FUNDO, conta: '1234567', lado: 'vender' }, { fundoId: FUNDO, conta: '7654321', lado: 'vender' }] });
+    expect(segundo).toMatchObject({ indice: 1, erro: { codigo: 'sem-boleta' } });
+  });
+
+  it('lado estranho vira compra; conta ou fundo estranhos nem chegam ao robô', async () => {
+    const { janela, recebidas } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const resultados = await robo.pedirBoletas({ itens: [{ fundoId: FUNDO, conta: '1234567', lado: 'xyz' }, { fundoId: 'x', conta: '1', lado: 'vender' }] });
+    expect(recebidas.at(-1).itens).toEqual([{ fundoId: FUNDO, conta: '1234567', lado: 'comprar' }]);
+    expect(resultados[1].erro).toMatchObject({ codigo: 'invalido' });
   });
 });

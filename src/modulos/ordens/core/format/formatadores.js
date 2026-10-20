@@ -1,3 +1,4 @@
+import { formatarCotas } from '../secundario/venda.js';
 import { formatarFinanceiro } from '../util/dinheiro.js';
 import { esc } from '../util/html.js';
 
@@ -92,6 +93,70 @@ const molduraDoEmail = (solicitacao) => {
 export const formatarEmail = (solicitacao) => {
   const { abertura, fecho } = molduraDoEmail(solicitacao);
   return [...abertura, '', solicitacao.ordens.map(blocoDeAtivo).join('\n\n'), '', ...fecho].join('\n');
+};
+
+/**
+ * A auditoria de venda de fundo do secundário, no modelo que o operador trouxe em 20/10/2026 e que o
+ * cliente aprova: sem preço e sem as observações do leilão, com "Operação: Venda;" (com
+ * ponto-e-vírgula) e, depois de cada ativo, "Condições:" com o print da cotação. O fecho é "atte,".
+ * O plural segue os outros e-mails (decisão do operador).
+ *
+ * A quantidade de uma venda do total é a posição disponível que o robô leu na boleta (`o.venda`),
+ * com as 8 casas do campo da boleta quando é fracionada (`123,45678910`).
+ *
+ * Devolve as partes, na ordem, para o texto e o HTML saírem iguais: `{texto}` é uma linha;
+ * `{cotacao: ordem}` é o lugar do print daquela ordem, que só o HTML preenche.
+ */
+const partesDaVenda = (solicitacao) => {
+  const varias = solicitacao.ordens.length > 1;
+  const linha = (texto) => ({ texto });
+
+  return [
+    linha(`Prezado(a) ${solicitacao.cliente?.nome || 'Cliente'},`),
+    linha(
+      'Conforme conversado, gostaria de realizar ' +
+        (varias ? 'as ordens abaixo' : 'a ordem abaixo') +
+        ` na conta XP ${solicitacao.conta}, conforme condições abaixo:`
+    ),
+    linha(''),
+    ...solicitacao.ordens.flatMap((o) => [
+      linha('Ativo: ' + o.ativo + ';'),
+      linha('Quantidade: ' + formatarCotas(o.venda?.quantidade ?? o.quantidade) + ';'),
+      linha('Operação: Venda;'),
+      linha(''),
+      linha('Condições:'),
+      { cotacao: o },
+      linha('')
+    ]),
+    linha('atte,')
+  ];
+};
+
+/** @returns {string} a auditoria de venda em texto: o lugar dos prints fica vazio. */
+export const formatarEmailVenda = (solicitacao) =>
+  partesDaVenda(solicitacao)
+    .filter((p) => 'texto' in p)
+    .map((p) => p.texto)
+    .join('\n');
+
+/**
+ * @param {object} solicitacao
+ * @param {{prints?: Map<object, string>}} [opcoes]  o print (data URL de imagem) de cada ordem
+ * @returns {string} a auditoria de venda em HTML, com cada print logo abaixo de "Condições:"
+ */
+export const formatarEmailVendaHtml = (solicitacao, { prints = new Map() } = {}) => {
+  const html = [];
+  for (const parte of partesDaVenda(solicitacao)) {
+    if ('texto' in parte) {
+      html.push(esc(parte.texto));
+      continue;
+    }
+    const print = prints.get(parte.cotacao);
+    if (print && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(print)) {
+      html[html.length - 1] += `<br><img src="${print}" alt="Cotação de ${esc(parte.cotacao.ativo)}" style="max-width:100%">`;
+    }
+  }
+  return '<div>' + html.join('<br>') + '</div>';
 };
 
 const tsv = (cabecalho, linhas) =>

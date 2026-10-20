@@ -3,7 +3,10 @@ import { ErroDosAssessores, lerPlanilhaDosAssessores } from './core/cliente/asse
 import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
+import { ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
+import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
+import { vendaDaOrdem } from './core/secundario/venda.js';
 import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
 import { copiar, colar } from './platform/clipboard.js';
@@ -15,7 +18,7 @@ import * as guardado from './platform/secundario.js';
 import { renderCliente } from './ui/cliente.js';
 import { aplicarEdicao, renderCartao } from './ui/preview.js';
 import { formatarTempos } from './ui/tempos.js';
-import { ROTULOS, esc, gerar, renderSaidas } from './ui/saidas.js';
+import { ROTULOS, chaveDaConfirmacao, esc, gerar, renderSaidas } from './ui/saidas.js';
 import { aviso } from '../../ui/avisos.js';
 import './ordens.css';
 
@@ -67,7 +70,10 @@ export const iniciarOrdens = (secao) => {
     // memória desta página, nunca guardado (decisão do operador em 07/10/2026).
     clientes: new Map(),
     // A planilha dos assessores, carregada à mão: liga o código do assessor ao e-mail dele.
-    assessores: guardadoDosAssessores.carregar()
+    assessores: guardadoDosAssessores.carregar(),
+    // As boletas do secundário lidas pelo robô (`core/secundario/boletaDoHub.js`): as de venda trazem a
+    // posição do cliente, e por isso ficam só na memória desta página, como o cliente.
+    boletas: {}
   };
 
   const formatosDe = (indice) => estado.escolhaManual ?? estado.detectados[indice] ?? [];
@@ -83,7 +89,15 @@ export const iniciarOrdens = (secao) => {
     'Cesta TWAP': '1234567\ncompra R$ 10.000,00 cada twap das 10h às 15h\nPETR4\nVALE3\nABEV3',
     'Lote simples': '1234567\nVENDA lote\n100 PETR4\n50 VALE3\n200 ITUB4',
     'Duas contas': '1234567\nC\nPETR4 100\n7654321\nV\nVALE3 50',
-    'Ticker suspeito': '1234567\nCOMPRA\nKCNR11 100'
+    'Ticker suspeito': '1234567\nCOMPRA\nKCNR11 100',
+    // Um de cada grupo de e-mail (20/10/2026): bolsa, fundos comprados, fundos vendidos, e o misto.
+    'Bolsa · compra e venda': '1234567\nvia email\nV KLBN11 674qtds\nC VULC3 R$ 11.800,00',
+    'Fundos · Estoque clientes':
+      '1234567\nvia email\nCompras\nIMOV11 - Navi Hedge Fund    R$20.000,00 (Estoque cliente)\nXPHF11 - XP Hedge Fund    R$10.000,00 (Estoque cliente o que for possível)',
+    'Fundos · venda':
+      '1234567\nvia email\nVendas | Quantidade Total\nRiza Malls Feeder FII RL\nTG Renda Urbana Feeder FII RL\n\nV 590qtds XP Habitat Renda Imobiliária II Feeder FII RL',
+    'Pedido misto':
+      '1234567\nvia email\n\nV KLBN11 674qtds\nC VULC3 R$ 11.800,00\n\nVendas | Quantidade Total\nPAAG11 - Pátria Crédito Agrícola FiAgro\nBGR Galpões Logísticos I Feeder FII\n\nCompras\nAZ Quest Panorama Data Centers FII RL    R$50.000,00\nIMOV11 - Navi Hedge Fund    R$52.832,35 (Estoque cliente)\nBrio Renda Mais FII RL    R$52.000,00'
   };
 
   $('presets').innerHTML = Object.keys(EXEMPLOS)
@@ -119,15 +133,19 @@ export const iniciarOrdens = (secao) => {
       aviso(`${ignoradas.length} linha(s) do WhatsApp descartadas (carimbo, menção ou confirmação).`);
     }
 
-    // Pedido com compra de fundo: o robô do Hub traz a cotação do momento, se a que está aqui já
+    // Pedido com fundo do secundário: o robô do Hub traz a cotação do momento, se a que está aqui já
     // tem mais de 2 minutos. Sem o robô, segue com o que foi carregado.
-    const temCompraDeFundo = solicitacoes.some((s) => s.ordens.some((o) => o.fundo?.situacao === 'exato' && o.operacao === 'C'));
+    const temFundo = solicitacoes.some((s) => s.ordens.some((o) => o.fundo?.situacao === 'exato'));
     const idade = estado.estoque ? Date.now() - new Date(estado.estoque.exportadaEm) : Infinity;
-    // Depois da cotação, o preço exato da cota de cada fundo pedido em R$, que só a boleta mostra.
-    if (temCompraDeFundo && robo.presente) {
+    // Depois da cotação, o preço exato da cota de cada fundo pedido em R$, que só a boleta mostra, e
+    // as boletas de venda (a posição) e do Estoque clientes.
+    if (temFundo && robo.presente) {
       comecarRodada(solicitacoes);
       const cotacao = idade > 2 * 60 * 1000 ? atualizarCotacoes({ automatico: true }) : Promise.resolve();
-      cotacao.then(() => buscarPrecosExatos()).then(() => fecharRodada());
+      cotacao
+        .then(() => buscarPrecosExatos())
+        .then(() => buscarBoletas())
+        .then(() => fecharRodada());
     }
 
     // Ao mesmo tempo, noutra aba do robô, o cliente de cada conta: nome, e-mail e assessor.
@@ -167,10 +185,15 @@ export const iniciarOrdens = (secao) => {
    * pode ter acabado de mudar. O validador e o e-mail leem o resultado em `ordem.secundario`.
    */
   function calcularSecundario(solicitacoes) {
-    const contexto = { estoque: estado.estoque, tetos: estado.tetos, cotas: estado.cotas, hoje: new Date() };
+    const hoje = new Date();
+    const contexto = { estoque: estado.estoque, tetos: estado.tetos, cotas: estado.cotas, boletas: estado.boletas, hoje };
     for (const s of solicitacoes) {
-      // O ROA máximo ou o zerado é escolhido para a solicitação inteira, nos botões de copiar.
-      for (const ordem of s.ordens) ordem.secundario = secundarioDaOrdem(ordem, { ...contexto, semRoa: s.semRoa === true });
+      for (const ordem of s.ordens) {
+        // O ROA máximo ou o zerado é escolhido para a solicitação inteira, nos botões de copiar.
+        ordem.secundario = secundarioDaOrdem(ordem, { ...contexto, semRoa: s.semRoa === true });
+        // A venda: a posição e a cotação da boleta de venda, pela conta do cartão.
+        ordem.venda = vendaDaOrdem(ordem, { estoque: estado.estoque, boletas: estado.boletas, conta: s.conta, hoje });
+      }
     }
   }
 
@@ -262,8 +285,10 @@ export const iniciarOrdens = (secao) => {
     // Controles segmentados (Compra/Venda, Qtd/R$). Aqui o cartão inteiro é refeito sem custo:
     // nenhum campo de texto está em foco quando se clica num deles.
     const segmento = e.target.closest('[data-campo]');
-    // O conserto do bloqueio de cotação velha não edita a ordem: pede uma cotação nova ao robô.
+    // O conserto do bloqueio de cotação velha não edita a ordem: pede uma cotação nova ao robô. O
+    // do Estoque clientes sem a boleta lida pede a boleta.
     if (segmento?.dataset.campo === 'atualizar-cotacoes') return atualizarCotacoes();
+    if (segmento?.dataset.campo === 'cotar-estoque-clientes') return buscarBoletas({ forcar: true });
     if (segmento) {
       aplicarEdicao(solicitacao, segmento.dataset.campo, segmento.dataset.valor, indiceDo(segmento, 'ordem'));
       render();
@@ -272,6 +297,8 @@ export const iniciarOrdens = (secao) => {
       if (segmento.dataset.campo === 'adicionar-ordem') {
         container.querySelector(`[data-solicitacao="${iSolicitacao}"] tbody tr:last-child .campo-ativo`)?.focus();
       }
+      // Trocar de estoque, ou voltar ao total da posição, pede a boleta que a conta nova usa.
+      if (['estoque-clientes', 'estoque-xp', 'usar-posicao', 'operacao'].includes(segmento.dataset.campo)) buscarBoletas();
       return;
     }
 
@@ -281,9 +308,10 @@ export const iniciarOrdens = (secao) => {
       return render();
     }
 
+    // A confirmação vale para o grupo do e-mail em que foi dada (bolsa, fundos comprados, vendidos).
     const confirmar = e.target.closest('[data-confirmar]');
     if (confirmar) {
-      estado.confirmados[iSolicitacao].add(confirmar.dataset.confirmar);
+      estado.confirmados[iSolicitacao].add(chaveDaConfirmacao(confirmar.dataset.grupo ?? 'bolsa', confirmar.dataset.confirmar));
       return renderSaidasDe(iSolicitacao);
     }
 
@@ -296,12 +324,13 @@ export const iniciarOrdens = (secao) => {
     let outlookBotao = e.target.closest('[data-outlook]');
     if (outlookBotao) {
       const formato = outlookBotao.dataset.outlook;
+      const grupo = outlookBotao.dataset.grupo ?? null;
 
       // Refeita antes, como no Copiar: a conta, o cliente e a idade da cotação são os de agora.
       renderSaidasDe(iSolicitacao);
-      outlookBotao = container.querySelector(`[data-solicitacao="${iSolicitacao}"] [data-outlook="${formato}"]`);
+      outlookBotao = container.querySelector(`[data-solicitacao="${iSolicitacao}"] [data-outlook="${formato}"]${grupo ? `[data-grupo="${grupo}"]` : ''}`);
 
-      const saida = gerar(solicitacao, formato, estado.confirmados[iSolicitacao]);
+      const saida = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo });
       if (!saida) return aviso('Resolva os bloqueios antes de abrir o e-mail.');
 
       const cliente = solicitacao.cliente?.situacao === 'achado' ? solicitacao.cliente : null;
@@ -329,8 +358,8 @@ export const iniciarOrdens = (secao) => {
       }
       historico.registrar({
         conta: solicitacao.conta,
-        ativos: solicitacao.ordens.map((o) => o.ativo),
-        formato: ROTULOS[formato],
+        ativos: recorte(solicitacao, grupo ?? 'bolsa', formato).ordens.map((o) => o.ativo),
+        formato: rotuloNoHistorico(solicitacao, formato, grupo),
         textoOriginal: estado.textoOriginal
       });
       return atualizarContadorHistorico();
@@ -340,6 +369,7 @@ export const iniciarOrdens = (secao) => {
     if (copiarBotao) {
       const formato = copiarBotao.dataset.copiar;
       const { roa } = copiarBotao.dataset;
+      const grupo = copiarBotao.dataset.grupo ?? null;
 
       // Fundo no secundário: o botão escolhe o ROA do e-mail inteiro. A área é refeita antes de
       // copiar — com a conta e a idade da cotação de agora, porque a página pode ter ficado aberta
@@ -347,15 +377,15 @@ export const iniciarOrdens = (secao) => {
       if (roa) aplicarEdicao(solicitacao, roa === 'zerado' ? 'roa-zerado' : 'roa-maximo', '');
       renderSaidasDe(iSolicitacao);
       copiarBotao = container.querySelector(
-        `[data-solicitacao="${iSolicitacao}"] [data-copiar="${formato}"]${roa ? `[data-roa="${roa}"]` : ''}`
+        `[data-solicitacao="${iSolicitacao}"] [data-copiar="${formato}"]${roa ? `[data-roa="${roa}"]` : ''}${grupo ? `[data-grupo="${grupo}"]` : ''}`
       );
 
-      const saida = gerar(solicitacao, formato, estado.confirmados[iSolicitacao]);
+      const saida = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo });
       if (!saida) return aviso('Resolva os bloqueios antes de copiar.');
 
       const ok = await copiar(saida.texto, saida.html);
       const comRoa = roa ? (roa === 'zerado' ? ', com ROA zerado' : ', com ROA máximo') : '';
-      aviso(ok ? `${ROTULOS[formato]} copiado${comRoa}.` : 'Não consegui copiar.');
+      aviso(ok ? `${rotuloNoHistorico(solicitacao, formato, grupo)} copiado${comRoa}.` : 'Não consegui copiar.');
       if (ok && copiarBotao) {
         copiarBotao.classList.add('copiado');
         setTimeout(() => copiarBotao.classList.remove('copiado'), 1600);
@@ -364,14 +394,19 @@ export const iniciarOrdens = (secao) => {
       if (ok) {
         historico.registrar({
           conta: solicitacao.conta,
-          ativos: solicitacao.ordens.map((o) => o.ativo),
-          formato: ROTULOS[formato],
+          ativos: recorte(solicitacao, grupo ?? 'bolsa', formato).ordens.map((o) => o.ativo),
+          formato: rotuloNoHistorico(solicitacao, formato, grupo),
           textoOriginal: estado.textoOriginal
         });
         atualizarContadorHistorico();
       }
     }
   });
+
+  function rotuloNoHistorico(solicitacao, formato, grupo) {
+    const varios = gruposDe(solicitacao).length > 1;
+    return formato === 'email' && grupo && varios ? `${ROTULOS[formato]} · ${ROTULOS_DOS_GRUPOS[grupo]}` : ROTULOS[formato];
+  }
 
   /* ── Secundário ───────────────────────────────────────────────────────────────────────── */
 
@@ -611,6 +646,69 @@ export const iniciarOrdens = (secao) => {
       aviso(
         `Não consegui o preço exato de ${nomes.join(', ')} na boleta do Hub: ${falharam[0].erro.message}. ` +
           'O e-mail está certo: as cotas saem pela conta arredondada (≈) e podem ficar umas abaixo do máximo.',
+        { tipo: 'erro' }
+      );
+    }
+  }
+
+  /** Uma boleta lida pelo robô: guardada para a conta do pedido, e o preço exato dela serve a todos. */
+  function guardarBoleta(bruta, conta) {
+    const lida = lerBoletaDoHub(bruta);
+    if (!lida) return;
+    estado.boletas[chaveDaBoleta(lida.fundoId, lida.lado, conta)] = lida;
+    if (lida.valorDaCota && lida.dataDaCota) guardarCota({ fundoId: lida.fundoId, valor: lida.valorDaCota, dataDaCota: lida.dataDaCota, em: lida.em });
+  }
+
+  /**
+   * As boletas que a conta precisa e que ainda não foram lidas (ou já venceram), pelo robô:
+   *  - a de **venda** de cada fundo vendido, para a posição do cliente e as modalidades do dia — vale
+   *    um dia útil (`venda.js`);
+   *  - a de **compra** de cada fundo pedido no Estoque clientes, para o estoque dele agora — vale 10
+   *    minutos, como a cotação.
+   * Abrir a boleta não digita nada. `forcar` lê de novo mesmo as que valem (o conserto "Cotar na
+   * boleta").
+   */
+  async function buscarBoletas({ forcar = false } = {}) {
+    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO || !estado.estoque) return;
+    calcularSecundario(estado.solicitacoes);
+
+    const pedidos = [];
+    const jaPedido = new Set();
+    const pedir = (fundoId, conta, lado, ordem) => {
+      const chave = chaveDaBoleta(fundoId, lado, conta);
+      if (jaPedido.has(chave)) return;
+      jaPedido.add(chave);
+      pedidos.push({ fundoId, conta, lado, ordens: [ordem] });
+    };
+    for (const s of estado.solicitacoes) {
+      if (!/^\d{5,8}$/.test(String(s.conta ?? ''))) continue;
+      for (const o of s.ordens) {
+        if (o.venda?.fundoId && (forcar || o.venda.situacao === 'sem-boleta')) pedir(o.venda.fundoId, s.conta, 'vender', o);
+        const sec = o.secundario;
+        if (sec?.modalidade === 'clientes' && sec.fundo?.id && (forcar || sec.p2p?.origem !== 'boleta')) pedir(sec.fundo.id, s.conta, 'comprar', o);
+      }
+    }
+    if (pedidos.length === 0) return;
+
+    for (const p of pedidos) for (const o of p.ordens) o.buscandoVenda = true;
+    marcarBusca('lendo as boletas no Hub…');
+    anotar('pediu as boletas', { quantas: pedidos.length });
+    const resultados = await robo.pedirBoletas({
+      itens: pedidos.map(({ fundoId, conta, lado }) => ({ fundoId, conta, lado })),
+      aoChegar: (r) => {
+        if (r.boleta) guardarBoleta(r.boleta, pedidos[r.indice].conta);
+        for (const o of pedidos[r.indice].ordens) o.buscandoVenda = false;
+        render();
+      }
+    });
+    for (const p of pedidos) for (const o of p.ordens) o.buscandoVenda = false;
+    marcarBusca('');
+
+    const falharam = resultados.filter((r) => r?.erro);
+    if (falharam.length > 0) {
+      aviso(
+        `Não consegui ler ${falharam.length === 1 ? 'uma boleta' : `${falharam.length} boletas`} no Hub: ${falharam[0].erro.message}. ` +
+          'A venda segue sem a posição conferida, e o Estoque clientes pelo da Prateleira.',
         { tipo: 'erro' }
       );
     }

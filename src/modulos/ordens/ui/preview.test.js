@@ -459,3 +459,46 @@ describe('fundo da prateleira digitado pelo ticker no cartão', () => {
     expect(renderCartao(solicitacoes[0], 0, ['email'], new Set())).toContain('Valora Imobiliário Multiestratégia Premium');
   });
 });
+
+describe('venda de fundo e Estoque clientes no cartão', () => {
+  const fundo = { situacao: 'exato', fundo: { nome: 'Riza Malls Feeder FII RL', ticker: null } };
+  const venda = (extra = {}) => ordem({ ativo: 'Riza Malls Feeder FII RL', ticker: null, fundo, operacao: 'V', quantidade: null, total: true, ...extra });
+
+  it('os consertos trocam a modalidade, ligam o "o que for possível" e voltam ao total', () => {
+    const s = solicitacao({ ordens: [venda({ total: false, quantidade: 999 })] });
+    aplicarEdicao(s, 'estoque-clientes', '', 0);
+    expect(s.ordens[0].estoque).toBe('clientes');
+    aplicarEdicao(s, 'estoque-xp', '', 0);
+    expect(s.ordens[0].estoque).toBe('xp');
+    aplicarEdicao(s, 'o-que-for-possivel', '', 0);
+    expect(s.ordens[0].oQueForPossivel).toBe(true);
+    aplicarEdicao(s, 'usar-posicao', '', 0);
+    expect(s.ordens[0]).toMatchObject({ total: true, quantidade: null });
+  });
+
+  it('na venda de fundo a quantidade aceita as casas da cota', () => {
+    const s = solicitacao({ ordens: [venda()] });
+    aplicarEdicao(s, 'valor', '123,4567891', 0);
+    expect(s.ordens[0]).toMatchObject({ quantidade: 123.4567891, total: false });
+    aplicarEdicao(s, 'valor', '5.125', 0);
+    expect(s.ordens[0].quantidade).toBe(5125);
+  });
+
+  it('na bolsa a quantidade continua inteira', () => {
+    const s = solicitacao();
+    aplicarEdicao(s, 'valor', '1.000', 0);
+    expect(s.ordens[0].quantidade).toBe(1000);
+  });
+
+  it('a linha da venda do total mostra o "Total" e a posição lida', () => {
+    const html = renderCartao(solicitacao({ ordens: [venda({ venda: { situacao: 'pronto', quantidade: 54.36585 } })] }), 0, ['email'], new Set());
+    expect(html).toContain('data-campo="usar-posicao"');
+    expect(html).toMatch(/class="seg ativo"[^>]*data-campo="usar-posicao"|data-campo="usar-posicao"[^>]*aria-pressed="true"/);
+    expect(html).toContain('54,36585');
+  });
+
+  it('o selo diz quando a ordem é no Estoque clientes', () => {
+    const html = renderCartao(solicitacao({ ordens: [venda({ total: false, quantidade: 10, estoque: 'clientes' })] }), 0, ['email'], new Set());
+    expect(html).toContain('Estoque clientes');
+  });
+});

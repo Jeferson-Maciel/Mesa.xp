@@ -117,3 +117,69 @@ describe('renderSecundario', () => {
     expect(cartao({}, { estoque: null })).toContain('Sem os fundos do secundário');
   });
 });
+
+describe('o bloco da venda e do Estoque clientes', () => {
+  const fundo = { situacao: 'exato', fundo: { nome: 'Riza Malls Feeder FII RL', ticker: null } };
+  const vendaLida = {
+    situacao: 'pronto',
+    modalidade: 'clientes',
+    total: true,
+    quantidade: 54.36585,
+    posicao: { disponivel: 54.36585, aVenda: 0 },
+    condicoes: { aberta: true, desagio: 17.5, corretagem: 0 },
+    outraAberta: false,
+    lidaEm: new Date(2026, 9, 20, 11, 50).getTime(),
+    validaAte: new Date(2026, 9, 21, 11, 50),
+    valorDaCota: 1502.84837186,
+    conta: { total: 67405.49 }
+  };
+  const comVenda = (venda, extra = {}) => ({ conta: '1234567', ordens: [{ ativo: 'Riza Malls Feeder FII RL', fundo, operacao: 'V', quantidade: null, total: true, venda, ...extra }] });
+
+  it('mostra a posição, o que vai ser vendido, o deságio e o líquido estimado', () => {
+    const html = renderSecundario(comVenda(vendaLida));
+    expect(html).toContain('Venda no secundário');
+    expect(html).toContain('54,36585000');
+    expect(html).toContain('17,50%');
+    expect(html).toContain('R$ 67.405,49');
+    expect(html).toContain('Estoque clientes');
+    expect(html).toMatch(/vale até .*21\/10 11:50/);
+  });
+
+  it('com a modalidade fechada, diz isso no lugar dos números', () => {
+    const html = renderSecundario(comVenda({ ...vendaLida, condicoes: { aberta: false }, outraAberta: true }));
+    expect(html).toContain('não está comprando este fundo hoje — o outro estoque está aberto');
+  });
+
+  it('sem a boleta lida, diz de onde a posição vem', () => {
+    expect(renderSecundario(comVenda({ situacao: 'sem-boleta', modalidade: 'xp', total: true, quantidade: null }))).toContain('boleta de venda do Hub');
+  });
+
+  it('a compra pelo Estoque clientes tem um cenário só, no pior preço', () => {
+    const s = {
+      conta: '1234567',
+      ordens: [
+        {
+          ativo: 'Navi Hedge Fund',
+          fundo,
+          operacao: 'C',
+          financeiro: 50000,
+          secundario: {
+            situacao: 'pronto',
+            modalidade: 'clientes',
+            porValor: true,
+            planilha: { exportadaEm: new Date(2026, 9, 20, 11, 0).toISOString(), deHoje: true, doHub: true, minutos: 1 },
+            fundo: { pu: 9, desagio: 9.75 },
+            p2p: { aberta: true, desagio: 9.9, corretagem: 1.5, variacao: 2, disponivel: 25034, origem: 'boleta', lidaEm: new Date(2026, 9, 20, 11, 52).getTime() },
+            cenarios: { maximo: { cotas: 5000, conta: { desconto: 9.9, total: 49900, remuneracao: 600, percentualDaRemuneracao: 1.5 } }, zerado: { cotas: 5000, conta: { desconto: 9.9, total: 49900, remuneracao: 600, percentualDaRemuneracao: 1.5 } } },
+            cotas: 5000
+          }
+        }
+      ]
+    };
+    const html = renderSecundario(s);
+    expect(html).toContain('Estoque clientes · pior preço');
+    expect(html).not.toContain('ROA zerado');
+    expect(html).toContain('25.034 cotas no estoque');
+    expect(html).toContain('boleta das 11:52');
+  });
+});

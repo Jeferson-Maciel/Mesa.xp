@@ -3,6 +3,8 @@ import {
   formatarAuditoria,
   formatarAuditoriaHtml,
   formatarEmail,
+  formatarEmailVenda,
+  formatarEmailVendaHtml,
   formatarLoteSimples,
   formatarLoteTwap
 } from './formatadores.js';
@@ -481,5 +483,73 @@ describe('formatarEmail — fundo do secundário', () => {
   it('sem conversão, o pedido em R$ sai como saía', () => {
     expect(formatarEmail(fundo({ situacao: 'sem-planilha' }))).toContain('Valor: R$ 16.000,00;');
     expect(formatarEmail(fundo(null))).toContain('Valor: R$ 16.000,00;');
+  });
+});
+
+describe('formatarEmailVenda — a auditoria de venda de fundo', () => {
+  const fundo = { situacao: 'exato', fundo: { nome: 'x', ticker: null } };
+  const venda = (ativo, quantidade, extra = {}) => ({
+    ativo,
+    operacao: 'V',
+    fundo,
+    quantidade: extra.total ? null : quantidade,
+    financeiro: null,
+    total: false,
+    venda: { situacao: 'pronto', quantidade },
+    ...extra
+  });
+
+  it('monta o modelo da auditoria de venda, com "Condições:" depois de cada ativo', () => {
+    const s = solicitacao({
+      conta: '1234567',
+      cliente: { nome: 'FULANO DE TAL' },
+      ordens: [venda('Riza Malls Feeder FII RL', 123.4567891, { total: true }), venda('PAAG11', 5125)]
+    });
+    expect(formatarEmailVenda(s)).toBe(
+      [
+        'Prezado(a) FULANO DE TAL,',
+        'Conforme conversado, gostaria de realizar as ordens abaixo na conta XP 1234567, conforme condições abaixo:',
+        '',
+        'Ativo: Riza Malls Feeder FII RL;',
+        'Quantidade: 123,45678910;',
+        'Operação: Venda;',
+        '',
+        'Condições:',
+        '',
+        'Ativo: PAAG11;',
+        'Quantidade: 5125;',
+        'Operação: Venda;',
+        '',
+        'Condições:',
+        '',
+        'atte,'
+      ].join('\n')
+    );
+  });
+
+  it('uma ordem só fica no singular, e sem o cliente sai "Cliente"', () => {
+    const texto = formatarEmailVenda(solicitacao({ conta: '1234567', ordens: [venda('TG Renda Urbana Feeder FII RL', 598)] }));
+    expect(texto.split('\n').slice(0, 2)).toEqual([
+      'Prezado(a) Cliente,',
+      'Conforme conversado, gostaria de realizar a ordem abaixo na conta XP 1234567, conforme condições abaixo:'
+    ]);
+  });
+
+  it('a quantidade escrita, sem a boleta lida, é a do pedido', () => {
+    const o = { ...venda('TG Renda Urbana Feeder FII RL', 598), venda: { situacao: 'sem-boleta', quantidade: 598 } };
+    expect(formatarEmailVenda(solicitacao({ ordens: [o] }))).toContain('Quantidade: 598;');
+  });
+
+  it('o HTML é o mesmo texto, com o lugar de cada cotação marcado', () => {
+    const html = formatarEmailVendaHtml(solicitacao({ conta: '1234567', ordens: [venda('Riza <b>', 10)] }), {});
+    expect(html).toContain('Ativo: Riza &lt;b&gt;;');
+    expect(html).toContain('Condições:');
+    expect(html).not.toContain('<img');
+  });
+
+  it('com o print, a imagem vai logo abaixo de "Condições:"', () => {
+    const o = venda('TG Renda Urbana Feeder FII RL', 598);
+    const html = formatarEmailVendaHtml(solicitacao({ ordens: [o] }), { prints: new Map([[o, 'data:image/png;base64,AAAA']]) });
+    expect(html).toMatch(/Condições:<br><img src="data:image\/png;base64,AAAA"/);
   });
 });

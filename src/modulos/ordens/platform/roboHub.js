@@ -210,52 +210,102 @@ export const criarRoboHub = ({ janela = window } = {}) => {
      * @returns {Promise<ResultadoDaCota[]>} na ordem dos itens
      */
     pedirCotas({ itens, aoChegar = () => {}, prazo = 40000 }) {
-      const resultados = new Map();
-      const validos = [];
-      for (const { fundoId, conta } of itens) {
-        if (FUNDO.test(String(fundoId)) && CONTA.test(String(conta))) validos.push({ fundoId, conta: String(conta) });
-        else resultados.set(fundoId, { fundoId, erro: new ErroDoRobo('invalido') });
-      }
-      const emOrdem = () => itens.map(({ fundoId }) => resultados.get(fundoId));
-      if (validos.length === 0) return Promise.resolve(emOrdem());
-      if (versao === null) {
-        for (const { fundoId } of validos) resultados.set(fundoId, { fundoId, erro: new ErroDoRobo('sem-robo') });
-        return Promise.resolve(emOrdem());
-      }
+      const doPreco = (r) => (r.erro ? { fundoId: r.fundoId, erro: r.erro } : { fundoId: r.fundoId, valor: r.boleta.quotaValue, dataDaCota: r.boleta.quotaDate });
+      return pedirLote(
+        itens.map(({ fundoId, conta }) => ({ fundoId, conta })),
+        { aoChegar: (r) => aoChegar(doPreco(r)), prazo, comLado: false }
+      ).then((resultados) => resultados.map(doPreco));
+    },
 
-      const id = novoId();
-      return new Promise((resolver) => {
-        let relogio = null;
-        const terminar = () => {
-          clearTimeout(relogio);
-          lotes.delete(id);
-          for (const { fundoId } of validos) {
-            if (!resultados.has(fundoId)) resultados.set(fundoId, { fundoId, erro: new ErroDoRobo('sem-resposta') });
-          }
-          resolver(emOrdem());
-        };
-        const esperar = () => {
-          clearTimeout(relogio);
-          relogio = setTimeout(terminar, prazo);
-        };
-        lotes.set(id, {
-          chegou(mensagem) {
-            const { fundoId } = mensagem;
-            if (!validos.some((v) => v.fundoId === fundoId) || resultados.has(fundoId)) return;
-            const resultado =
-              mensagem.tipo === 'cota'
-                ? { fundoId, valor: mensagem.valor, dataDaCota: mensagem.dataDaCota }
-                : { fundoId, erro: new ErroDoRobo(mensagem.motivo) };
-            resultados.set(fundoId, resultado);
-            aoChegar(resultado);
-            if (validos.every((v) => resultados.has(v.fundoId))) terminar();
-            else esperar();
-          },
-          terminar
-        });
-        esperar();
-        enviar({ tipo: 'pedir-cotas', id, itens: validos });
-      });
+    /**
+     * Pede ao robô (1.4.0) as boletas de compra e de venda, de uma vez: ele as abre uma atrás da
+     * outra, na aba dele, para a conta de cada item, e devolve de cada uma o preço, as modalidades do
+     * fundo (Estoque XP e Estoque clientes) e, na venda, a posição do cliente. A leitura dos campos é
+     * da Mesa (`core/secundario/boletaDoHub.js`). O mesmo fundo pode vir em duas contas: a resposta
+     * volta no lugar do item (`indice`).
+     *
+     * @param {{itens: Array<{fundoId: string, conta: string|number, lado: 'comprar'|'vender'}>,
+     *   aoChegar?: (resultado: ResultadoDaBoleta) => void, prazo?: number}} pedido
+     * @returns {Promise<ResultadoDaBoleta[]>} na ordem dos itens
+     */
+    pedirBoletas({ itens, aoChegar = () => {}, prazo = 40000 }) {
+      return pedirLote(
+        itens.map(({ fundoId, conta, lado }) => ({ fundoId, conta, lado: lado === 'vender' ? 'vender' : 'comprar' })),
+        { aoChegar, prazo, comLado: true }
+      );
     }
   };
+
+  /**
+   * @typedef {{indice: number, fundoId: string, lado?: 'comprar'|'vender', erro?: ErroDoRobo,
+   *   boleta?: {fundoId: string, lado: string, quotaValue: number, quotaDate: string, stock: object|null,
+   *   posicao: object|null, em: number}}} ResultadoDaBoleta
+   */
+  function pedirLote(itens, { aoChegar, prazo, comLado }) {
+    const resultados = new Array(itens.length).fill(null);
+    // Os válidos levam o lugar deles na lista que a Mesa pediu.
+    const validos = [];
+    itens.forEach((item, indice) => {
+      if (FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta))) validos.push({ ...item, conta: String(item.conta), indice });
+      else resultados[indice] = { indice, fundoId: item.fundoId, lado: item.lado, erro: new ErroDoRobo('invalido') };
+    });
+    if (validos.length === 0) return Promise.resolve(resultados);
+    if (versao === null) {
+      for (const v of validos) resultados[v.indice] = { indice: v.indice, fundoId: v.fundoId, lado: v.lado, erro: new ErroDoRobo('sem-robo') };
+      return Promise.resolve(resultados);
+    }
+
+    const id = novoId();
+    return new Promise((resolver) => {
+      let relogio = null;
+      const terminar = () => {
+        clearTimeout(relogio);
+        lotes.delete(id);
+        for (const v of validos) {
+          if (!resultados[v.indice]) resultados[v.indice] = { indice: v.indice, fundoId: v.fundoId, lado: v.lado, erro: new ErroDoRobo('sem-resposta') };
+        }
+        resolver(resultados);
+      };
+      const esperar = () => {
+        clearTimeout(relogio);
+        relogio = setTimeout(terminar, prazo);
+      };
+      lotes.set(id, {
+        chegou(mensagem) {
+          // A 1.4.0 diz o lugar do item (o robô o conta na lista que recebeu, só com os válidos);
+          // sem isso, vale o primeiro item ainda sem resposta com o mesmo fundo.
+          const pelaPosicao = Number.isInteger(mensagem.indice) ? validos[mensagem.indice] : null;
+          const item =
+            pelaPosicao && pelaPosicao.fundoId === mensagem.fundoId && !resultados[pelaPosicao.indice]
+              ? pelaPosicao
+              : validos.find((v) => v.fundoId === mensagem.fundoId && !resultados[v.indice]);
+          if (!item) return;
+          const resultado =
+            mensagem.tipo === 'cota'
+              ? {
+                  indice: item.indice,
+                  fundoId: item.fundoId,
+                  lado: item.lado,
+                  boleta: {
+                    fundoId: item.fundoId,
+                    lado: item.lado ?? 'comprar',
+                    quotaValue: mensagem.valor,
+                    quotaDate: mensagem.dataDaCota,
+                    stock: mensagem.stock ?? null,
+                    posicao: mensagem.posicao ?? null,
+                    em: Date.now()
+                  }
+                }
+              : { indice: item.indice, fundoId: item.fundoId, lado: item.lado, erro: new ErroDoRobo(mensagem.motivo) };
+          resultados[item.indice] = resultado;
+          aoChegar(resultado);
+          if (validos.every((v) => resultados[v.indice])) terminar();
+          else esperar();
+        },
+        terminar
+      });
+      esperar();
+      enviar({ tipo: 'pedir-cotas', id, itens: validos.map(({ fundoId, conta, lado }) => (comLado ? { fundoId, conta, lado } : { fundoId, conta })) });
+    });
+  }
 };

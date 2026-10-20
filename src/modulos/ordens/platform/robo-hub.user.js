@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.3.2
-// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê o preço exato da cota nas boletas e o nome, o e-mail e o assessor do cliente na ficha dele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
+// @version      1.4.0
+// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, e na ficha dele o nome, o e-mail e o assessor, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
 // @match        file:///*/mesa-xp/dist/index.html
@@ -26,9 +26,10 @@
  *   aba da Mesa   pede ──→ aba do robô no Hub — uma aba só dele, que ele mesmo abre:
  *                            · cotação: clica em Atualizar na Prateleira, se a lista não acabou
  *                              de chegar sozinha;
- *                            · preço exato das cotas: abre as boletas dos fundos, uma atrás da
- *                              outra, para a conta pelo endereço do próprio Hub
- *                              (#/secundario/comprar/<fundo>/<conta>), lê a resposta de cada
+ *                            · as boletas: abre as boletas dos fundos, uma atrás da outra, para a
+ *                              conta pelo endereço do próprio Hub — a de compra
+ *                              (#/secundario/comprar/<fundo>/<conta>) e, desde a 1.4.0, a de venda
+ *                              (#/secundario/vender/<fundo>/<conta>) —, lê a resposta de cada
  *                              pre-check e, no fim, volta para a Prateleira
  *   aba da Mesa  ←── o que o Hub respondeu, cada preço assim que chega
  *
@@ -48,7 +49,11 @@
  *    etapa 1. Vai de uma boleta direto para a próxima — voltar à Prateleira entre elas custava uns
  *    4 s de desenho, mais 2 a 3 s da lista que ela baixa de novo — e volta uma vez só, no fim. Se a
  *    troca direta não disparar o pre-check, passa pela Prateleira entre as boletas, como antes;
- *  - do pre-check só sai o preço e o dia da cota do fundo pedido — nada do cliente;
+ *  - do pre-check da boleta que ele abriu saem o preço e o dia da cota, os estoques do fundo (Estoque
+ *    XP e Estoque clientes: se estão abertos, deságio, corretagem, PU e cotas disponíveis) e, só na
+ *    boleta de venda, a posição do cliente naquele fundo (a quantidade, a disponível e a que já está
+ *    à venda) — nada mais do cliente. A posição passa pelo armazenamento do Tampermonkey e é apagada
+ *    assim que a Mesa a recebe. Da boleta que a pessoa abre, só o preço;
  *  - da ficha do cliente só saem o nome, o e-mail e o assessor (código e nome), e só para a conta
  *    pedida — nada de CPF, telefone ou patrimônio. Eles passam pelo armazenamento do Tampermonkey
  *    e são apagados assim que a Mesa os recebe; o pedido, com a conta, é apagado no fim da busca;
@@ -75,7 +80,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.3.2';
+  const VERSAO = '1.4.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -214,7 +219,7 @@
     const naRotaDoRobo = () =>
       papel === 'clientes'
         ? location.pathname.startsWith('/new/posicao-consolidada')
-        : naPrateleira() || location.hash.startsWith('#/secundario/comprar/');
+        : naPrateleira() || /^#\/secundario\/(comprar|vender)\//.test(location.hash);
     const botao = () => document.querySelector('soma-button[aria-label="atualizar"]');
 
     // O título diz, na barra de abas, que esta é a aba do robô.
@@ -306,6 +311,27 @@
       };
     }
 
+    // Do pre-check só saem estes campos, e só se forem número (ou, nas travas, verdadeiro/falso).
+    const CAMPOS_DA_POSICAO = ['quotaQuantity', 'quotaQuantityAvailable', 'quotaQuantityOnSale'];
+    const CAMPOS_DO_ESTOQUE = ['secondaryDiscount', 'percentageComission', 'unitaryQuotaValue', 'quotaQuantityAvailable', 'maxAmountVariationPercentage'];
+    const TRAVAS = ['canOperateBuyTreasury', 'canOperateBuyPeerToPeer', 'canOperateSellTreasury', 'canOperateSellPeerToPeer'];
+    const numerosDe = (origem, campos) => {
+      if (!origem || typeof origem !== 'object') return null;
+      const lidos = {};
+      for (const campo of campos) if (typeof origem[campo] === 'number' && Number.isFinite(origem[campo])) lidos[campo] = origem[campo];
+      return lidos;
+    };
+    const estoquesDe = (stock) => {
+      if (!stock || typeof stock !== 'object') return null;
+      const lidos = {};
+      for (const trava of TRAVAS) if (typeof stock[trava] === 'boolean') lidos[trava] = stock[trava];
+      for (const modalidade of ['treasury', 'peerToPeer']) {
+        const m = stock[modalidade];
+        if (m && typeof m === 'object') lidos[modalidade] = { buy: numerosDe(m.buy, CAMPOS_DO_ESTOQUE) || {}, sell: numerosDe(m.sell, CAMPOS_DO_ESTOQUE) || {} };
+      }
+      return lidos;
+    };
+
     /* O gancho no fetch entra antes do app carregar: é por ele que passam a prateleira e o
        pre-check da boleta. */
     let esperaPreCheck = null;
@@ -353,8 +379,12 @@
               const fundo = json && json.fund;
               if (!fundo || !FUNDO.test(String(fundo.id)) || typeof fundo.quotaValue !== 'number') return;
               const cota = { fundoId: fundo.id, valor: fundo.quotaValue, dataDaCota: String(fundo.quotaDate || '').slice(0, 10) };
-              if (esperaPreCheck && esperaPreCheck.fundoId === cota.fundoId) esperaPreCheck.resolver(cota);
-              else GM_setValue('cotaVista', { ...cota, em: Date.now() });
+              if (esperaPreCheck && esperaPreCheck.fundoId === cota.fundoId) {
+                // Da boleta que o robô abriu: os estoques do fundo e, na venda, a posição do cliente.
+                const { lado } = esperaPreCheck;
+                const posicao = lado === 'vender' ? numerosDe(json.customer && json.customer.balancePosition, CAMPOS_DA_POSICAO) : null;
+                esperaPreCheck.resolver({ ...cota, lado, stock: estoquesDe(fundo.stock), posicao });
+              } else GM_setValue('cotaVista', { ...cota, em: Date.now() });
             })
             .catch(() => {});
         }
@@ -430,7 +460,7 @@
         );
         location.hash = rota;
       });
-    const naBoleta = () => location.hash.startsWith('#/secundario/comprar/');
+    const naBoleta = () => /^#\/secundario\/(comprar|vender)\//.test(location.hash);
     const ondeEsta = () =>
       papel === 'clientes' ? 'ficha do cliente' : naPrateleira() ? 'Prateleira' : naBoleta() ? 'boleta' : 'outra página';
 
@@ -448,8 +478,8 @@
       if (achado) achado.click();
     };
 
-    // Abre a boleta do fundo para a conta e espera o pre-check dele.
-    const abrirBoleta = (fundoId, conta, prazo, direto) =>
+    // Abre a boleta do fundo para a conta — de compra ou de venda — e espera o pre-check dele.
+    const abrirBoleta = (fundoId, conta, prazo, direto, lado = 'comprar') =>
       new Promise((resolver) => {
         const relogio = setTimeout(() => {
           esperaPreCheck = null;
@@ -457,14 +487,15 @@
         }, prazo);
         esperaPreCheck = {
           fundoId,
+          lado,
           resolver: (cota) => {
             clearTimeout(relogio);
             esperaPreCheck = null;
             resolver(cota);
           }
         };
-        registrar('abriu a boleta', { fundoId, direto });
-        irPara(`#/secundario/comprar/${fundoId}/${conta}`);
+        registrar('abriu a boleta', { fundoId, direto, lado });
+        irPara(`#/secundario/${lado}/${fundoId}/${conta}`);
       });
 
     const passarPelaPrateleira = async () => {
@@ -482,21 +513,22 @@
     const lerCotas = async ({ id, itens }) => {
       const resultados = [];
       let anteriorCarregou = false;
-      for (const [i, { fundoId, conta }] of itens.entries()) {
+      for (const [i, { fundoId, conta, lado }] of itens.entries()) {
         // Saindo de uma boleta que não carregou (a conta não é de um cliente, por exemplo), a troca
         // direta não diria nada: passa pela Prateleira.
         const direto = trocaDireta && naBoleta() && anteriorCarregou;
         if (naBoleta() && !direto) await passarPelaPrateleira();
-        let cota = await abrirBoleta(fundoId, conta, direto ? TROCA_DIRETA_MS : PRE_CHECK_MS, direto);
+        let cota = await abrirBoleta(fundoId, conta, direto ? TROCA_DIRETA_MS : PRE_CHECK_MS, direto, lado);
         if (!cota && direto) {
           trocaDireta = false;
           registrar('a troca direta não trouxe o pre-check', { fundoId });
           await passarPelaPrateleira();
-          cota = await abrirBoleta(fundoId, conta, PRE_CHECK_MS, false);
+          cota = await abrirBoleta(fundoId, conta, PRE_CHECK_MS, false, lado);
         }
         registrar(cota ? 'pre-check chegou' : 'pre-check não veio', { fundoId });
         anteriorCarregou = Boolean(cota);
-        resultados.push(cota || { fundoId, erro: 'sem-boleta' });
+        // O lugar do item na lista: o mesmo fundo pode vir em duas contas.
+        resultados.push(cota ? { ...cota, indice: i } : { fundoId, indice: i, erro: 'sem-boleta' });
         gravarRegistro();
         GM_setValue('cotas', { id, resultados: resultados.slice(), fim: i === itens.length - 1 });
       }
@@ -593,7 +625,9 @@
     // Só passa o fundo e a conta na forma exata: os dois vão para o endereço da boleta.
     const receberCotas = (pedido) => {
       if (papel !== 'prateleira' || !pedido || !Array.isArray(pedido.itens)) return;
-      const itens = pedido.itens.filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)));
+      const itens = pedido.itens
+        .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
+        .map((item) => ({ fundoId: item.fundoId, conta: String(item.conta), lado: item.lado === 'vender' ? 'vender' : 'comprar' }));
       if (itens.length > 0) receber({ ...pedido, itens }, lerCotas);
     };
 
@@ -698,7 +732,7 @@
         const { id } = mensagem;
         const itens = (Array.isArray(mensagem.itens) ? mensagem.itens : [])
           .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
-          .map(({ fundoId, conta }) => ({ fundoId, conta: String(conta) }));
+          .map(({ fundoId, conta, lado }) => ({ fundoId, conta: String(conta), lado: lado === 'vender' ? 'vender' : 'comprar' }));
         if (itens.length === 0) {
           enviar({ tipo: 'cotas-fim', id });
           return;
@@ -738,11 +772,26 @@
       if (!nova || !Array.isArray(nova.resultados)) return;
       if (entregues.id !== nova.id) entregues = { id: nova.id, quantos: 0 };
       for (const r of nova.resultados.slice(entregues.quantos)) {
-        if (r.erro) enviar({ tipo: 'cota-falhou', id: nova.id, fundoId: r.fundoId, motivo: r.erro });
-        else enviar({ tipo: 'cota', id: nova.id, fundoId: r.fundoId, valor: r.valor, dataDaCota: r.dataDaCota });
+        if (r.erro) enviar({ tipo: 'cota-falhou', id: nova.id, fundoId: r.fundoId, motivo: r.erro, indice: r.indice });
+        else
+          enviar({
+            tipo: 'cota',
+            id: nova.id,
+            fundoId: r.fundoId,
+            valor: r.valor,
+            dataDaCota: r.dataDaCota,
+            indice: r.indice,
+            lado: r.lado,
+            stock: r.stock || null,
+            posicao: r.posicao || null
+          });
       }
       entregues.quantos = nova.resultados.length;
-      if (nova.fim) enviar({ tipo: 'cotas-fim', id: nova.id });
+      if (nova.fim) {
+        enviar({ tipo: 'cotas-fim', id: nova.id });
+        // A posição do cliente não fica no armazenamento depois de entregue.
+        GM_setValue('cotas', null);
+      }
     });
     // A boleta que a pessoa abriu para executar também deixa o preço exato do fundo, com a hora.
     GM_addValueChangeListener('cotaVista', (_chave, _antiga, nova) => {

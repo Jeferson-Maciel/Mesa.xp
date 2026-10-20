@@ -26,7 +26,7 @@ cada sessão.
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 12 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 11 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo

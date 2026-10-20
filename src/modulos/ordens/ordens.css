@@ -1659,3 +1659,135 @@ table.preview .btn-remover {
   border-color: var(--acento-borda);
   box-shadow: inset 0 0 0 1px var(--acento-borda);
 }
+
+/* ── Grupos de e-mail (20/10/2026) ──────────────────────────────────────────────────────
+   Cada conta sai em até três e-mails, um por grupo, cada um numa seção com o que é dele. A cor
+   do grupo tem o sentido de sempre: a pedra da aba na bolsa, o verde da compra nos fundos
+   comprados, o vermelho da venda nos vendidos. Ela fica no ponto do cabeçalho e no filete do
+   título das saídas do grupo — o resto da seção segue neutro, para o bloqueio continuar sendo o que
+   salta. */
+
+.grupo-saidas {
+  --cor-do-grupo: var(--acento);
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.grupo-saidas + .grupo-saidas {
+  padding-top: var(--esp-4);
+  border-top: 1px dashed var(--borda);
+}
+
+.grupo-saidas[data-grupo='fundos-compra'] {
+  --cor-do-grupo: var(--positivo);
+}
+
+.grupo-saidas[data-grupo='fundos-venda'] {
+  --cor-do-grupo: var(--negativo);
+}
+
+.grupo-cabeca {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.grupo-nome {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  color: var(--texto-forte);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.grupo-nome::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cor-do-grupo);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor-do-grupo) 20%, transparent);
+}
+
+.grupo-conta {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+.grupo-saidas .saida:not(.bloqueada) .panel-title::before {
+  background: var(--cor-do-grupo);
+}
+
+.grupo-saidas .secundario {
+  margin-bottom: 0;
+}
+
+.saida-nota {
+  margin: 0;
+  color: var(--texto-fraco);
+  font-size: 0.82rem;
+}
+
+.saida.vazia > .panel-header-row {
+  margin-bottom: var(--esp-2);
+}
+
+/* ── Estoque XP e Estoque clientes ──────────────────────────────────────────────────────
+   O selo diz de onde a compra sai, ou para quem a venda vai, quando o pedido disse. A água-marinha
+   (categórica, reaproveitada como no Renda Fixa) marca o Estoque clientes, que é a exceção: uma
+   intenção de ordem, casada pela Mesa de Fundos. */
+
+.selo.estoque-clientes {
+  --cor: var(--agua);
+}
+
+.selo.estoque-xp {
+  --cor: var(--classe-outros);
+}
+
+/* O "Total" da venda de fundo: um botão do mesmo desenho do segmentado, ao lado do valor. Escolhido,
+   leva o vermelho da venda, como o "Venda" escolhido da linha. */
+table.preview .seg-total {
+  margin-left: var(--esp-2);
+  height: 32px;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  background: var(--superficie-afundada);
+}
+
+table.preview .seg-total.ativo {
+  background: color-mix(in srgb, var(--negativo) 13%, var(--superficie));
+  color: var(--negativo);
+  box-shadow: inset 0 0 0 1px var(--negativo-borda);
+}
+
+/* A venda no secundário: o filete é o vermelho da venda, como o cabeçalho do grupo dela. */
+.secundario.secundario-vendas {
+  border-left-color: var(--negativo);
+}
+
+.secundario-origem {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.secundario-origem.antiga {
+  color: var(--atencao);
+}
+
+.secundario-falta.buscando {
+  color: var(--acento);
+}
+
+/* O e-mail em texto quebra a linha longa na tela (as observações do leilão), em vez de esconder o
+   fim dela atrás de uma rolagem lateral. O texto copiado é o mesmo. Os TSVs não quebram: as colunas
+   precisam ficar inteiras para conferir. */
+.saida[data-formato='email'] pre.output-box {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -7,7 +7,7 @@ import {
   formatarLoteSimples,
   formatarLoteTwap
 } from '../core/format/formatadores.js';
-import { ROTULOS_DOS_GRUPOS, gruposDe, indiceNaSolicitacao, recorte } from '../core/format/grupos.js';
+import { ROTULOS_DOS_GRUPOS, grupoDaOrdem, gruposDe, indiceNaSolicitacao, recorte } from '../core/format/grupos.js';
 import { esc } from '../core/util/html.js';
 import { validar } from '../core/validate/validar.js';
 import { renderSecundario } from './secundario.js';
@@ -159,11 +159,8 @@ const botaoDoOutlook = (formato, grupo) =>
     ? `<button class="copy-btn btn-outlook" data-outlook="${formato}" title="${DICAS_DO_OUTLOOK[formato]}" data-grupo="${grupo}">Abrir no Outlook</button>`
     : '';
 
-// O título de cada saída diz o grupo quando o e-mail sai em mais de um.
-const tituloDa = (formato, grupo, varios) =>
-  formato === 'email' && varios
-    ? `${ROTULOS[formato]} <span class="grupo-da-saida" data-grupo="${grupo}">${ROTULOS_DOS_GRUPOS[grupo]}</span>`
-    : ROTULOS[formato];
+// O título de cada saída: o grupo fica no cabeçalho da seção dele.
+const tituloDa = (formato) => ROTULOS[formato];
 
 // O HTML vem do formatador, que já escapou cada valor digitado. Mostrá-lo montado deixa o operador
 // conferir a grade como ela vai chegar no e-mail.
@@ -208,36 +205,67 @@ const renderSemBolsa = (formato) => `
  * @returns {string} HTML da área de diagnósticos e saídas
  */
 export const renderSaidas = (solicitacao, formatos, confirmados, { prints } = {}) => {
-  // O bloco do secundário vem antes das saídas e não depende do formato: é a conta que o e-mail
-  // vai usar, e mora aqui porque esta área é refeita a cada tecla no cartão.
-  const secundario = renderSecundario(solicitacao);
-
+  // Sem formato escolhido, ou sem ordem nenhuma, a área é a de sempre: o secundário e o que falta.
   if (formatos.length === 0) {
-    return secundario + '<div class="empty-state pequeno"><p>Escolha um formato de saída acima.</p></div>';
+    return renderSecundario(solicitacao) + '<div class="empty-state pequeno"><p>Escolha um formato de saída acima.</p></div>';
   }
+  if ((solicitacao.ordens ?? []).length === 0) {
+    return formatos
+      .map((formato) => {
+        const pendentes = pendentesDe(validar(solicitacao, formato), confirmados, 'bolsa');
+        return renderBloqueado(formato, pendentes, confirmados, { solicitacao, parte: solicitacao, grupo: 'bolsa', varios: false });
+      })
+      .join('');
+  }
+  return renderPorGrupo(solicitacao, formatos, confirmados, { prints });
+};
 
-  // Os avisos não dependem do formato escolhido, então são mostrados uma vez só. Os de e-mail cobrem
-  // o secundário e a venda, que só o e-mail usa.
+/**
+ * Uma seção por grupo de e-mail (bolsa, fundos comprados, fundos vendidos), cada uma com o que é
+ * dela: a conta do secundário ou a venda, os avisos das ordens dela e as saídas. O operador confere
+ * e copia um grupo de cada vez, de cima para baixo, como o pedido do operador em 20/10/2026.
+ */
+const renderPorGrupo = (solicitacao, formatos, confirmados, { prints }) => {
+
+  // Os avisos não dependem do formato escolhido. Os de uma ordem vão para a seção do grupo dela; os
+  // da solicitação (linhas descartadas, fundos de outro dia), para o topo.
   const avisos = validar(solicitacao, formatos.includes('email') ? 'email' : formatos[0]).filter((d) => d.nivel === 'aviso');
+  const avisoNaTela = (d) => renderDiagnostico(d, false, { indiceOrdem: d.indiceOrdem });
+  const gerais = avisos.filter((d) => d.indiceOrdem === null || d.indiceOrdem === undefined);
+  const doGrupo = (grupo) =>
+    avisos.filter((d) => Number.isInteger(d.indiceOrdem) && solicitacao.ordens[d.indiceOrdem] && grupoDaOrdem(solicitacao.ordens[d.indiceOrdem]) === grupo);
 
-  // O e-mail sai um por grupo (bolsa, fundos comprados, fundos vendidos); o resto, só de bolsa.
   const grupos = gruposDe(solicitacao);
-  const varios = grupos.length > 1;
-  const saidas = formatos.flatMap((formato) => (formato === 'email' ? grupos.map((g) => [formato, g]) : [[formato, 'bolsa']]));
-
-  const blocos = saidas.map(([formato, grupo]) => {
+  const saidaDoGrupo = (formato, grupo) => {
     const parte = recorte(solicitacao, grupo, formato);
-    if (parte.ordens.length === 0) return formato === 'email' ? '' : renderSemBolsa(formato);
-
+    if (parte.ordens.length === 0) return '';
     const pendentes = pendentesDe(validar(parte, formato), confirmados, grupo);
-    if (pendentes.length > 0) return renderBloqueado(formato, pendentes, confirmados, { solicitacao, parte, grupo, varios });
+    if (pendentes.length > 0) return renderBloqueado(formato, pendentes, confirmados, { solicitacao, parte, grupo, varios: true });
+    return renderSaida(formato, saidaDe(parte, formato, { prints }), parte, grupo, true);
+  };
 
-    return renderSaida(formato, saidaDe(parte, formato, { prints }), parte, grupo, varios);
-  });
+  const secao = (grupo) => {
+    const ordens = recorte(solicitacao, grupo).ordens.length;
+    const info =
+      grupo === 'fundos-compra' ? renderSecundario(solicitacao, { so: 'compra' }) : grupo === 'fundos-venda' ? renderSecundario(solicitacao, { so: 'venda' }) : '';
+    const doFormato = formatos.filter((f) => f === 'email' || grupo === 'bolsa');
+    const saidas = doFormato.map((f) => saidaDoGrupo(f, grupo)).join('');
+    const semEmail =
+      grupo !== 'bolsa' && !formatos.includes('email')
+        ? '<p class="saida-nota">Os fundos saem na Ordem por e-mail: marque-a nos formatos de saída.</p>'
+        : '';
+    return `
+    <section class="grupo-saidas" data-grupo="${grupo}">
+      <header class="grupo-cabeca">
+        <span class="grupo-nome">${ROTULOS_DOS_GRUPOS[grupo]}</span>
+        <span class="grupo-conta">${ordens} ${ordens === 1 ? 'ordem' : 'ordens'}</span>
+      </header>
+      ${info}${doGrupo(grupo).map(avisoNaTela).join('')}${saidas}${semEmail}
+    </section>`;
+  };
 
-  return (
-    secundario +
-    avisos.map((d) => renderDiagnostico(d, false, { indiceOrdem: d.indiceOrdem })).join('') +
-    blocos.join('')
-  );
+  // Tabela, lote ou TWAP num pedido sem bolsa: dizem por que não saem.
+  const semBolsa = grupos.includes('bolsa') ? '' : formatos.filter((f) => f !== 'email').map(renderSemBolsa).join('');
+
+  return gerais.map(avisoNaTela).join('') + grupos.map(secao).join('') + semBolsa;
 };

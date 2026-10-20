@@ -213,9 +213,10 @@ const venda = (ordem, indice) => {
  * @param {object} solicitacao  com `ordem.secundario` já calculado
  * @returns {string} o bloco, ou vazio quando a solicitação não tem compra de fundo
  */
-export const renderSecundario = (solicitacao) => {
-  const comFundo = (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.secundario);
-  const vendas = (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.venda);
+export const renderSecundario = (solicitacao, { so = null } = {}) => {
+  // `so` mostra só a compra ou só a venda, na seção do grupo delas; os índices são os da solicitação.
+  const comFundo = so === 'venda' ? [] : (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.secundario);
+  const vendas = so === 'compra' ? [] : (solicitacao.ordens ?? []).map((o, i) => [o, i]).filter(([o]) => o.venda);
   if (comFundo.length === 0 && vendas.length === 0) return '';
   const blocoDeVendas = vendas.length
     ? `<div class="secundario secundario-vendas">

@@ -102,6 +102,41 @@ atte,
   Condições:
   ```
 
+## 1c. Aplicação no Tesouro Direto (o e-mail "Tesouro Direto")
+
+O modelo que o operador trouxe em 20/10/2026. O Abrir no Outlook usa o assunto dele:
+
+```
+Confirmação aplicação Tesouro Direto
+```
+
+```
+Prezado(a) [NOME],
+
+Conforme conversado, gostaria de realizar a[s] ordem[ns] para a aplicação no Tesouro Direto abaixo na conta XP [CONTA]:
+
+
+Título: [NOME DO TÍTULO NO HUB];
+Taxa: [TAXA COMO O HUB MOSTRA];
+Vencimento: [DD/MM/AAAA];
+Valor a ser aplicado: R$ [VALOR]
+
+
+Observação importante: O valor financeiro total da aplicação e o PU de compra dependem da cotação atual do mercado.
+
+Aguardo confirmação para realizar a[s] ordem[ns].
+
+Att,
+```
+
+- **Duas linhas em branco** antes e depois dos títulos, como no modelo colado; os espaços que o modelo
+  tinha no fim de algumas linhas não entram.
+- **Um bloco por título**, na ordem digitada, separados por uma linha em branco. Plural como os outros.
+- `Título`, `Taxa` e `Vencimento` levam ponto-e-vírgula; `Valor a ser aplicado` não.
+- O título, a taxa e o vencimento são os da lista do Hub, lida pelo robô: `Título: Tesouro Selic 2031;`,
+  `Taxa: SELIC + 0,0992 %;`, `Vencimento: 01/03/2031;`. Sem a lista (sem o robô), confirmado o bloqueio,
+  `Taxa: ;` e `Vencimento: ;` ficam em branco, para preencher no Outlook.
+
 ## 2. Auditoria por E-mail (na tela, "E-mail em tabela")
 
 O e-mail do formato 1, com a mesma abertura e o mesmo fecho, mas com uma **tabela das ordens** no

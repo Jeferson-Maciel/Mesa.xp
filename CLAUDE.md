@@ -589,11 +589,52 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
 - **Os grupos de e-mail.** Cada conta sai em até três e-mails, um por grupo, cada um numa seção do
   cartão com o que é dele: **Bolsa** (ações, FIIs listados, ETFs, BDRs; compra e venda juntas, no
   modelo de sempre), **Fundos · Compra** (o modelo de sempre, com as cotas) e **Fundos · Venda** (o
-  modelo da auditoria de venda, em `docs/FORMATOS-DE-SAIDA.md`). O Tesouro vai ser o quarto. O
-  E-mail em tabela, o Lote Simples e o TWAP são só de bolsa — com os fundos escritos pelo ticker,
+  modelo da auditoria de venda, em `docs/FORMATOS-DE-SAIDA.md`). O quarto é o **Tesouro Direto**
+  (ver "Tesouro Direto"), com o assunto dele. O E-mail em tabela, o Lote Simples e o TWAP são só de bolsa — com os fundos escritos pelo ticker,
   que seguem com o bloqueio confirmável de sempre. Um grupo é a própria solicitação com só as ordens
   dele (`recorte`): o validador e os formatadores não mudaram de contrato. A confirmação de um
   bloqueio vale para o grupo em que foi dada (`grupo:codigo`).
+
+### Tesouro Direto (robô 1.6.0)
+
+Decidido com o operador em 20/10/2026, com o modelo de e-mail dele, um pedido real e a página do
+Tesouro vista no Hub de verdade. Código em `core/tesouro/tesouro.js`, `ui/tesouro.js` e o quarto
+grupo de e-mail.
+
+- **O pedido.** O assessor escreve "Tesouro Selic 2031", "LFT", "Selic 2031 - 2k", "Pré 2029",
+  "LTN 2032", "IPCA+ 2045 juros semestrais", "NTN-B 2045", "Renda+ 2065", "Educa+ 2030", "Tesouro
+  Direto Selic"; o valor às vezes vem na linha de cima ("Comprar 2k" / "Tesouro Selic 2031"). É de
+  Tesouro a linha que diz "Tesouro", um código (LFT, LTN, NTN-B, NTN-B1, NTN-F) ou um tipo com o ano —
+  **se não for um fundo da prateleira**: há fundos com "Prefixado", "Pré" e "Renda+" no nome. O ano e o
+  nome do título saem da linha antes de ler o valor (`semOTitulo`), senão o 2031 vira quantidade.
+- **O valor na linha de cima** só casa com o ativo de baixo quando é o único jeito de ler o bloco: todo
+  valor solto tem um ativo sem valor logo abaixo, e nenhum tem um logo acima (`casarValores`). Se as
+  duas leituras são possíveis, nada casa, como sempre.
+- **A lista do Hub** (`/new/renda-fixa/#/produtos/tesouro-direto`) só aparece com um cliente escolhido
+  na página, e o cliente não vai no endereço — fica guardado nela. Vem de
+  `rede-treasury/v1/customers/<conta>/available-assets` (`data.items[]`: `codeBonds`,
+  `descTypeBond`, `nickname`, `expirateDate`, `profitability` já como o Hub mostra — "SELIC + 0,0992
+  %" —, `buyValue`, `minimumInvestmentValue`). Uma conta não habilitada responde com erro ("já existe
+  outra conta XP Inc atrelada ao CPF"). **A taxa muda ao longo do dia** (o Prefixado 2029 foi de
+  12,58% a 12,63% em minutos): o robô a lê ao colar e de novo na hora de gerar, se tiver mais de 2
+  minutos; passados 10, o e-mail segura com "Atualizar a taxa" (confirmável).
+- **O robô 1.6.0** tem uma aba só dele no Renda Fixa ("🤖 Tesouro"). Para a lista, vai e volta de
+  tela (o Hub pede a lista do cliente que está escolhido); se não vier a da conta pedida, **digita a
+  conta no "Pesquisar cliente" e clica só no resultado "Conta XP: <conta>"** (liberado pelo operador,
+  T5), nada mais. Entrega só os dados dos títulos, que são públicos, ou o erro do Hub.
+- **O título**: o do tipo e do ano pedidos; sem o ano, o único daquele tipo na lista, com aviso
+  (decisão do operador, T4); com mais de um, o operador escolhe num botão por candidato; nenhum,
+  bloqueia.
+- **A aplicação vai por valor em R$** — o modelo pede "Valor a ser aplicado" e avisa que o PU e o
+  valor final dependem da cotação —, e não é convertida em títulos. Por quantidade bloqueia; abaixo
+  da aplicação mínima (1% do PU) bloqueia; fora do horário (dia útil, 9h30–18h) avisa.
+- **O resgate** ainda não tem modelo de e-mail: bloqueia, para fazer na mão. A página de posições
+  (`#/posicoes/cliente/tesouro-direto`, de `rede-treasury/v1/customers/<conta>/positions`) e a boleta
+  de resgate (`#/posicoes/cliente/tesouro-direto/<codeBonds>`, que avisa que o resgate "não poderá
+  ser cancelado após seu envio") já foram vistas.
+- **Sem o robô**, a lista não vem: o bloqueio se confirma, e o e-mail sai com a taxa e o vencimento em
+  branco, para preencher no Outlook — nada é inventado, e o operador não fica sem saída.
+- A lista fica só na memória da página (`estado.tesouro`), por conta.
 
 ### O cliente e o assessor (robô 1.3.0)
 
@@ -1228,7 +1269,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.044 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.080 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

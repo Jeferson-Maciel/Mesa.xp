@@ -21,12 +21,12 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.044 testes (`npm test`), o build e 196
-  conferências no navegador (`npm run verificar`), **três rodadas seguidas sem falha**. As duas
+- A última verificação passou inteira (20/10): 1.080 testes (`npm test`), o build e 203
+  conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 11 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 14 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
@@ -34,7 +34,7 @@ cada sessão.
 Um grilling com o usuário, a partir de um pedido real que misturava bolsa, fundos comprados e
 fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão no `CLAUDE.md`,
 "Venda de fundo e Estoque clientes", e o literal novo em `docs/FORMATOS-DE-SAIDA.md`, seção 1b. O
-plano tinha 4 fases; **a 0, a 1 e a 2 estão feitas**, e a 3 (Tesouro) espera as respostas do usuário:
+plano tinha 4 fases, e **as quatro estão feitas** (do Tesouro, só a aplicação):
 
 - **Fase 0:** o E-mail em tabela com a tabela em texto no corpo do Outlook (de 09/10), commitado.
 - **Fase 1:**
@@ -65,12 +65,17 @@ plano tinha 4 fases; **a 0, a 1 e a 2 estão feitas**, e a 3 (Tesouro) espera as
   Hub de verdade, o jeito de preencher o campo (a máscara) e de achar o painel pode precisar de
   ajuste. O teste de injetar a SnapDOM do CDN no Hub pelo Claude in Chrome foi **bloqueado pelo modo
   automático** ("código de fora") e não foi contornado.
-- **Fase 3 (a fazer): Tesouro.** Perguntas abertas ao usuário: Tesouro Direto (B3), títulos públicos
-  no secundário da XP ou os dois; exemplos reais de pedido; modelo próprio de e-mail; print na venda.
+- **Fase 3 (feita, robô 1.6.0): Tesouro Direto, a aplicação.** O quarto grupo de e-mail, no modelo do
+  operador ("Confirmação aplicação Tesouro Direto"), com o título, a taxa e o vencimento da lista do
+  Hub, lida pelo robô na hora, pela conta (regras no `CLAUDE.md`, "Tesouro Direto"; literal em
+  `FORMATOS-DE-SAIDA.md`, 1c). **Ficou em aberto:** o modelo do e-mail de **resgate** (T10 — até lá,
+  o resgate bloqueia, para fazer na mão; a página de posições e a boleta de resgate já foram vistas) e
+  o que é o número de 7 dígitos no fim da linha do pedido real (T3 — até lá, bloqueia como número não
+  explicado). No pedido real, "LFT - R$ 81.708,17" é o saldo inteiro da conta em Selic.
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.5.0)
+### A testar no Hub e no Outlook de verdade (robô 1.6.0)
 
 1. Copiar robô → Tampermonkey (o script agora tem ~260 KB, com a SnapDOM); fechar as abas 🤖 antigas.
    Ao abrir o Outlook na web pela primeira vez com o robô novo, o Tampermonkey pode pedir permissão.
@@ -86,6 +91,10 @@ plano tinha 4 fases; **a 0, a 1 e a 2 estão feitas**, e a 3 (Tesouro) espera as
 5. Um pedido com "(Estoque cliente)": conferir o estoque e o deságio do Estoque clientes contra a
    boleta.
 6. O E-mail em tabela no Outlook: o corpo deve virar a tabela em grade.
+7. **Tesouro**: colar "Compra / Tesouro Selic 2031 R$ 2.000,00" para um cliente habilitado e conferir,
+   na seção Tesouro Direto, o título, a taxa e o vencimento contra a página de Produtos → Tesouro
+   Direto; a aba 🤖 Tesouro deve ter escolhido o cliente sozinha. Um cliente não habilitado deve
+   mostrar a mensagem do Hub.
 
 ## O cliente e o assessor no e-mail (07/10, robô 1.3.0 → 1.3.1)
 

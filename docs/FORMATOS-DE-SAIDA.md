@@ -138,10 +138,13 @@ Confirmação de ordem
 - **Formato 1:** o corpo é o texto acima, o mesmo do Copiar, com as quebras de linha em `\r\n`.
   A área de transferência não é tocada. Com o fundo do secundário, vai o cenário à vista (o último
   ROA escolhido).
-- **Formato 2:** o endereço só leva texto puro, e a tabela não iria em grade. O e-mail abre só com
-  o assunto, e o conteúdo vai copiado como no Copiar (HTML e texto com TAB) para colar no corpo.
+- **Formato 2** (09/10/2026, decidido com o operador): o endereço só leva texto puro, e a tabela
+  não vai em grade. O corpo é o texto do Copiar, com TAB entre as colunas e as quebras de linha em
+  `\r\n`; as colunas chegam desalinhadas. A área de transferência não é tocada. Em grade, só pelo
+  Copiar. (Até 09/10 o e-mail abria só com o assunto, e a tabela ia copiada para colar.)
 - **Texto que não cabe no endereço** (mais de 7.000 caracteres, já codificado; dez ativos dão uns
-  2.900 com o cliente e o assessor): abre sem o corpo, e o texto vai copiado.
+  2.900 com o cliente e o assessor): abre sem o corpo, e o texto vai copiado — no formato 2, com a
+  tabela em grade.
 
 ## 3. Lote Simples (TSV)
 

@@ -288,9 +288,11 @@ export const iniciarOrdens = (secao) => {
     }
 
     // Abrir no Outlook: um e-mail novo no Outlook na web, com o assunto e o texto à vista, o cliente
-    // no Para e o assessor em cópia, quando o robô e a planilha os trouxeram. O texto que cabe no
-    // endereço não é copiado — a área de transferência pode estar guardando algo que a pessoa vai
-    // colar. A tabela, e o texto longo demais, vão copiados para colar no corpo.
+    // no Para e o assessor em cópia, quando o robô e a planilha os trouxeram. O endereço só leva
+    // texto puro: o E-mail em tabela vai com a tabela em texto, com TAB entre as colunas (decidido
+    // com o operador em 09/10/2026). O texto que cabe no endereço não é copiado — a área de
+    // transferência pode estar guardando algo que a pessoa vai colar. O longo demais vai copiado,
+    // com a tabela em grade, para colar no corpo.
     let outlookBotao = e.target.closest('[data-outlook]');
     if (outlookBotao) {
       const formato = outlookBotao.dataset.outlook;
@@ -304,7 +306,7 @@ export const iniciarOrdens = (secao) => {
 
       const cliente = solicitacao.cliente?.situacao === 'achado' ? solicitacao.cliente : null;
       const enderecos = { para: cliente?.email ?? null, cc: cliente?.assessor.email ?? null };
-      const comCorpo = saida.html ? null : enderecoDoEmail({ ...enderecos, corpo: saida.texto });
+      const comCorpo = enderecoDoEmail({ ...enderecos, corpo: saida.texto });
       if (!comCorpo && !(await copiar(saida.texto, saida.html))) {
         return aviso('Não consegui copiar o e-mail para colar no Outlook.', { tipo: 'erro' });
       }
@@ -319,7 +321,6 @@ export const iniciarOrdens = (secao) => {
       ].filter(Boolean);
       const resto = faltou.length ? ` — ${faltou.join('; ')}` : '';
       if (comCorpo) aviso(`E-mail aberto no Outlook${resto}.`);
-      else if (saida.html) aviso(`Outlook aberto: cole o e-mail com a tabela no corpo (Ctrl+V)${resto}.`);
       else aviso(`O texto é longo para ir junto: cole-o no corpo do e-mail (Ctrl+V)${resto}.`);
 
       if (outlookBotao) {

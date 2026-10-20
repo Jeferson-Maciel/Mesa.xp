@@ -661,9 +661,12 @@ de e-mail padrão do Windows, e o operador usa o Outlook na web. Conferido no Ou
   aberta: o navegador só deixa reaproveitar uma janela aberta pela própria página.
 
 O texto vai no endereço e a área de transferência não é tocada, porque ela pode estar guardando algo
-que a pessoa vai colar. A tabela não vai no endereço, que só leva texto puro: o E-mail em tabela abre
-sem o corpo e vai copiado, para colar. O mesmo vale para o texto acima de 7.000 caracteres
-codificados. Abrir conta no histórico como copiar.
+que a pessoa vai colar. O endereço só leva texto puro, e a tabela não vai nele em grade: o E-mail em
+tabela vai com o texto dele, o mesmo do Copiar, com TAB entre as colunas (decidido com o operador em
+09/10/2026, sabendo que as colunas chegam desalinhadas). Até então ele abria sem o corpo e ia
+copiado para colar com Ctrl+V, e o operador achava que o e-mail chegava vazio. Em grade, só pelo
+Copiar. O texto acima de 7.000 caracteres codificados abre sem o corpo e vai copiado — a tabela em
+grade, inclusive. Abrir conta no histórico como copiar.
 
 Os textos e cabeçalhos exatos das 4 saídas estão em [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md).
 Leia esse arquivo antes de alterar qualquer formatter ou template — ele é a fonte da verdade dos

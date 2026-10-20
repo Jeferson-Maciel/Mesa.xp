@@ -116,13 +116,14 @@ const botoesDeCopiar = (formato, solicitacao) => {
 };
 
 /**
- * Os dois e-mails abrem também no Outlook na web, com o assunto da confirmação. O texto vai no
- * endereço; a tabela não cabe nele e vai copiada, para colar no corpo. No fundo do secundário, vai
- * o cenário à vista, o do último ROA escolhido.
+ * Os dois e-mails abrem também no Outlook na web, com o assunto da confirmação e o texto no
+ * endereço. O endereço só leva texto puro: a tabela vai em texto, com TAB entre as colunas, e não
+ * em grade — em grade, só pelo Copiar. No fundo do secundário, vai o cenário à vista, o do último
+ * ROA escolhido.
  */
 const DICAS_DO_OUTLOOK = {
   email: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem” e este texto',
-  auditoria: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem”, e copia este e-mail para colar no corpo (Ctrl+V)'
+  auditoria: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem” e a tabela em texto. Para a tabela em grade, use o Copiar'
 };
 
 const botaoDoOutlook = (formato) =>

@@ -1,6 +1,6 @@
 # Contexto — onde paramos
 
-**Última atualização: 07/10/2026, tarde.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 09/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
 regras de negócio e de código estão no [`CLAUDE.md`](../CLAUDE.md), que é a fonte da verdade; o
 [`AGENTS.md`](../AGENTS.md) é o resumo delas para outros agentes. Atualize este arquivo no fim de
@@ -24,7 +24,8 @@ cada sessão.
 - A última verificação passou inteira (07/10, tarde): 948 testes (`npm test`), o build e 178
   conferências no navegador (`npm run verificar`). As duas conferências das Anotações que dependem
   do relógio ("N abre uma anotação nova…" e "depois de recarregar…") falharam de novo em rodadas de
-  07/10 e passaram na seguinte. Já são três vezes: vale olhar.
+  07/10 e passaram na seguinte. Já são três vezes: vale olhar. Em 09/10, de novo (a quarta): falharam
+  na primeira rodada e a segunda passou inteira (948 testes, build e o `verificar`).
 
 ## O cliente e o assessor no e-mail (07/10, robô 1.3.0 → 1.3.1)
 
@@ -69,8 +70,23 @@ antes do link para os formatos de saída; o literal está em `docs/FORMATOS-DE-S
 
 - É o endereço de compor do Outlook na web (`outlook.cloud.microsoft/mail/deeplink/compose`), não um
   `mailto:` solto: o `CLAUDE.md` registra que o operador cola no Outlook na web.
-- A Ordem por e-mail vai inteira no endereço, e a área de transferência não é tocada. O E-mail em
-  tabela abre sem o corpo e vai copiado, porque o endereço só leva texto puro.
+- A Ordem por e-mail vai inteira no endereço, e a área de transferência não é tocada. **Desde
+  09/10 o E-mail em tabela também**: vai com a tabela em texto, com TAB entre as colunas, porque o
+  endereço só leva texto puro. Até então ele abria sem o corpo e ia copiado para colar com Ctrl+V,
+  e o usuário achava que o e-mail chegava vazio. Ofereci três caminhos (deixar o Ctrl+V à vista, um
+  script do Tampermonkey que cola a tabela no Outlook, ou a tabela em texto no endereço) e ele
+  escolheu o texto, sabendo que as colunas chegam desalinhadas. Em grade, só pelo Copiar. Visto no
+  Outlook dele (09/10, e-mail de teste sem destinatário, descartado): **o TAB aparece como um espaço
+  só** ("PETR4 C A mercado 100"), embora o editor guarde o `	` (corpo: `div[role=textbox]`, "Corpo
+  da mensagem", linhas em `<br>`). Sem commit.
+- **HTML no corpo do link não vira tabela** (testado pelo usuário no Outlook dele, 09/10, com
+  `teste-outlook-tabela.html` na pasta-mãe): pelo endereço simples e pelo `mailto:` dentro do `to`,
+  o corpo mostrou o código (`<table>…`), não a grade. Em grade, só colando dentro do Outlook. O
+  usuário **não quer extensão** (Tampermonkey) para isso: quer que a Mesa faça sozinha. Sem extensão,
+  o navegador não deixa a Mesa mexer na janela do Outlook; o caminho é o **Microsoft Graph** (a Mesa
+  cria o rascunho com a tabela e o abre), que depende da TI registrar o app no Microsoft 365 com
+  consentimento de administrador para `Mail.ReadWrite`. Alternativa sem TI: `.eml` com `X-Unsent: 1`,
+  só para quem tem o Outlook instalado. Decisão pendente.
 - **Testado no Outlook da mesa (07/10, tarde, com a autorização do usuário)**, com dois e-mails de
   teste para endereços `@example.com`, fechados sem enviar:
   - o formato antigo (`to=…&cc=…&subject=…&body=…`) preenche Para, assunto e texto, **mas não a

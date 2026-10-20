@@ -196,13 +196,14 @@ try {
     ok(url.searchParams.get('body') === texto.replace(/\n/g, '\r\n'), 'o corpo é o texto do e-mail à vista, com as quebras de linha');
     ok((await areaDeTransferencia()) === 'cliente@exemplo.com', 'o texto que vai no endereço não apaga a área de transferência');
 
-    // A tabela não cabe no endereço: abre só com o assunto, e o e-mail vai copiado para colar.
+    // A tabela não entra no endereço, que só leva texto puro: vai o texto dela, com TAB entre as
+    // colunas, como o do e-mail (decidido com o operador em 09/10/2026).
     await pagina.click('.saida[data-formato="auditoria"] [data-outlook]');
-    // A cópia vem antes da janela, e é assíncrona.
     await pagina.waitForFunction(() => window.__abertas.length === 2, null, { timeout: 5000 });
     const segunda = new URL((await abertas())[1]);
-    ok(segunda.searchParams.get('subject') === 'Confirmação de ordem' && !segunda.searchParams.has('body'), 'o e-mail em tabela abre só com o assunto');
-    ok((await areaDeTransferencia()).includes('PETR4\tC\tA mercado\t100'), 'e a tabela vai copiada, para colar no corpo');
+    ok(segunda.searchParams.get('subject') === 'Confirmação de ordem', 'o e-mail em tabela abre com o assunto');
+    ok(segunda.searchParams.get('body')?.includes('PETR4\tC\tA mercado\t100\r\n'), 'e com a tabela no corpo, em texto');
+    ok((await areaDeTransferencia()) === 'cliente@exemplo.com', 'a tabela no endereço também não apaga a área de transferência');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }

@@ -159,6 +159,43 @@ export const formatarEmailVendaHtml = (solicitacao, { prints = new Map() } = {})
   return '<div>' + html.join('<br>') + '</div>';
 };
 
+/**
+ * A aplicação no Tesouro Direto, no modelo que o operador trouxe em 20/10/2026 (assunto "Confirmação
+ * aplicação Tesouro Direto"): por valor em R$, com o título, a taxa e o vencimento como a lista do
+ * Hub os mostra, lida na hora pelo robô (\`ordem.tesouroDoHub\`). Os espaços no fim das linhas do modelo
+ * colado não entram; as duas linhas em branco antes e depois dos títulos, sim. Plural como os outros.
+ */
+export const formatarEmailTesouro = (solicitacao) => {
+  const varias = solicitacao.ordens.length > 1;
+  const blocos = solicitacao.ordens.map((o) => {
+    const titulo = o.tesouroDoHub?.titulo ?? {};
+    return [
+      'Título: ' + (titulo.nome ?? o.ativo) + ';',
+      'Taxa: ' + (titulo.taxa ?? '') + ';',
+      'Vencimento: ' + (titulo.vencimento ?? '') + ';',
+      'Valor a ser aplicado: ' + formatarFinanceiro(o.financeiro)
+    ].join('\n');
+  });
+
+  return [
+    `Prezado(a) ${solicitacao.cliente?.nome || 'Cliente'},`,
+    '',
+    'Conforme conversado, gostaria de realizar ' +
+      (varias ? 'as ordens' : 'a ordem') +
+      ` para a aplicação no Tesouro Direto abaixo na conta XP ${solicitacao.conta}:`,
+    '',
+    '',
+    blocos.join('\n\n'),
+    '',
+    '',
+    'Observação importante: O valor financeiro total da aplicação e o PU de compra dependem da cotação atual do mercado.',
+    '',
+    'Aguardo confirmação para realizar ' + (varias ? 'as ordens' : 'a ordem') + '.',
+    '',
+    'Att,'
+  ].join('\n');
+};
+
 const tsv = (cabecalho, linhas) =>
   [cabecalho.join('\t'), ...linhas.map((l) => l.join('\t'))].join('\n') + '\n';
 

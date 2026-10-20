@@ -2,6 +2,7 @@ import { limparEntrada } from '../texto/limparEntrada.js';
 import { analisarTicker, temFormatoDeTicker } from '../validate/ticker.js';
 import { fundoPeloTicker, procurarFundo } from '../validate/fundo.js';
 import { lerPreco, lerValor } from './valores.js';
+import { nomeDoTitulo, pedidoDeTesouro, semOTitulo } from '../tesouro/tesouro.js';
 
 /**
  * Segunda etapa do pipeline: das linhas limpas às solicitações estruturadas.
@@ -163,7 +164,7 @@ const VALOR_NO_FIM = new RegExp(
  * `V8 Capital` é nome. O número só sai com a unidade junto, que nome de fundo não começa por ela.
  */
 const OPERACAO_NA_FRENTE = new RegExp(
-  String.raw`^\s*(?:[CV]|compra[rs]?|comprem?|vend[ae]r?|vendas?|resgat(?:e|ar))(?=[\s\-–—:])[\s\-–—:]*`,
+  String.raw`^\s*(?:[CV]|compra[rs]?|comprem?|vend[ae]r?|vendas?|resgat(?:e|ar)|aplicar|aplica[çc][ãa]o|aport(?:e|ar))(?=[\s\-–—:])[\s\-–—:]*`,
   'i'
 );
 const QUANTIDADE_NA_FRENTE = new RegExp(String.raw`^\s*\d[\d.,]*\s*${UNIDADE}${FIM}[\s\-–—:]*`, 'i');
@@ -341,7 +342,26 @@ const lerLinha = (linha) => {
   const ticker = tickers[0] ?? null;
 
   if (!ticker && /\d/.test(linha) && SO_VALOR.test(linha.trim())) {
-    return { tipo: 'valor', linha, valor: lerValor(linha) };
+    return { tipo: 'valor', linha, valor: lerValor(linha), operacao: null };
+  }
+  // O valor com a operação na frente, sem ativo: `Comprar 2k` (pedido real de Tesouro, 20/10/2026).
+  const semOperacao = linha.replace(OPERACAO_NA_FRENTE, '');
+  if (!ticker && semOperacao !== linha && /\d/.test(semOperacao) && SO_VALOR.test(semOperacao.trim())) {
+    return { tipo: 'valor', linha, valor: lerValor(semOperacao), operacao: unica(operacoesDe(linha)) };
+  }
+
+  // Tesouro Direto: o título pelo nome, pelo código ou pelo tipo com o ano — se não for um fundo da
+  // prateleira com "Prefixado" ou "Renda+" no nome. O valor é lido sem o título: o 2031 de "Selic
+  // 2031" não é quantidade.
+  const tesouro = ticker ? null : pedidoDeTesouro(linha);
+  if (tesouro && (tesouro.especies.length > 0 || tesouro.ano)) {
+    const comoFundo = textoDoAtivo(linha.replace(new RegExp(TOTAL.source, 'gi'), ' '));
+    if (!comoFundo || procurarFundo(comoFundo).situacao !== 'exato') {
+      const resto = semOTitulo(linha);
+      const { preco, trecho: trechoPreco } = lerPreco(resto);
+      const semPreco = trechoPreco ? resto.replace(trechoPreco, ' ') : resto;
+      return { tipo: 'ativo', linha, tickers: [], ticker: null, nomeDoFundo: nomeDoTitulo(linha), tesouro, resto, preco, semPreco, proprio: lerValor(semPreco) };
+    }
   }
 
   // Tirar o identificador antes de ler número evita que o `11` de `IVVB11`, ou o `99` de
@@ -375,19 +395,23 @@ const lerLinha = (linha) => {
  *   pela posição do ativo
  */
 const casarValores = (leituras) => {
-  const pares = new Map();
-  let cancelado = false;
+  const livre = (l) => l?.tipo === 'ativo' && l.tickers.length <= 1 && semValor(l.proprio);
+  const valores = leituras.map((l, p) => [l, p]).filter(([l]) => l?.tipo === 'valor');
+  if (valores.length === 0) return { pares: new Map(), cancelado: false };
 
-  leituras.forEach((leitura, posicao) => {
-    if (leitura?.tipo !== 'valor') return;
+  // O padrão: cada valor logo abaixo de um ativo sem valor.
+  if (valores.every(([, p]) => livre(leituras[p - 1]))) {
+    return { pares: new Map(valores.map(([l, p]) => [p - 1, l])), cancelado: false };
+  }
 
-    const acima = leituras[posicao - 1];
-    const livre = acima?.tipo === 'ativo' && acima.tickers.length <= 1 && semValor(acima.proprio);
-    if (livre) pares.set(posicao - 1, leitura);
-    else cancelado = true;
-  });
+  // O valor logo **acima** do ativo (`Comprar 2k` / `Tesouro Selic 2031`, pedido real de 20/10/2026)
+  // só vale quando é o único jeito de ler o bloco: todo valor tem um ativo sem valor logo abaixo, e
+  // nenhum tem um logo acima. Se as duas leituras são possíveis, não se escolhe uma.
+  if (valores.every(([, p]) => livre(leituras[p + 1]) && !livre(leituras[p - 1]))) {
+    return { pares: new Map(valores.map(([l, p]) => [p + 1, { ...l, acima: true }])), cancelado: false };
+  }
 
-  return cancelado ? { pares: new Map(), cancelado } : { pares, cancelado };
+  return { pares: new Map(), cancelado: true };
 };
 
 const solicitacaoVazia = (conta) => ({
@@ -448,7 +472,7 @@ export const parseSolicitacoes = (texto) => {
       const { linha } = leitura;
 
       if (leitura.tipo === 'valor') {
-        if (pares.has(posicao - 1)) continue;
+        if (pares.get(posicao - 1) === leitura || pares.get(posicao + 1)?.linha === leitura.linha) continue;
         bloco.descartadas.push({
           linha,
           motivo: cancelado
@@ -459,7 +483,7 @@ export const parseSolicitacoes = (texto) => {
         continue;
       }
 
-      const { tickers, ticker, nomeDoFundo, resto, preco, semPreco, proprio } = leitura;
+      const { tickers, ticker, nomeDoFundo, resto, preco, semPreco, proprio, tesouro } = leitura;
 
       // `vender XPML11 100 e comprar BTLG11 100`: ler um só perderia o outro, e a operação da
       // linha seria a primeira palavra achada. Separar em duas é trabalho do operador.
@@ -480,7 +504,7 @@ export const parseSolicitacoes = (texto) => {
       // que ninguém explicou. Não dá para saber se é preço, quantidade ou ruído — e é
       // exatamente por não dar para saber que ele vira bloqueio, em vez de sumir calado.
       const sobra = proprio.trecho ? semPreco.replace(proprio.trecho, ' ') : semPreco;
-      const sobraDoPar = par ? par.linha.replace(par.valor.trecho, ' ') : '';
+      const sobraDoPar = par ? par.linha.replace(OPERACAO_NA_FRENTE, ' ').replace(par.valor.trecho, ' ') : '';
       const numerosSobrando = (sobra + ' ' + sobraDoPar).match(/\d[\d.]*(?:,\d+)?/g) ?? [];
 
       // A venda do total não tem número a ler: a quantidade é a posição, que o robô lê na boleta de
@@ -510,7 +534,7 @@ export const parseSolicitacoes = (texto) => {
 
       // O ticker de um fundo da prateleira (`VGPR11`) é o fundo, e não papel de bolsa: decisão da
       // mesa em 06/10/2026. O ativo fica como foi escrito; o nome vem junto no fundo.
-      const fundo = fundoDoTicker ?? (ticker ? null : procurarFundo(nomeDoFundo));
+      const fundo = tesouro ? null : (fundoDoTicker ?? (ticker ? null : procurarFundo(nomeDoFundo)));
       if (fundo && fundo.situacao === 'nenhum') {
         bloco.descartadas.push({
           linha,
@@ -526,20 +550,23 @@ export const parseSolicitacoes = (texto) => {
       bloco.ordens.push({
         // Nome ambíguo fica como foi digitado: promovê-lo a um da prateleira seria escolher
         // pelo operador justamente onde ele precisa escolher.
-        ativo: ticker ?? fundo.fundo?.nome ?? nomeDoFundo,
+        ativo: tesouro ? nomeDoFundo : (ticker ?? fundo.fundo?.nome ?? nomeDoFundo),
         ticker: ticker && !fundoDoTicker ? analisarTicker(ticker) : null,
         fundo,
-        operacao: propria.size > 0 ? unica(propria) : operacaoDaSecao(cabecalhos, posicao),
+        // A da própria linha, a da linha do valor (`Comprar 2k`), a da seção.
+        operacao: propria.size > 0 ? unica(propria) : (par?.operacao ?? operacaoDaSecao(cabecalhos, posicao)),
         quantidade,
         financeiro,
         quantidadeSolta: quantidade !== null && Boolean(valor.quantidadeSolta),
         total,
         // De onde comprar ou para quem vender, no secundário; null é o padrão (o Estoque XP).
         estoque: estoqueDe(linha),
+        // O título do Tesouro que a linha pede; o título da lista do Hub é achado depois, pela conta.
+        tesouro: tesouro ?? null,
         oQueForPossivel: O_QUE_FOR_POSSIVEL.test(linha),
         preco,
         numerosSobrando,
-        linha: par ? `${linha} / ${par.linha}` : linha
+        linha: par ? (par.acima ? `${par.linha} / ${linha}` : `${linha} / ${par.linha}`) : linha
       });
     }
 

@@ -1,4 +1,5 @@
 import { LIMITE_DA_COTACAO_MIN } from '../secundario/secundario.js';
+import { LIMITE_DA_TAXA_MIN } from '../tesouro/tesouro.js';
 import { formatarFinanceiro, formatarPercentual } from '../util/dinheiro.js';
 
 /**
@@ -436,6 +437,69 @@ export const validar = (solicitacao, formato) => {
             i
           )
         );
+      }
+    }
+
+    // ── Tesouro Direto ───────────────────────────────────────────────────────────────────
+    // A aplicação vai por valor em R$, com o título, a taxa e o vencimento da lista do Hub, que o robô
+    // lê pela conta, na hora (`o.tesouroDoHub`, de `core/tesouro`). O resgate ainda não tem modelo.
+    const td = o.tesouroDoHub;
+    if (o.tesouro && formato === 'email') {
+      const lerDeNovo = { campo: 'ler-tesouro', rotulo: 'Ler o Tesouro no Hub' };
+      if (o.operacao === 'V') {
+        diagnosticos.push(bloqueio('tesouro-resgate', `${nome}: o resgate de Tesouro ainda não tem o modelo de e-mail — fazer na mão.`, i, false));
+      } else {
+        if (!porFinanceiro && (o.quantidade !== null && o.quantidade !== undefined)) {
+          diagnosticos.push(
+            bloqueio('tesouro-por-quantidade', `${nome}: a aplicação no Tesouro vai por valor em R$ ("Valor a ser aplicado"). Troque para R$.`, i, false)
+          );
+        }
+        if (!td || td.situacao === 'sem-lista') {
+          diagnosticos.push({
+            ...bloqueio('tesouro-sem-lista', `${nome}: falta a lista do Tesouro no Hub (título, taxa e vencimento), que o robô lê pela conta.`, i, false),
+            acao: lerDeNovo
+          });
+        } else if (td.situacao === 'nao-habilitada') {
+          diagnosticos.push(bloqueio('tesouro-nao-habilitada', `${nome}: ${td.mensagem}`, i, false));
+        } else if (td.situacao === 'erro') {
+          diagnosticos.push({ ...bloqueio('tesouro-erro', `${nome}: o Hub não mostrou a lista do Tesouro (${td.mensagem}).`, i, false), acao: lerDeNovo });
+        } else if (td.situacao === 'nenhum') {
+          diagnosticos.push(bloqueio('tesouro-nao-encontrado', `${nome}: nenhum título da lista do Tesouro de agora bate com o pedido. Confira o nome e o vencimento.`, i, false));
+        } else if (td.situacao === 'ambiguo') {
+          diagnosticos.push({
+            ...bloqueio(
+              'tesouro-ambiguo',
+              `${nome}: cabe em ${td.candidatos.length} títulos da lista do Tesouro. Escolha qual é.`,
+              i,
+              false
+            ),
+            acoes: td.candidatos.map((c) => ({ campo: 'ativo', valor: c.nome, rotulo: c.nome }))
+          });
+        } else if (td.situacao === 'pronto') {
+          if (td.unicoDoTipo) {
+            diagnosticos.push(aviso('tesouro-sem-vencimento', `${nome}: o pedido não diz o vencimento — vai o único da lista: ${td.titulo.nome}. Confira.`, i));
+          }
+          if (porFinanceiro && td.titulo.minimo && o.financeiro < td.titulo.minimo) {
+            diagnosticos.push(
+              bloqueio(
+                'tesouro-abaixo-do-minimo',
+                `${nome}: ${formatarFinanceiro(o.financeiro)} fica abaixo da aplicação mínima de ${formatarFinanceiro(td.titulo.minimo)} (1% do PU).`,
+                i,
+                false
+              )
+            );
+          }
+          // A taxa muda ao longo do dia: a lida há mais de 10 minutos pede atualização.
+          if (td.minutos > LIMITE_DA_TAXA_MIN) {
+            diagnosticos.push({
+              ...bloqueio('tesouro-taxa-velha', `${nome}: a taxa do Tesouro foi lida há ${td.minutos} min, e ela muda ao longo do dia. Atualize, ou confirme.`, i),
+              acao: { campo: 'ler-tesouro', rotulo: 'Atualizar a taxa' }
+            });
+          }
+        }
+        if (td?.foraDoHorario) {
+          diagnosticos.push(aviso('tesouro-fora-do-horario', `${nome}: fora do horário do Tesouro Direto (dia útil, das 9h30 às 18h): a aplicação entra no próximo.`, i));
+        }
       }
     }
 

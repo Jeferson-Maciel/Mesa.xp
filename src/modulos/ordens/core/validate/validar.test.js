@@ -629,3 +629,55 @@ describe('compra pelo Estoque clientes', () => {
     expect(bloqueios(compra({ cotas: 5000, fundo: { nome: 'Navi Hedge Fund', estoque: 10, corretagem: 1.5 } }))).not.toContain('secundario-sem-estoque');
   });
 });
+
+describe('aplicação no Tesouro Direto', () => {
+  const titulo = { nome: 'Tesouro Selic 2031', taxa: 'SELIC + 0,0992 %', vencimento: '01/03/2031', minimo: 200.43 };
+  const td = (extra = {}) => ({ situacao: 'pronto', titulo, unicoDoTipo: false, minutos: 1, foraDoHorario: false, ...extra });
+  const aplicacao = (extra = {}, tdExtra = {}) =>
+    solicitacao({
+      ordens: [ordem({ ativo: 'Tesouro Selic 2031', ticker: null, tesouro: { especies: ['selic'], ano: 2031 }, quantidade: null, financeiro: 2000, tesouroDoHub: td(tdExtra), ...extra })]
+    });
+
+  it('com o título da lista, na hora, não acusa nada', () => {
+    expect(codigos(aplicacao())).toEqual([]);
+  });
+
+  it('sem a lista do Hub, bloqueia com o conserto de ler', () => {
+    const d = validar(aplicacao({ tesouroDoHub: { situacao: 'sem-lista' } }), 'email').find((x) => x.codigo === 'tesouro-sem-lista');
+    expect(d).toMatchObject({ confirmavel: false, acao: { campo: 'ler-tesouro' } });
+  });
+
+  it('conta não habilitada: a mensagem do Hub', () => {
+    const msg = 'A Conta 1234567 não está habilitada para operar no Tesouro Direto';
+    const d = validar(aplicacao({ tesouroDoHub: { situacao: 'nao-habilitada', mensagem: msg } }), 'email').find((x) => x.codigo === 'tesouro-nao-habilitada');
+    expect(d.mensagem).toContain('não está habilitada');
+  });
+
+  it('mais de um título cabe: um botão por candidato', () => {
+    const candidatos = [{ nome: 'Tesouro Prefixado 2029' }, { nome: 'Tesouro Prefixado 2032' }];
+    const d = validar(aplicacao({ tesouroDoHub: { situacao: 'ambiguo', candidatos } }), 'email').find((x) => x.codigo === 'tesouro-ambiguo');
+    expect(d.acoes).toEqual([
+      { campo: 'ativo', valor: 'Tesouro Prefixado 2029', rotulo: 'Tesouro Prefixado 2029' },
+      { campo: 'ativo', valor: 'Tesouro Prefixado 2032', rotulo: 'Tesouro Prefixado 2032' }
+    ]);
+  });
+
+  it('sem o vencimento, só avisa qual título vai', () => {
+    expect(codigos(aplicacao({}, { unicoDoTipo: true }))).toEqual(['tesouro-sem-vencimento']);
+  });
+
+  it('abaixo do mínimo, por quantidade e com a taxa velha', () => {
+    expect(bloqueios(aplicacao({ financeiro: 100 }))).toContain('tesouro-abaixo-do-minimo');
+    expect(bloqueios(aplicacao({ financeiro: null, quantidade: 3 }))).toContain('tesouro-por-quantidade');
+    const velha = validar(aplicacao({}, { minutos: 25 }), 'email').find((x) => x.codigo === 'tesouro-taxa-velha');
+    expect(velha).toMatchObject({ confirmavel: true, acao: { campo: 'ler-tesouro', rotulo: 'Atualizar a taxa' } });
+  });
+
+  it('o resgate ainda não tem modelo: fazer na mão', () => {
+    expect(bloqueios(aplicacao({ operacao: 'V' }))).toEqual(['tesouro-resgate']);
+  });
+
+  it('fora do horário do Tesouro, avisa', () => {
+    expect(codigos(aplicacao({}, { foraDoHorario: true }))).toContain('tesouro-fora-do-horario');
+  });
+});

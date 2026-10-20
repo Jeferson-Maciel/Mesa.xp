@@ -1816,3 +1816,17 @@ table.preview .seg-total.ativo {
 .secundario-cabeca .btn-prints {
   margin-left: auto;
 }
+
+/* O Tesouro Direto: a água-marinha, a pedra da aba Renda Fixa, de onde o Tesouro é (categórica,
+   reaproveitada como nas outras paletas). */
+.grupo-saidas[data-grupo='tesouro'] {
+  --cor-do-grupo: var(--agua);
+}
+
+.selo.classe-tesouro {
+  --cor: var(--agua);
+}
+
+.tesouro {
+  border-left-color: var(--agua);
+}

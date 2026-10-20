@@ -5,6 +5,7 @@ import {
   formatarEmail,
   formatarEmailVenda,
   formatarEmailVendaHtml,
+  formatarEmailTesouro,
   formatarLoteSimples,
   formatarLoteTwap
 } from './formatadores.js';
@@ -551,5 +552,52 @@ describe('formatarEmailVenda — a auditoria de venda de fundo', () => {
     const o = venda('TG Renda Urbana Feeder FII RL', 598);
     const html = formatarEmailVendaHtml(solicitacao({ ordens: [o] }), { prints: new Map([[o, 'data:image/png;base64,AAAA']]) });
     expect(html).toMatch(/Condições:<br><img src="data:image\/png;base64,AAAA"/);
+  });
+});
+
+describe('formatarEmailTesouro — a aplicação no Tesouro Direto', () => {
+  const titulo = (nome, taxa, vencimento) => ({ nome, taxa, vencimento });
+  const aplicacao = (nome, taxa, vencimento, financeiro) => ({
+    ativo: nome,
+    operacao: 'C',
+    tesouro: { especies: ['selic'], ano: 2031 },
+    financeiro,
+    quantidade: null,
+    tesouroDoHub: { situacao: 'pronto', titulo: titulo(nome, taxa, vencimento) }
+  });
+
+  it('segue o modelo do operador, com o título, a taxa e o vencimento do Hub', () => {
+    const s = solicitacao({ conta: '1234567', cliente: { nome: 'FULANO DE TAL' }, ordens: [aplicacao('Tesouro Selic 2031', 'SELIC + 0,0992 %', '01/03/2031', 2000)] });
+    expect(formatarEmailTesouro(s)).toBe(
+      [
+        'Prezado(a) FULANO DE TAL,',
+        '',
+        'Conforme conversado, gostaria de realizar a ordem para a aplicação no Tesouro Direto abaixo na conta XP 1234567:',
+        '',
+        '',
+        'Título: Tesouro Selic 2031;',
+        'Taxa: SELIC + 0,0992 %;',
+        'Vencimento: 01/03/2031;',
+        'Valor a ser aplicado: R$ 2.000,00',
+        '',
+        '',
+        'Observação importante: O valor financeiro total da aplicação e o PU de compra dependem da cotação atual do mercado.',
+        '',
+        'Aguardo confirmação para realizar a ordem.',
+        '',
+        'Att,'
+      ].join('\n')
+    );
+  });
+
+  it('dois títulos no mesmo e-mail: um bloco cada, e o plural', () => {
+    const s = solicitacao({
+      conta: '1234567',
+      ordens: [aplicacao('Tesouro Selic 2031', 'SELIC + 0,0992 %', '01/03/2031', 81708.17), aplicacao('Tesouro Prefixado 2029', '12,63 %', '01/01/2029', 5000)]
+    });
+    const texto = formatarEmailTesouro(s);
+    expect(texto).toContain('gostaria de realizar as ordens para a aplicação no Tesouro Direto abaixo');
+    expect(texto).toContain('Valor a ser aplicado: R$ 81.708,17\n\nTítulo: Tesouro Prefixado 2029;');
+    expect(texto).toContain('Aguardo confirmação para realizar as ordens.');
   });
 });

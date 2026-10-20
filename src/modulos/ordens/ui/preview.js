@@ -1,5 +1,6 @@
 import { analisarTicker, temFormatoDeTicker } from '../core/validate/ticker.js';
 import { fundoPeloTicker, procurarFundo } from '../core/validate/fundo.js';
+import { pedidoDeTesouro } from '../core/tesouro/tesouro.js';
 import { formatarCotas } from '../core/secundario/venda.js';
 import { formatarFinanceiro, lerFinanceiro } from '../core/util/dinheiro.js';
 import { renderCliente } from './cliente.js';
@@ -47,6 +48,8 @@ const seloDoEstoque = (ordem) =>
 
 const selo = (ordem) => {
   const { ticker, fundo } = ordem;
+
+  if (ordem.tesouro) return '<span class="selo ok classe-tesouro">Tesouro</span>';
 
   if (fundo) {
     if (fundo.situacao === 'exato') return '<span class="selo ok classe-cetipado">Fundo</span>' + seloDoEstoque(ordem);
@@ -364,8 +367,16 @@ export const aplicarEdicao = (solicitacao, campo, valor, indiceOrdem) => {
 
       // Ticker é código e vai para maiúsculas; nome de fundo é texto e fica como está. Um
       // `toUpperCase` aqui transformaria "Riza Malls Feeder FII RL" em grito na saída.
+      // O título do Tesouro (o escolhido entre os candidatos, ou digitado), se não for um fundo.
+      const tesouro = texto ? pedidoDeTesouro(texto) : null;
+      ordem.tesouro = null;
       if (!texto) {
         ordem.ativo = '';
+        ordem.ticker = null;
+        ordem.fundo = null;
+      } else if (tesouro && (tesouro.especies.length > 0 || tesouro.ano) && procurarFundo(texto).situacao !== 'exato') {
+        ordem.ativo = texto;
+        ordem.tesouro = tesouro;
         ordem.ticker = null;
         ordem.fundo = null;
       } else if (temFormatoDeTicker(texto)) {

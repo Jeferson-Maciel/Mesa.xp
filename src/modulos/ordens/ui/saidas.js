@@ -4,6 +4,7 @@ import {
   formatarEmail,
   formatarEmailVenda,
   formatarEmailVendaHtml,
+  formatarEmailTesouro,
   formatarLoteSimples,
   formatarLoteTwap
 } from '../core/format/formatadores.js';
@@ -11,6 +12,7 @@ import { ROTULOS_DOS_GRUPOS, grupoDaOrdem, gruposDe, indiceNaSolicitacao, recort
 import { esc } from '../core/util/html.js';
 import { validar } from '../core/validate/validar.js';
 import { renderSecundario } from './secundario.js';
+import { renderTesouro } from './tesouro.js';
 
 export { esc };
 
@@ -51,6 +53,7 @@ const GERADORES_HTML = {
  * a auditoria de venda; o HTML dela leva o print de cada cotação, quando há (`prints`).
  */
 const saidaDe = (parte, formato, { prints } = {}) => {
+  if (formato === 'email' && parte.grupo === 'tesouro') return { texto: formatarEmailTesouro(parte), html: null };
   if (formato === 'email' && parte.grupo === 'fundos-venda') {
     return { texto: formatarEmailVenda(parte), html: prints?.size ? formatarEmailVendaHtml(parte, { prints }) : null };
   }
@@ -107,7 +110,7 @@ const renderDiagnostico = (d, jaConfirmado, { grupo = 'bolsa', indiceOrdem = nul
   const naOrdem = indiceOrdem === null || indiceOrdem === undefined || indiceOrdem < 0 ? '' : ` data-ordem="${indiceOrdem}"`;
   const consertos = pendente ? (d.acoes ?? (d.acao ? [d.acao] : [])) : [];
   const conserto = consertos
-    .map((a) => `<button class="btn-confirmar" data-campo="${esc(a.campo)}" data-valor=""${naOrdem}>${esc(a.rotulo)}</button>`)
+    .map((a) => `<button class="btn-confirmar" data-campo="${esc(a.campo)}" data-valor="${esc(a.valor ?? '')}"${naOrdem}>${esc(a.rotulo)}</button>`)
     .join('');
   const confirmar =
     pendente && d.confirmavel
@@ -247,12 +250,18 @@ const renderPorGrupo = (solicitacao, formatos, confirmados, { prints }) => {
   const secao = (grupo) => {
     const ordens = recorte(solicitacao, grupo).ordens.length;
     const info =
-      grupo === 'fundos-compra' ? renderSecundario(solicitacao, { so: 'compra' }) : grupo === 'fundos-venda' ? renderSecundario(solicitacao, { so: 'venda' }) : '';
+      grupo === 'fundos-compra'
+        ? renderSecundario(solicitacao, { so: 'compra' })
+        : grupo === 'fundos-venda'
+          ? renderSecundario(solicitacao, { so: 'venda' })
+          : grupo === 'tesouro'
+            ? renderTesouro(solicitacao)
+            : '';
     const doFormato = formatos.filter((f) => f === 'email' || grupo === 'bolsa');
     const saidas = doFormato.map((f) => saidaDoGrupo(f, grupo)).join('');
     const semEmail =
       grupo !== 'bolsa' && !formatos.includes('email')
-        ? '<p class="saida-nota">Os fundos saem na Ordem por e-mail: marque-a nos formatos de saída.</p>'
+        ? `<p class="saida-nota">${grupo === 'tesouro' ? 'O Tesouro' : 'Os fundos'} saem na Ordem por e-mail: marque-a nos formatos de saída.</p>`
         : '';
     return `
     <section class="grupo-saidas" data-grupo="${grupo}">

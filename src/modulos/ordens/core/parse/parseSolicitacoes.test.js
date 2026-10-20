@@ -898,3 +898,77 @@ describe('Estoque XP e Estoque clientes escritos no pedido', () => {
     expect(uma('1234567\nC IMOV11 R$ 1.000,00 p2p').ordens[0].estoque).toBe('clientes');
   });
 });
+
+describe('Tesouro Direto — o pedido real de 20/10 e as variações', () => {
+  it('o pedido real: LFT pelo saldo, e o valor na linha de cima do título', () => {
+    const s = uma('1234567\n\nCompra\nLFT - R$ 81.708,17   7654321\nComprar 2k\nTesouro Selic 2031\nEmail');
+    expect(s.descartadas).toEqual([]);
+    expect(s.ordens.map((o) => [o.ativo, o.operacao, o.financeiro, o.tesouro?.especies])).toEqual([
+      ['LFT', 'C', 81708.17, ['selic']],
+      ['Tesouro Selic 2031', 'C', 2000, ['selic']]
+    ]);
+    // O número no fim da linha não é chutado: fica à vista para o operador dizer o que é.
+    expect(s.ordens[0].numerosSobrando).toEqual(['7654321']);
+    expect(s.ordens[1].tesouro.ano).toBe(2031);
+    expect(s.saidas.email).toBe(true);
+  });
+
+  it('as variações viram ordens de Tesouro, com o valor e sem o ano como quantidade', () => {
+    const casos = [
+      ['Compra Tesouro Selic 2031 R$ 2.000,00', 2000],
+      ['Selic 2031 - 2k', 2000],
+      ['LFT 2k', 2000],
+      ['Aplicar 10 mil no Tesouro Prefixado 2029', 10000],
+      ['LTN 2032 3.000,00', 3000],
+      ['Pré 2029 R$ 5.000', 5000],
+      ['C - IPCA+ 2045 juros semestrais 5k', 5000],
+      ['NTN-B 2045 R$ 20.000,00', 20000],
+      ['Tesouro IPCA com juros 2037 - R$ 50.000', 50000],
+      ['Renda+ 2065 R$ 1.000', 1000],
+      ['Educa+ 2030 500 reais', 500],
+      ['Tesouro Direto Selic R$ 81.708,17', 81708.17]
+    ];
+    for (const [linha, valor] of casos) {
+      const s = uma('1234567\nCompra\n' + linha);
+      expect(s.ordens, linha).toHaveLength(1);
+      expect(s.ordens[0], linha).toMatchObject({ financeiro: valor, quantidade: null, operacao: 'C', fundo: null, ticker: null });
+      expect(s.ordens[0].tesouro, linha).toBeTruthy();
+      expect(s.ordens[0].numerosSobrando, linha).toEqual([]);
+    }
+  });
+
+  it('o resgate é venda de Tesouro', () => {
+    const o = uma('1234567\nResgate total Tesouro Selic 2031').ordens[0];
+    expect(o).toMatchObject({ operacao: 'V', total: true, ativo: 'Tesouro Selic 2031' });
+    expect(o.tesouro.especies).toEqual(['selic']);
+  });
+
+  it('fundo com "Prefixado" ou "Renda+" no nome continua fundo', () => {
+    const o = uma('1234567\nCompra\nLCP Prefixado Feeder FII R$ 10.000,00').ordens[0];
+    expect(o.tesouro ?? null).toBeNull();
+    expect(o.fundo.situacao).toBe('exato');
+  });
+
+  it('"Tesouro Direto" sozinho, ou com o formato, é contexto', () => {
+    const s = uma('1234567\nTesouro Direto via email\nCompra\nTesouro Selic 2031 R$ 1.000,00');
+    expect(s.ordens).toHaveLength(1);
+    expect(s.descartadas).toEqual([]);
+  });
+});
+
+describe('o valor na linha de cima', () => {
+  it('casa quando é o único jeito de ler o bloco', () => {
+    const s = uma('1234567\nComprar 2k\nTesouro Selic 2031');
+    expect(s.ordens[0]).toMatchObject({ financeiro: 2000, operacao: 'C' });
+  });
+
+  it('valor embaixo e valor em cima no mesmo bloco: não casa nada, vai tudo para a mão', () => {
+    const s = uma('1234567\nCompra\nRiza Malls Feeder FII RL\nR$ 1.000,00\nR$ 2.000,00\nBrio Renda Mais FII RL');
+    expect(s.ordens).toHaveLength(0);
+  });
+
+  it('o padrão de sempre (valor embaixo) continua igual', () => {
+    const s = uma('1234567\ncompra\nRiza Malls Feeder FII RL\nR$ 16.000,00');
+    expect(s.ordens[0]).toMatchObject({ ativo: 'Riza Malls Feeder FII RL', financeiro: 16000 });
+  });
+});

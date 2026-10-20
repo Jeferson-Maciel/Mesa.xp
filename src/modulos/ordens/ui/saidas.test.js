@@ -174,3 +174,28 @@ describe("um e-mail por grupo", () => {
     expect(html).toContain("data-campo=\"estoque-clientes\" data-valor=\"\" data-ordem=\"2\"");
   });
 });
+
+describe("o Tesouro no cartão", () => {
+  const titulo = { nome: "Tesouro Selic 2031", tipo: "LFT", taxa: "SELIC + 0,0992 %", vencimento: "01/03/2031", pu: 20043.37, minimo: 200.43 };
+  const comTesouro = () => ({
+    conta: "1234567",
+    descartadas: [],
+    horario: null,
+    ordens: [
+      { ativo: "KLBN11", ticker: { situacao: "conhecido" }, fundo: null, operacao: "V", quantidade: 674, financeiro: null, preco: null },
+      { ativo: "Tesouro Selic 2031", ticker: null, fundo: null, tesouro: { especies: ["selic"], ano: 2031 }, operacao: "C", quantidade: null, financeiro: 2000, preco: null, tesouroDoHub: { situacao: "pronto", titulo, unicoDoTipo: false, minutos: 1, lidaEm: Date.now(), foraDoHorario: false } }
+    ]
+  });
+
+  it("a quarta seção, com o título, a taxa e o vencimento, e o e-mail do modelo", () => {
+    const html = renderSaidas(comTesouro(), ["email"], new Set());
+    expect(html).toContain('data-grupo="tesouro"');
+    expect(html).toContain(">Tesouro Direto</span>");
+    expect(html).toContain("SELIC + 0,0992 %");
+    expect(gerar(comTesouro(), "email", new Set(), { grupo: "tesouro" }).texto).toContain("Título: Tesouro Selic 2031;\nTaxa: SELIC + 0,0992 %;\nVencimento: 01/03/2031;\nValor a ser aplicado: R$ 2.000,00");
+  });
+
+  it("o Tesouro não entra no lote nem na tabela", () => {
+    expect(gerar(comTesouro(), "lote", new Set()).texto).not.toContain("Tesouro");
+  });
+});

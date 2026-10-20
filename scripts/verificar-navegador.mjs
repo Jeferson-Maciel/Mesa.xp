@@ -618,10 +618,46 @@ try {
         fundo(TERRAX, 'Riza Terrax Vintage FIAgro RL', '99,00', '2,00', '1,75')
       ]
     };
-    const preCheck = (id) => ({
+    // A boleta de compra e a de venda (robô 1.4.0) chamam o mesmo pre-check, com os estoques do
+    // fundo e, na venda, a posição do cliente. O saldo e o preço médio da posição nunca podem sair do Hub.
+    const ESTOQUES = {
+      [VGPR]: {
+        canOperateBuyTreasury: true,
+        canOperateBuyPeerToPeer: true,
+        canOperateSellTreasury: true,
+        canOperateSellPeerToPeer: true,
+        treasury: { modalityId: 1, buy: { secondaryDiscount: 6, percentageComission: 1.5, quotaQuantityAvailable: 500000 }, sell: { secondaryDiscount: 7.5, percentageComission: 0 } },
+        peerToPeer: { modalityId: 2, buy: { secondaryDiscount: 6.15, percentageComission: 1.5, quotaQuantityAvailable: 500, maxAmountVariationPercentage: 2 }, sell: { secondaryDiscount: 7, percentageComission: 0 } }
+      },
+      [IMOV]: {
+        canOperateBuyTreasury: true,
+        canOperateBuyPeerToPeer: false,
+        canOperateSellTreasury: true,
+        canOperateSellPeerToPeer: true,
+        treasury: { modalityId: 1, buy: {}, sell: { secondaryDiscount: 10.5, percentageComission: 0, unitaryQuotaValue: 8.05 } },
+        peerToPeer: { modalityId: 2, buy: {}, sell: { secondaryDiscount: 10, percentageComission: 0 } }
+      },
+      [TERRAX]: {
+        canOperateBuyTreasury: true,
+        canOperateBuyPeerToPeer: false,
+        canOperateSellTreasury: false,
+        canOperateSellPeerToPeer: true,
+        treasury: { modalityId: 1, buy: {}, sell: {} },
+        peerToPeer: { modalityId: 2, buy: {}, sell: { secondaryDiscount: 3, percentageComission: 0 } }
+      }
+    };
+    const POSICOES = {
+      [IMOV]: { quotaQuantity: 1234.5678, quotaQuantityAvailable: 1234.5678, quotaQuantityOnSale: 0, balance: 99999.99, averagePriceValue: 9.87654 },
+      [TERRAX]: { quotaQuantity: 50, quotaQuantityAvailable: 50, quotaQuantityOnSale: 0, balance: 99999.99, averagePriceValue: 9.87654 }
+    };
+    const preCheck = (id, lado) => ({
       isSuccess: true,
-      fund: { id, quotaValue: PRECOS[id], quotaDate: '2026-10-01T00:00:00' },
-      customer: { name: 'CLIENTE QUE NÃO PODE SAIR DO HUB', availableGuarantee: 123456.78 }
+      fund: { id, quotaValue: PRECOS[id], quotaDate: '2026-10-01T00:00:00', stock: ESTOQUES[id] },
+      customer: {
+        name: 'CLIENTE QUE NÃO PODE SAIR DO HUB',
+        availableGuarantee: 123456.78,
+        ...(lado === 'vender' ? { balancePosition: POSICOES[id] } : {})
+      }
     });
 
     // A ficha do cliente na Posição Consolidada (customer-info), inventada, no formato do Hub de
@@ -706,7 +742,7 @@ try {
       const url = new URL(r.request().url());
       const ehPreCheck = url.pathname.endsWith('/order-secondary/pre-check');
       pedidosAoHub[ehPreCheck ? 'preCheck' : 'lista']++;
-      const corpo = ehPreCheck ? preCheck(url.searchParams.get('f')) : resposta;
+      const corpo = ehPreCheck ? preCheck(url.searchParams.get('f'), url.searchParams.get('l')) : resposta;
       r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(corpo) });
     });
     await contexto.route(`${FICHA_API}/**`, (r) => {
@@ -751,11 +787,11 @@ try {
             }
             let anterior = '';
             const rota = () => {
-              const m = location.hash.match(/^#\\/secundario\\/comprar\\/([0-9a-f-]{36})\\/(\\d+)$/);
-              const deBoleta = anterior.startsWith('#/secundario/comprar/');
+              const m = location.hash.match(/^#\\/secundario\\/(comprar|vender)\\/([0-9a-f-]{36})\\/(\\d+)$/);
+              const deBoleta = /^#\\/secundario\\/(comprar|vender)\\//.test(anterior);
               anterior = location.hash;
               window.__rotas.push(m ? 'boleta' : 'prateleira');
-              if (m && document.visibilityState === 'visible' && !(window.__semTrocaDireta && deBoleta)) requestAnimationFrame(() => fetch('${PRE_CHECK}?f=' + m[1]));
+              if (m && document.visibilityState === 'visible' && !(window.__semTrocaDireta && deBoleta)) requestAnimationFrame(() => fetch('${PRE_CHECK}?f=' + m[2] + '&l=' + m[1]));
             };
             addEventListener('hashchange', rota);
             rota();
@@ -958,6 +994,41 @@ try {
     const antiga = await novaAba('https://hub.xpi.com.br/new/fundos-de-investimento?mesaxp=robo#/secundario/prateleira');
     await antiga.waitForURL((u) => !u.search, { timeout: 10_000 });
     ok((await antiga.evaluate(() => window.name)) === 'mesa-xp-robo' && (await antiga.evaluate(() => location.hash)) === '#/secundario/prateleira', 'a aba antiga, com a marca no endereço, recarrega limpa e segue do robô');
+
+    // ── A venda e o Estoque clientes (robô 1.4.0) ──
+    // A venda do total de dois fundos e a compra de um pelo Estoque clientes, no mesmo pedido: o robô
+    // abre as duas boletas de venda e a de compra, e a Mesa monta os três e-mails.
+    const rotasAntes = await antiga.evaluate(() => window.__rotas.length);
+    await mesa.fill('#entrada', '1234567\nvia email\nVendas | Quantidade Total\nIMOV11\nRiza Terrax Vintage FIAgro RL\nCompras\nVGPR11 R$ 10.000,00 (Estoque cliente)');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    await mesa.waitForFunction(() => document.querySelectorAll('.secundario-fundo[data-venda="pronto"]').length === 2, null, { timeout: 40_000 });
+    await terminarBusca();
+    const rotasDaVenda = (await antiga.evaluate(() => window.__rotas)).slice(rotasAntes);
+    ok(rotasDaVenda.filter((r) => r === 'boleta').length >= 3, `o robô abre as boletas de venda e a de compra do Estoque clientes (${rotasDaVenda.join(', ')})`);
+    const vendaNaTela = await mesa.textContent('.secundario-vendas');
+    ok(vendaNaTela.includes('1234,56780000') && vendaNaTela.includes('10,50%'), 'a posição disponível do cliente chega da boleta de venda, com as 8 casas, e o deságio do Estoque XP');
+    ok(!(await mesa.textContent('body')).includes('99999') && !(await mesa.textContent('body')).includes('9,87654'), 'o saldo e o preço médio da posição não saem do Hub');
+    const vendaBloqueada = await mesa.textContent('.saida[data-grupo="fundos-venda"]');
+    ok(vendaBloqueada.includes('não está comprando este fundo hoje'), 'o Estoque XP fechado para um fundo segura o e-mail de venda');
+    await mesa.click('.saida[data-grupo="fundos-venda"] [data-campo="estoque-clientes"]');
+    await mesa.waitForSelector('.saida[data-grupo="fundos-venda"] pre', { timeout: 40_000 });
+    const emailDeVenda = await mesa.textContent('.saida[data-grupo="fundos-venda"] pre');
+    ok(
+      emailDeVenda.includes('Ativo: IMOV11;\nQuantidade: 1234,56780000;\nOperação: Venda;\n\nCondições:') &&
+        emailDeVenda.includes('Quantidade: 50;') &&
+        emailDeVenda.endsWith('atte,'),
+      '"Vender no Estoque clientes" destrava o e-mail de venda, no modelo da auditoria, com a posição de cada fundo'
+    );
+    ok((await mesa.textContent('.secundario:not(.secundario-vendas)')).includes('Estoque clientes · pior preço'), 'a compra pelo Estoque clientes sai num cenário só, no pior preço');
+    // O Estoque clientes do Hub falso tem 500 cotas, e o pedido daria mais: bloqueia e oferece comprar o que houver.
+    const compraP2p = await mesa.textContent('.saida[data-grupo="fundos-compra"]');
+    ok(compraP2p.includes('Estoque clientes tem 500 na boleta do Hub') && compraP2p.includes('Comprar o que houver (500)'), 'o Estoque clientes que não cobre o pedido segura o e-mail, com a quantidade da boleta');
+    await mesa.click('.saida[data-grupo="fundos-compra"] [data-campo="o-que-for-possivel"]');
+    await mesa.waitForSelector('.saida[data-grupo="fundos-compra"] pre', { timeout: 10_000 });
+    ok((await mesa.textContent('.saida[data-grupo="fundos-compra"] pre')).includes('Ativo: VGPR11;\nQuantidade: 500;'), '"Comprar o que houver" leva o e-mail às 500 cotas do Estoque clientes');
+    const lojaDepois = JSON.stringify(loja);
+    ok(!lojaDepois.includes('1234.5678') && !lojaDepois.includes('99999') && !lojaDepois.includes('1234567'), 'nem a posição nem a conta ficam no armazenamento do robô depois da busca');
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

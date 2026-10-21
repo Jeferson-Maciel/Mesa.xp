@@ -30,6 +30,7 @@ import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
 import { contasConhecidas, diaDe, registrarEnvio, repetidosHoje } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { registrarServico } from '../../comum/servicos.js';
+import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { acharEm, registrarFonteDeBusca } from '../../comum/busca.js';
 import './ordens.css';
 
@@ -582,6 +583,14 @@ export const iniciarOrdens = (secao) => {
       // Trocar de estoque, ou voltar ao total da posição, pede a boleta que a conta nova usa.
       if (['estoque-clientes', 'estoque-xp', 'usar-posicao', 'operacao'].includes(segmento.dataset.campo)) buscarBoletas();
       return;
+    }
+
+    // Anotar: uma anotação nova com o pedido escrito (nas Anotações), pela memória da página.
+    if (e.target.closest('[data-anotar]')) {
+      const valor = (o) => o.quantidade ?? (o.financeiro ? `R$ ${o.financeiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : o.total ? 'total' : '');
+      const linhas = solicitacao.ordens.map((o) => [o.operacao ?? '?', o.ativo, valor(o)].filter(Boolean).join(' '));
+      const cliente = solicitacao.cliente?.nome ? ` · ${solicitacao.cliente.nome}` : '';
+      return pedirAnotacao({ titulo: `Conta ${solicitacao.conta ?? '?'}${cliente}`, texto: `${linhas.join('\n')}\n\n`, etiquetas: ['ordens'] });
     }
 
     const remover = e.target.closest('.btn-remover');

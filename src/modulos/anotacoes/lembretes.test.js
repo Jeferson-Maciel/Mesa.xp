@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ATALHOS,
+  proximaOcorrencia,
   aplicarAtalho,
   chaveDoDia,
   estadoDaNota,
@@ -125,5 +126,39 @@ describe('próximo momento', () => {
 
   it('sem lembrete futuro, nada', () => {
     expect(proximoMomento([nota(null), nota({ data: '2026-09-01', hora: null })], AGORA)).toBeNull();
+  });
+});
+
+describe('o lembrete que se repete', () => {
+  // 21/10/2026, uma quarta-feira, às 15h.
+  const agora = new Date(2026, 9, 21, 15, 0);
+
+  it('todo dia: o dia seguinte, mesmo que tenha vencido há dias', () => {
+    expect(proximaOcorrencia({ data: '2026-10-21', hora: '09:00', repetir: 'diario' }, agora)).toEqual({ data: '2026-10-22', hora: '09:00', repetir: 'diario' });
+    expect(proximaOcorrencia({ data: '2026-10-15', hora: '18:00', repetir: 'diario' }, agora)).toEqual({ data: '2026-10-21', hora: '18:00', repetir: 'diario' });
+  });
+
+  it('todo dia útil: pula o fim de semana (e o feriado, com a regra de dia útil)', () => {
+    expect(proximaOcorrencia({ data: '2026-10-23', hora: '09:00', repetir: 'dias-uteis' }, new Date(2026, 9, 23, 10))).toMatchObject({ data: '2026-10-26' });
+    const semFinados = (d) => d.getDay() !== 0 && d.getDay() !== 6 && !(d.getMonth() === 10 && d.getDate() === 2);
+    expect(proximaOcorrencia({ data: '2026-10-30', hora: '09:00', repetir: 'dias-uteis' }, new Date(2026, 9, 30, 10), semFinados)).toMatchObject({ data: '2026-11-03' });
+  });
+
+  it('toda semana e todo mês; o dia 31 cai no último dia do mês mais curto e volta ao 31', () => {
+    expect(proximaOcorrencia({ data: '2026-10-19', hora: null, repetir: 'semanal' }, agora)).toMatchObject({ data: '2026-10-26' });
+    expect(proximaOcorrencia({ data: '2026-10-31', hora: null, repetir: 'mensal' }, new Date(2026, 9, 31, 12))).toMatchObject({ data: '2026-11-30' });
+    expect(proximaOcorrencia({ data: '2026-10-31', hora: null, repetir: 'mensal' }, new Date(2026, 11, 1))).toMatchObject({ data: '2026-12-31' });
+  });
+
+  it('o selo diz que se repete', () => {
+    const nota = { lembrete: { data: '2026-10-22', hora: '09:00', repetir: 'dias-uteis' }, concluida: false, excluidaEm: null };
+    expect(rotuloDoLembrete(nota, agora)).toBe('Lembrar amanhã às 09:00 · todo dia útil');
+  });
+});
+
+describe('o lembrete que se repete, adiado', () => {
+  it('a próxima vez conta da vez original, não da adiada: o "todo dia útil às 9h" continua às 9h', () => {
+    const adiado = { data: '2026-10-21', hora: '11:00', repetir: 'dias-uteis', base: { data: '2026-10-21', hora: '09:00' } };
+    expect(proximaOcorrencia(adiado, new Date(2026, 9, 21, 11, 30))).toEqual({ data: '2026-10-22', hora: '09:00', repetir: 'dias-uteis' });
   });
 });

@@ -44,6 +44,19 @@ Um lembrete é `{ data: 'YYYY-MM-DD', hora: 'HH:MM' | null }`, no fuso local —
 Os atalhos (Daqui 1 hora, Hoje às 17:00, Amanhã às 09:00, Em 2 dias, Segunda às 09:00) marcam o
 lembrete e, depois que ele vence, viram "Adiar".
 
+**O lembrete que se repete** (21/10/2026): "Repetir" — todo dia, todo dia útil (com os feriados da
+B3, `src/comum/diasUteis.js`), toda semana ou todo mês (o dia 31 cai no último dia dos meses mais
+curtos). Feito ("Resolvido" na anotação, na lista ou no alerta) não resolve: o lembrete pula para a
+próxima vez depois de agora, e a anotação continua, com "Feito. Próximo: …". O selo diz "· todo dia
+útil" no fim. Adiar (pelo atalho ou pelo alerta) vale só para aquela vez: a vez original fica em
+`lembrete.base`, e a próxima conta dela — o "todo dia útil às 9h" adiado para as 11h volta às 9h no
+dia seguinte. Mudar o dia ou a hora à mão recomeça a repetição dali. A forma do lembrete com
+repetição: `{ data, hora, repetir?, base?: { data, hora } }`.
+
+**Anotar de outra aba**: o "Anotar" do cartão do Ordens e o da Fila do dia abrem uma anotação nova com
+o pedido escrito (a conta, o cliente, as ordens). O pedido passa pela memória da página
+(`src/comum/anotarDeFora.js`), nunca pelo endereço, que iria para o histórico do navegador com a conta.
+
 ## O vigia (`vigia.js`)
 
 A aba Anotações inicia na primeira visita, como as outras; **o vigia dos lembretes começa com a

@@ -248,17 +248,26 @@ export const paraApagarDeVez = (notas, agora = new Date(), dias = DIAS_NA_LIXEIR
 /* ── Rascunho ───────────────────────────────────────────────────────────────────────────
    O editor trabalha numa cópia (o rascunho); nada muda na anotação gravada até Salvar. */
 
-/** O que se edita no editor. O `avisado` do lembrete é do vigia, não da pessoa. */
+/** O que se edita no editor. O `avisado` do lembrete é do vigia, não da pessoa; a repetição é dela. */
 export const camposDe = (n) => ({
   titulo: n.titulo,
   texto: n.texto,
   etiquetas: [...n.etiquetas],
-  lembrete: n.lembrete ? { data: n.lembrete.data, hora: n.lembrete.hora ?? null } : null
+  lembrete: n.lembrete
+    ? {
+        data: n.lembrete.data,
+        hora: n.lembrete.hora ?? null,
+        ...(n.lembrete.repetir ? { repetir: n.lembrete.repetir } : {}),
+        ...(n.lembrete.base ? { base: { ...n.lembrete.base } } : {})
+      }
+    : null
 });
 
 const igual = (campo, a, b) => {
   if (campo === 'etiquetas') return a.length === b.length && a.every((e, i) => e === b[i]);
-  if (campo === 'lembrete') return (!a && !b) || Boolean(a && b && a.data === b.data && (a.hora ?? null) === (b.hora ?? null));
+  if (campo === 'lembrete') {
+    return (!a && !b) || Boolean(a && b && a.data === b.data && (a.hora ?? null) === (b.hora ?? null) && (a.repetir ?? null) === (b.repetir ?? null));
+  }
   return a === b;
 };
 

@@ -789,6 +789,46 @@ try {
   }
 
   /* ── Ordens: o robô do Hub ───────────────────────────────────────────────────────── */
+  // O lembrete que se repete e o "Anotar" do cartão do Ordens (21/10/2026). Uma quarta, às 10h.
+  titulo('Anotações: o lembrete que se repete e o Anotar do Ordens');
+  {
+    const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T10:00:00-03:00' });
+    await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
+    await pagina.click('#btn-analisar');
+    await pagina.click('[data-solicitacao="0"] [data-anotar]');
+    await pagina.waitForSelector('[data-campo="titulo"]', { state: 'visible' });
+    ok(
+      (await pagina.inputValue('[data-campo="titulo"]')) === 'Conta 1234567' && (await pagina.inputValue('[data-campo="texto"]')).startsWith('C PETR4 100'),
+      '"Anotar" no cartão do Ordens abre uma anotação nova com a conta e as ordens'
+    );
+    await pagina.fill('[data-campo="data"]', '2026-10-21');
+    await pagina.locator('[data-campo="data"]').dispatchEvent('change');
+    await pagina.fill('[data-campo="hora"]', '09:00');
+    await pagina.locator('[data-campo="hora"]').dispatchEvent('change');
+    await pagina.selectOption('[data-campo="repetir"]', 'dias-uteis');
+    await pagina.click('[data-acao="salvar"]');
+    // Salvar termina abrindo uma anotação nova: só depois disso se abre a salva.
+    await pagina.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Anotação salva')) && !document.querySelector('.an-saindo'));
+    // O lembrete das 9h já venceu às 10h: o alerta aparece, e o "Resolvido" dele leva o lembrete a amanhã.
+    await pagina.click('.an-alerta [data-alerta="resolver"]');
+    const pulouNoAlerta = await pagina
+      .waitForFunction(() => document.querySelector('.an-cartao')?.textContent.includes('Lembrar amanhã às 09:00 · todo dia útil'), null, { timeout: 5000 })
+      .then(() => true, () => false);
+    ok(pulouNoAlerta && !(await pagina.$('.an-cartao.an-resolvida')), '"Resolvido" no alerta do lembrete que se repete o leva ao próximo dia útil, e a anotação continua');
+    // E o "Resolvido" da anotação aberta, de novo: quinta → sexta. Pelo endereço do cartão: o meio dele
+    // cai na etiqueta, que filtra a lista.
+    await pagina.evaluate(() => (location.hash = document.querySelector('.an-cartao-link').getAttribute('href')));
+    await pagina.waitForFunction(() => location.hash.startsWith('#anotacoes/nota/'));
+    await pagina.click('[data-acao="resolver"]');
+    await pagina.waitForFunction(() => document.querySelector('[data-campo="data"]')?.value === '2026-10-23', null, { timeout: 5000 }).catch(() => {});
+    ok(
+      (await pagina.inputValue('[data-campo="data"]')) === '2026-10-23' && (await pagina.textContent('.an-lembrete')).includes('todo dia útil'),
+      'feito na anotação aberta, o lembrete pula outra vez, e ela continua aberta'
+    );
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   titulo('Ordens: o robô do Hub (Tampermonkey simulado, Hub falso)');
   {
     // O robô só reconhece a Mesa aberta do disco em .../mesa-xp/dist/index.html.

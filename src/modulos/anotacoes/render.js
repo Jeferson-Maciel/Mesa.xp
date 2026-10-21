@@ -9,7 +9,7 @@
  */
 
 import { esc } from '../../ui/html.js';
-import { ATALHOS, estadoDaNota, rotuloDoLembrete } from './lembretes.js';
+import { ATALHOS, REPETICOES, estadoDaNota, rotuloDoLembrete } from './lembretes.js';
 import { MODELOS } from './modelos.js';
 import { agruparPorPrazo, camposDe, corDaEtiqueta, extrairLinks, lerChecklist, progressoChecklist, tituloVisivel, trechoDe } from './notas.js';
 
@@ -162,6 +162,10 @@ export const htmlLembrete = (nota, agora) => {
         <span class="an-lembrete-rotulo">${nota.lembrete ? htmlSelo(nota, agora) : 'Lembrete'}</span>
         <label class="an-campo-data"><span>Dia</span><input type="date" data-campo="data" value="${esc(data)}" /></label>
         <label class="an-campo-data"><span>Hora</span><input type="time" data-campo="hora" value="${esc(hora ?? '')}" /></label>
+        <label class="an-campo-data"><span>Repetir</span><select data-campo="repetir">
+          <option value="">Não repete</option>
+          ${REPETICOES.map((r) => `<option value="${r.id}"${nota.lembrete?.repetir === r.id ? ' selected' : ''}>${r.rotulo}</option>`).join('')}
+        </select></label>
         ${nota.lembrete ? '<button type="button" class="an-link" data-acao="sem-lembrete">Tirar lembrete</button>' : ''}
       </div>
       <div class="an-atalhos"><span>${verbo}:</span>${atalhos}</div>

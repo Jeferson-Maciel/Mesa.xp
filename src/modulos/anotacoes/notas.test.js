@@ -9,7 +9,10 @@ import {
   novaNota,
   ordenarNotas,
   tituloVisivel,
-  trechoDe
+  trechoDe,
+  camposDe,
+  mesclarAoSalvar,
+  mesmosCampos
 } from './notas.js';
 
 const AGORA = new Date(2026, 8, 30, 10, 5);
@@ -129,5 +132,22 @@ describe('ordem, filtros e busca', () => {
 
   it('conta cada filtro', () => {
     expect(contagens(todas, AGORA)).toEqual({ todas: 5, lembretes: 2, vencidas: 1, resolvidas: 1, lixeira: 0 });
+  });
+});
+
+describe('a repetição do lembrete no editor', () => {
+  const base = { titulo: 't', texto: '', etiquetas: [], lembrete: { data: '2026-10-22', hora: '09:00', repetir: 'dias-uteis', avisado: true } };
+
+  it('o editor recebe a repetição, e não o avisado', () => {
+    expect(camposDe(base).lembrete).toEqual({ data: '2026-10-22', hora: '09:00', repetir: 'dias-uteis' });
+  });
+
+  it('mudar só a repetição é uma alteração, e ela é gravada', () => {
+    const original = camposDe(base);
+    const rascunho = { ...original, lembrete: { ...original.lembrete, repetir: 'semanal' } };
+    expect(mesmosCampos(original, rascunho)).toBe(false);
+    expect(mesclarAoSalvar({ original, rascunho, atual: base }).lembrete.repetir).toBe('semanal');
+    // "Não repete" (null) é o mesmo que nunca ter tido.
+    expect(mesmosCampos({ ...original, lembrete: { data: 'x', hora: null, repetir: null } }, { ...original, lembrete: { data: 'x', hora: null } })).toBe(true);
   });
 });

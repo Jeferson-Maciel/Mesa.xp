@@ -48,8 +48,17 @@ const ddmm = (d) => `${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)
 const diasEntre = (antes, depois) =>
   Math.round((new Date(depois.getFullYear(), depois.getMonth(), depois.getDate()) - new Date(antes.getFullYear(), antes.getMonth(), antes.getDate())) / 86_400_000);
 
-/** O texto do selo da anotação: "Lembrar amanhã às 09:00", "Venceu ontem", "Resolvida em 29/09". */
+/**
+ * O texto do selo da anotação: "Lembrar amanhã às 09:00", "Venceu ontem", "Resolvida em 29/09" — e,
+ * no lembrete que se repete, "· todo dia útil" no fim.
+ */
 export const rotuloDoLembrete = (nota, agora = new Date()) => {
+  const texto = rotuloSemRepeticao(nota, agora);
+  const repete = REPETICOES.find((r) => r.id === nota.lembrete?.repetir);
+  return texto && repete && !nota.concluida && !nota.excluidaEm ? `${texto} · ${repete.curto}` : texto;
+};
+
+const rotuloSemRepeticao = (nota, agora) => {
   const estado = estadoDaNota(nota, agora);
   if (estado === 'excluida') return `Na lixeira desde ${ddmm(new Date(nota.excluidaEm))}`;
   if (estado === 'resolvida') return nota.concluidaEm ? `Resolvida em ${ddmm(new Date(nota.concluidaEm))}` : 'Resolvida';
@@ -101,6 +110,53 @@ export const aplicarAtalho = (id, agora = new Date()) => {
   }
   throw new Error(`Atalho de lembrete desconhecido: ${id}`);
 };
+
+/**
+ * O lembrete que se repete (21/10/2026): `lembrete.repetir`. Marcar a anotação como feita não a
+ * resolve — o lembrete pula para a próxima vez, depois de agora, contada a partir da data dele (o
+ * "todo mês" do dia 31 cai no último dia dos meses mais curtos, e volta ao 31 quando o mês tem).
+ */
+export const REPETICOES = [
+  { id: 'diario', rotulo: 'Todo dia', curto: 'todo dia' },
+  { id: 'dias-uteis', rotulo: 'Todo dia útil', curto: 'todo dia útil' },
+  { id: 'semanal', rotulo: 'Toda semana', curto: 'toda semana' },
+  { id: 'mensal', rotulo: 'Todo mês', curto: 'todo mês' }
+];
+
+const ehDiaDaSemana = (d) => d.getDay() !== 0 && d.getDay() !== 6;
+
+/**
+ * @param {{data: string, hora: string|null, repetir: string, base?: {data: string, hora: string|null}}} lembrete
+ * @param {Date} agora
+ * @param {(d: Date) => boolean} [ehUtil]  o dia útil; sem ele, de segunda a sexta
+ * @returns {{data: string, hora: string|null, repetir: string}} a próxima vez, sem o `avisado`
+ */
+export const proximaOcorrencia = (lembrete, agora = new Date(), ehUtil = ehDiaDaSemana) => {
+  // O adiado (`base`) conta da vez original: o adiamento vale só para aquela vez.
+  const origem = lembrete.base ?? lembrete;
+  const [ano, mes, dia] = origem.data.split('-').map(Number);
+  const passo = (n) => {
+    if (lembrete.repetir === 'mensal') {
+      const ultimo = new Date(ano, mes - 1 + n + 1, 0).getDate();
+      return new Date(ano, mes - 1 + n, Math.min(dia, ultimo));
+    }
+    return new Date(ano, mes - 1, dia + n * (lembrete.repetir === 'semanal' ? 7 : 1));
+  };
+  for (let n = 1; n < 3700; n++) {
+    const d = passo(n);
+    if (lembrete.repetir === 'dias-uteis' && !ehUtil(d)) continue;
+    const proximo = { data: chaveDoDia(d), hora: origem.hora ?? null, repetir: lembrete.repetir };
+    if (momentoDoLembrete(proximo) > agora) return proximo;
+  }
+  throw new Error(`Repetição desconhecida: ${lembrete.repetir}`);
+};
+
+/**
+ * Adiar: o lembrete novo, do atalho ou do alerta. No que se repete, a repetição continua e a vez
+ * original fica em `base` — o adiamento vale só para aquela vez.
+ */
+export const adiarLembrete = (atual, novo) =>
+  atual?.repetir ? { ...novo, repetir: atual.repetir, base: atual.base ?? { data: atual.data, hora: atual.hora ?? null } } : novo;
 
 /** O próximo instante em que alguma anotação não resolvida vai vencer, para agendar o alerta. */
 export const proximoMomento = (notas, agora = new Date()) => {

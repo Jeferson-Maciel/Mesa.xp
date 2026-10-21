@@ -7,7 +7,8 @@ import { exportarBackup, importarBackup } from './backup.js';
 import { repositorioDasAnotacoes } from './banco.js';
 import { lerDataNatural, semOsTrechos } from './dataNatural.js';
 import { aoMudar, avisarMudanca } from './eventos.js';
-import { aplicarAtalho, chaveDoDia, rotuloDoLembrete } from './lembretes.js';
+import { adiarLembrete, aplicarAtalho, chaveDoDia, proximaOcorrencia, rotuloDoLembrete } from './lembretes.js';
+import { ehDiaUtil } from '../../comum/diasUteis.js';
 import { MODELOS, aplicarModelo } from './modelos.js';
 import {
   LIMITES,
@@ -507,6 +508,9 @@ export const iniciarAnotacoes = (secao) => {
   };
 
   const mudarLembrete = (lembrete) => {
+    // Mudar o dia, a hora ou adiar mantém a repetição: só o "Repetir" e o "Tirar lembrete" a mudam.
+    const repetir = estado.aberta?.campos.lembrete?.repetir;
+    if (lembrete && !('repetir' in lembrete) && repetir) lembrete = { ...lembrete, repetir };
     mudarCampos((c) => {
       c.lembrete = lembrete;
     });
@@ -556,6 +560,19 @@ export const iniciarAnotacoes = (secao) => {
     if (!nota) return;
     const resolver = !nota.concluida;
     const antes = gravada(id);
+    // O lembrete que se repete: feito não resolve, o lembrete pula para a próxima vez.
+    if (resolver && nota.lembrete?.repetir) {
+      const proxima = { ...nota, lembrete: proximaOcorrencia(nota.lembrete, new Date(), ehDiaUtil) };
+      const salva = await gravarJa(proxima, `Feito. Próximo: ${rotuloDoLembrete(proxima).toLowerCase()}.`, () =>
+        gravarJa({ ...antes }, 'Voltou como estava.').then(depoisDeMudar)
+      );
+      if (salva && estado.aberta?.id === id) {
+        Object.assign(estado.aberta, { original: camposDe(salva), campos: camposDe(salva) });
+        apagarRascunho();
+        renderEditor();
+      }
+      return depoisDeMudar();
+    }
     if (daLista) {
       const cartao = [...el('lista').querySelectorAll('.an-cartao')].find((c) => c.dataset.id === id);
       cartao?.classList.add(resolver ? 'an-resolvendo' : 'an-reabrindo');
@@ -813,7 +830,7 @@ export const iniciarAnotacoes = (secao) => {
   principal.addEventListener('click', (e) => {
     const alvo = e.target.closest('[data-acao], [data-atalho], [data-remover-etiqueta], [data-anexo], [data-modelo]');
     if (!alvo || !estado.aberta) return;
-    if (alvo.dataset.atalho) return mudarLembrete(aplicarAtalho(alvo.dataset.atalho, new Date()));
+    if (alvo.dataset.atalho) return mudarLembrete(adiarLembrete(estado.aberta?.campos.lembrete, aplicarAtalho(alvo.dataset.atalho, new Date())));
     if (alvo.dataset.removerEtiqueta !== undefined) {
       mudarCampos((c) => {
         c.etiquetas = c.etiquetas.filter((x) => x !== alvo.dataset.removerEtiqueta);
@@ -902,6 +919,10 @@ export const iniciarAnotacoes = (secao) => {
     } else if (campo === 'hora') {
       // Hora sem dia vale para hoje.
       mudarLembrete({ data: lembrete?.data ?? chaveDoDia(new Date()), hora: e.target.value || null });
+    } else if (campo === 'repetir') {
+      // Repetir sem dia começa hoje; "Não repete" sem lembrete não cria um.
+      if (!lembrete && !e.target.value) return;
+      mudarLembrete({ data: lembrete?.data ?? chaveDoDia(new Date()), hora: lembrete?.hora ?? null, repetir: e.target.value || null });
     } else if (e.target.dataset?.item !== undefined) {
       aplicarNoTexto(alternarItem(estado.aberta.campos.texto, Number(e.target.dataset.item)));
     } else if (e.target.dataset?.an === 'arquivo') {

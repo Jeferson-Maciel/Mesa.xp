@@ -18,7 +18,8 @@
  */
 
 import { aviso } from '../../ui/avisos.js';
-import { aplicarAtalho, estadoDaNota, proximoMomento, rotuloDoLembrete } from './lembretes.js';
+import { adiarLembrete, aplicarAtalho, proximaOcorrencia, estadoDaNota, proximoMomento, rotuloDoLembrete } from './lembretes.js';
+import { ehDiaUtil } from '../../comum/diasUteis.js';
 import { tituloVisivel } from './notas.js';
 import { aoMudar, avisarMudanca } from './eventos.js';
 import { htmlAlerta } from './render.js';
@@ -196,8 +197,10 @@ export const iniciarVigia = ({ repo, abrirNota }) => {
     const agora = new Date();
     let nova;
     if (acao === 'abrir' || acao === 'dispensar') nova = { ...nota, lembrete: { ...nota.lembrete, avisado: true } };
-    else if (acao === 'adiar-1h') nova = { ...nota, lembrete: aplicarAtalho('1h', agora) };
-    else if (acao === 'adiar-amanha') nova = { ...nota, lembrete: aplicarAtalho('amanha-9h', agora) };
+    else if (acao === 'adiar-1h') nova = { ...nota, lembrete: adiarLembrete(nota.lembrete, aplicarAtalho('1h', agora)) };
+    else if (acao === 'adiar-amanha') nova = { ...nota, lembrete: adiarLembrete(nota.lembrete, aplicarAtalho('amanha-9h', agora)) };
+    // O lembrete que se repete: "Resolver" o leva para a próxima vez, e a anotação continua.
+    else if (acao === 'resolver' && nota.lembrete?.repetir) nova = { ...nota, lembrete: proximaOcorrencia(nota.lembrete, agora, ehDiaUtil) };
     else if (acao === 'resolver') nova = { ...nota, concluida: true, concluidaEm: agora.getTime() };
     else return;
 
@@ -213,6 +216,7 @@ export const iniciarVigia = ({ repo, abrirNota }) => {
       aviso(erro.message, { tipo: 'erro' });
     }
     if (acao === 'abrir') abrirNota(nota.id);
+    else if (acao === 'resolver' && nova.lembrete?.repetir) aviso(`Feito. Próximo: ${rotuloDoLembrete(nova, agora).toLowerCase()}.`);
     else if (acao !== 'dispensar') aviso(acao === 'resolver' ? 'Anotação resolvida.' : `Lembrete adiado: ${rotuloDoLembrete(nova, agora)}.`);
   });
 

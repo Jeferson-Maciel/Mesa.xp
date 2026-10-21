@@ -293,7 +293,10 @@ export const renderCartao = (solicitacao, indice, formatos, confirmados) => `
         <tbody>${solicitacao.ordens.map(linha).join('')}</tbody>
       </table>
     </div>
-    <button type="button" class="btn-adicionar" data-campo="adicionar-ordem" data-valor="">+ Adicionar ativo</button>
+    <div class="cartao-rodape">
+      <button type="button" class="btn-adicionar" data-campo="adicionar-ordem" data-valor="">+ Adicionar ativo</button>
+      <button type="button" class="btn-anotar" data-anotar title="Criar uma anotação com este pedido (nas Anotações)">✎ Anotar</button>
+    </div>
 
     ${horario(solicitacao, formatos.includes('twap'))}
     ${descartadas(solicitacao.descartadas ?? [])}

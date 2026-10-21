@@ -1023,6 +1023,7 @@
 }
 
 .an .an-campo-data input,
+.an .an-campo-data select,
 .an .an-nova-etiqueta {
   padding: 0.34rem 0.55rem;
   background: var(--superficie);
@@ -1036,6 +1037,7 @@
 }
 
 .an .an-campo-data input:focus,
+.an .an-campo-data select:focus,
 .an .an-nova-etiqueta:focus {
   border-color: var(--acento-borda);
   box-shadow: var(--foco);

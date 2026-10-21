@@ -710,7 +710,8 @@ table.preview .btn-remover {
 
 /* Botão + para acrescentar uma linha em branco. Tracejado e em tom fraco: é espaço a preencher,
    não ação principal, e não pode competir com o Copiar. */
-.btn-adicionar {
+.btn-adicionar,
+.btn-anotar {
   display: inline-flex;
   align-items: center;
   margin-top: var(--esp-3);
@@ -726,7 +727,8 @@ table.preview .btn-remover {
     color var(--t-rapido) var(--curva);
 }
 
-.btn-adicionar:hover {
+.btn-adicionar:hover,
+.btn-anotar:hover {
   background: var(--acento-fundo);
   border-color: var(--acento-borda);
   border-style: solid;
@@ -1937,4 +1939,13 @@ table.preview .seg-total.ativo {
 .secundario-boleta:hover {
   border-color: var(--acento);
   background: var(--acento-fundo);
+}
+
+/* O rodapé da tabela do cartão: acrescentar uma linha e, à direita, anotar o pedido. */
+.cartao-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
 }

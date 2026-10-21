@@ -1,3 +1,5 @@
+import { chaveDoDia } from './dia.js';
+
 /**
  * Dias úteis da B3: sem sábado, domingo, feriado nacional e os dois dias sem pregão do fim do ano
  * (24/12 e 31/12).
@@ -16,8 +18,7 @@
 
 const FIXOS = ['01-01', '04-21', '05-01', '09-07', '10-12', '11-02', '11-15', '11-20', '12-24', '12-25', '12-31'];
 
-const chave = (data) =>
-  `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+const chave = chaveDoDia;
 
 /** @returns {Date} o domingo de Páscoa do ano, à meia-noite local */
 export const pascoa = (ano) => {

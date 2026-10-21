@@ -1,3 +1,4 @@
+import { chaveDoDia } from '../dia.js';
 import { HORARIOS, proximoHorario } from '../horarios.js';
 
 /**
@@ -8,22 +9,16 @@ import { HORARIOS, proximoHorario } from '../horarios.js';
  * - Um cartão nasce quando um e-mail do Ordens é copiado ou aberto no Outlook: é o que de fato vai
  *   para o cliente. Colar e analisar, só, não cria nada. O mesmo pedido copiado de novo, ainda à
  *   espera do cliente, atualiza o cartão em vez de criar outro.
- * - Os estados são as colunas: aguardando o cliente → o cliente respondeu (o robô viu a resposta no
- *   Outlook) → aprovado, a executar → executado. Cancelado sai do quadro. Quem diz que o cliente
- *   aprovou é o operador: "ok, mas só metade" não é aprovação, e nada aqui é adivinhado.
+ * - Os estados: enviado (aguardando o cliente) → o cliente respondeu (o robô viu a resposta no
+ *   Outlook) → aprovado, a executar → executado; ou cancelado. Na tela, cada estado mora numa pasta
+ *   (`PASTAS`, em modulos/fila/render.js). Quem diz que o cliente aprovou é o operador: "ok, mas só
+ *   metade" não é aprovação, e nada aqui é adivinhado.
  * - Os prazos vêm do que o pedido é (os horários em `../horarios.js`): o leilão da bolsa, o Tesouro,
  *   o Estoque clientes, o secundário da XP e a validade da cotação de venda.
  * - Tudo fica no navegador: o cartão tem o nome e a conta do cliente.
  */
 
 export const ESTADOS = ['enviado', 'respondeu', 'aprovado', 'executado', 'cancelado'];
-
-export const COLUNAS = [
-  { estado: 'enviado', titulo: 'Aguardando o cliente' },
-  { estado: 'respondeu', titulo: 'O cliente respondeu' },
-  { estado: 'aprovado', titulo: 'Aprovado: executar' },
-  { estado: 'executado', titulo: 'Executado' }
-];
 
 export const NOMES_DOS_GRUPOS = {
   bolsa: 'Bolsa',
@@ -34,10 +29,7 @@ export const NOMES_DOS_GRUPOS = {
 };
 
 /** O dia local `AAAA-MM-DD` de um momento — nunca `toISOString()`, que muda o dia às 21h. */
-export const diaDe = (momento) => {
-  const d = new Date(momento);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+export const diaDe = chaveDoDia;
 
 const normalizar = (texto) =>
   String(texto ?? '')
@@ -131,7 +123,13 @@ export const registrarEnvio = (pedidosDoDia, dados, { novo: pedidoNovo = false, 
   const candidatos = pedidoNovo ? pedidosDoDia.filter((p) => proprios.has(p.id)) : pedidosDoDia;
   const mesmo = candidatos.find((p) => p.chave === novo.chave && (p.estado === 'enviado' || p.estado === 'respondeu'));
   if (!mesmo) return novo;
-  return { ...mesmo, cliente: novo.cliente ?? mesmo.cliente, assessor: novo.assessor ?? mesmo.assessor, ordens: novo.ordens, texto: novo.texto, prazos: novo.prazos, horario: novo.horario, atualizadoEm: dados.em };
+  const atualizado = { ...mesmo, cliente: novo.cliente ?? mesmo.cliente, assessor: novo.assessor ?? mesmo.assessor, ordens: novo.ordens, texto: novo.texto, prazos: novo.prazos, horario: novo.horario, atualizadoEm: dados.em };
+  // O cliente respondeu e saiu um e-mail diferente (o "só metade" refeito): é outro e-mail esperando o
+  // cliente. A resposta de antes sai de vista e fica guardada; o mesmo texto copiado de novo não mexe.
+  if (mesmo.estado === 'respondeu' && novo.texto !== mesmo.texto) {
+    return mudarEstado({ ...atualizado, resposta: null, respostaAnterior: mesmo.resposta ?? null }, 'enviado', dados.em);
+  }
+  return atualizado;
 };
 
 /** O cartão no estado novo, com a passagem no histórico. */
@@ -162,9 +160,11 @@ export const prazoMaisUrgente = (pedido, agora = Date.now()) => {
   return pedido.prazos.find((p) => situacaoDoPrazo(p, agora) !== 'ok') ?? pedido.prazos[0] ?? null;
 };
 
-/** Pede atenção agora: o cliente respondeu, ou um prazo está perto ou vencido. */
+/**
+ * Pede atenção agora: um prazo está perto ou vencido. A resposta do cliente já leva o pedido para
+ * Aprovação e execução; ali, o de prazo perto vem primeiro, e os outros pela ordem das respostas.
+ */
 export const pedeAtencao = (pedido, agora = Date.now()) => {
-  if (pedido.estado === 'respondeu') return true;
   const prazo = prazoMaisUrgente(pedido, agora);
   return Boolean(prazo) && situacaoDoPrazo(prazo, agora) !== 'ok';
 };
@@ -190,8 +190,9 @@ export const repetidosHoje = (conta, ordens, pedidosDoDia) => {
 /** As contas que já passaram pela Fila, em qualquer dia. */
 export const contasConhecidas = (pedidos) => new Set(pedidos.map((p) => p.conta));
 
-const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-const diaEHora = (ms) =>
+/** A hora ("10:42") e o dia com a hora ("21/10 10:42") de um momento, como a Fila os mostra. */
+export const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+export const diaEHora = (ms) =>
   new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
 const verbo = (ordem, grupo) => {
@@ -209,23 +210,24 @@ const numeroDoEmail = (texto) => {
 };
 
 /**
- * A quantidade de cada ativo **no e-mail que saiu** — o que o cliente aprovou (pedido do operador em
- * 21/10/2026: "ter também a quantidade de cotas que foi auditada, para executar com base nas cotas").
- * É o `Quantidade:` do bloco de cada `Ativo:` (o e-mail por grupo e a auditoria de venda), ou a coluna
- * `Qtd. Total` do E-mail em tabela. Na compra de fundo em R$, são as cotas da conversão, com o ROA
- * escolhido no Copiar; na venda do total, a posição lida na boleta. O bloco com `Valor:` não tem cotas.
+ * Os blocos de ordem **do e-mail que saiu** — o que o cliente aprovou (pedido do operador em 21/10/2026:
+ * "ter também a quantidade de cotas que foi auditada, para executar com base nas cotas") —, na ordem do
+ * e-mail, que é a das ordens do pedido. Cada `Ativo:` com o `Quantidade:` logo abaixo (o e-mail por
+ * grupo e a auditoria de venda), ou cada linha do E-mail em tabela, com a coluna `Qtd. Total`. Na compra
+ * de fundo em R$, são as cotas da conversão, com o ROA escolhido no Copiar; na venda do total, a posição
+ * lida na boleta. O bloco com `Valor:` não tem cotas (`quantidade: null`).
  *
  * @param {string} texto  o e-mail, como saiu
- * @returns {Map<string, number>} pelo ativo, sem acento e em maiúsculas
+ * @returns {Array<{ativo: string, quantidade: number|null}>}  o ativo sem acento e em maiúsculas
  */
-export const quantidadesDoEmail = (texto) => {
-  const mapa = new Map();
+export const blocosDoEmail = (texto) => {
+  const blocos = [];
   const linhas = String(texto ?? '').split(/\r?\n/);
   linhas.forEach((linha, i) => {
     const ativo = /^Ativo:\s*(.+?);?\s*$/.exec(linha.trim());
-    const quantidade = ativo && /^Quantidade:\s*([\d.,]+);?\s*$/.exec((linhas[i + 1] ?? '').trim());
-    const n = quantidade ? numeroDoEmail(quantidade[1]) : null;
-    if (n !== null) mapa.set(normalizar(ativo[1]), n);
+    if (!ativo) return;
+    const quantidade = /^Quantidade:\s*([\d.,]+);?\s*$/.exec((linhas[i + 1] ?? '').trim());
+    blocos.push({ ativo: normalizar(ativo[1]), quantidade: quantidade ? numeroDoEmail(quantidade[1]) : null });
   });
   // O E-mail em tabela: a linha de cabeçalho com Ativo e Qtd. Total, e as linhas embaixo dela.
   linhas.forEach((linha, i) => {
@@ -235,16 +237,30 @@ export const quantidadesDoEmail = (texto) => {
     if (iAtivo < 0 || iQuantidade < 0) return;
     for (const abaixo of linhas.slice(i + 1)) {
       const celulas = abaixo.split('\t').map((c) => c.trim());
-      if (celulas.length <= Math.max(iAtivo, iQuantidade)) break;
-      const n = numeroDoEmail(celulas[iQuantidade]);
-      if (n !== null && celulas[iAtivo]) mapa.set(normalizar(celulas[iAtivo]), n);
+      if (celulas.length <= Math.max(iAtivo, iQuantidade) || !celulas[iAtivo]) break;
+      blocos.push({ ativo: normalizar(celulas[iAtivo]), quantidade: numeroDoEmail(celulas[iQuantidade]) });
     }
   });
-  return mapa;
+  return blocos;
+};
+
+/**
+ * O bloco do e-mail de uma ordem: o da mesma posição, se o ativo bate; senão, o único bloco daquele
+ * ativo, se o ativo também aparece uma vez só no pedido. Com o ativo repetido e as posições
+ * desencontradas, nenhum — nada é adivinhado.
+ */
+const blocoDaOrdem = (pedido, ordem) => {
+  const blocos = blocosDoEmail(pedido.texto);
+  const ativo = normalizar(ordem.ativo);
+  const naPosicao = blocos[pedido.ordens.indexOf(ordem)];
+  if (naPosicao?.ativo === ativo) return naPosicao;
+  const doAtivo = blocos.filter((b) => b.ativo === ativo);
+  const noPedido = pedido.ordens.filter((o) => normalizar(o.ativo) === ativo);
+  return doAtivo.length === 1 && noPedido.length === 1 ? doAtivo[0] : null;
 };
 
 /** A quantidade da ordem como o e-mail aprovado a escreveu; sem ela no e-mail, a da própria ordem. */
-export const quantidadeAprovada = (pedido, ordem) => quantidadesDoEmail(pedido.texto).get(normalizar(ordem.ativo)) ?? ordem.quantidade ?? null;
+export const quantidadeAprovada = (pedido, ordem) => blocoDaOrdem(pedido, ordem)?.quantidade ?? ordem.quantidade ?? null;
 
 // "R$ 2.000,00" → 2000.
 const reaisDoEmail = (texto) => {
@@ -417,10 +433,13 @@ export const resumoDoDia = (pedidos, dia) => {
  * o que não foi executado ontem continua pendente hoje.
  */
 export const DIAS_ABERTOS = 7;
+
+/** O primeiro dia da vista de hoje: o que a Fila precisa ler do banco (`listarDesde`). */
+export const inicioDaVista = (agora = Date.now()) => diaDe(agora - DIAS_ABERTOS * 86400000);
 const ABERTOS = new Set(['enviado', 'respondeu', 'aprovado']);
 export const pedidosDaVista = (todos, dia, agora = Date.now()) => {
   if (dia !== diaDe(agora)) return todos.filter((p) => p.dia === dia);
-  const limite = diaDe(agora - DIAS_ABERTOS * 86400000);
+  const limite = inicioDaVista(agora);
   return todos.filter((p) => p.dia === dia || (p.dia < dia && p.dia >= limite && ABERTOS.has(p.estado)));
 };
 

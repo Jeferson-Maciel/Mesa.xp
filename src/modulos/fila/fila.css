@@ -134,7 +134,7 @@
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
-  box-shadow: var(--sombra);
+  box-shadow: inset 0 1px 0 var(--realce), var(--sombra);
 }
 
 .fl .fl-pasta {
@@ -228,7 +228,6 @@
 .fl .fl-conferir {
   border-color: color-mix(in srgb, var(--acento) 45%, var(--borda));
   box-shadow: var(--sombra), inset 0 3px 0 var(--acento);
-  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
 }
 
 .fl .fl-soltas {
@@ -306,8 +305,8 @@
   border: 1px solid var(--borda);
   border-left: 3px solid var(--grupo);
   border-radius: var(--r-md);
-  box-shadow: var(--sombra);
-  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
+  box-shadow: inset 0 1px 0 var(--realce), var(--sombra);
+  transition: border-color var(--t-rapido) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 /* Pede atenção: o prazo perto. Um brilho que acende uma vez, ao aparecer — não um laço chamando o
@@ -316,6 +315,19 @@
   --brilho: var(--atencao);
   border-color: color-mix(in srgb, var(--brilho) 55%, var(--borda));
   border-left-color: var(--grupo);
+}
+
+/* A entrada só quando a vista muda (`em-cena`, src/ui/cena.js): outra pasta, outro dia, um pedido que
+   chegou ou saiu. A Fila redesenha a cada 30 s e a cada letra da busca; solta no cartão, a entrada e o
+   brilho rodariam de novo a cada vez. */
+.fl.em-cena .fl-cartao,
+.fl.em-cena .fl-resposta,
+.fl.em-cena .fl-linhas,
+.fl.em-cena .fl-conferir {
+  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.fl.em-cena .fl-cartao.fl-atencao {
   animation: fl-entrar var(--t-lento) var(--curva-saida) both, fl-acender 1.4s var(--curva) 0.2s 1;
 }
 
@@ -387,7 +399,6 @@
   color: var(--texto-forte);
   font-size: 0.92rem;
   line-height: 1.45;
-  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
 }
 
 .fl .fl-resposta cite {
@@ -590,7 +601,6 @@
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
   box-shadow: var(--sombra);
-  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
 }
 
 .fl .fl-linha {
@@ -788,11 +798,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fl .fl-cartao,
-  .fl .fl-cartao.fl-atencao,
-  .fl .fl-resposta,
-  .fl .fl-linhas,
-  .fl .fl-conferir,
+  .fl.em-cena .fl-cartao,
+  .fl.em-cena .fl-cartao.fl-atencao,
+  .fl.em-cena .fl-resposta,
+  .fl.em-cena .fl-linhas,
+  .fl.em-cena .fl-conferir,
   .fl .fl-outlook[data-tipo='vigiando']::before {
     animation: none;
   }

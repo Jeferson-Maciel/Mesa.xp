@@ -187,3 +187,16 @@ describe('o lote e o Tesouro na Fila', () => {
     expect(html).toMatch(/data-acao="boleta" data-indice="0"[^>]*>Tesouro do cliente/);
   });
 });
+
+// A revisão de 21/10/2026: "quem lê 'de acordo' e clica em 'Aprovou' é o operador" — o respondido não
+// tinha o Aprovou, e a hora da aprovação nunca ficava registrada.
+describe('o Aprovou no cartão respondido', () => {
+  it('o respondido tem o Aprovou; o aprovado com resposta diz quando foi aprovado', () => {
+    expect(htmlLista([respondido()], 'executar', em(11))).toMatch(/data-estado="aprovado"[^>]*>Aprovou</);
+    const aprovado = mudarEstado(respondido(), 'aprovado', em(10, 50));
+    const html = htmlLista([aprovado], 'executar', em(11));
+    expect(html).not.toMatch(/>Aprovou</);
+    expect(html).toContain('De acordo, pode seguir.');
+    expect(html).toContain('Aprovado por você às 10:50.');
+  });
+});

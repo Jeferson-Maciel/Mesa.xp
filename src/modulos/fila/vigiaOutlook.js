@@ -1,5 +1,5 @@
 import { avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { diaDe, pedidosDaVista, registrarResposta } from '../../comum/fila/regras.js';
+import { diaDe, hora, inicioDaVista, pedidosDaVista, registrarResposta } from '../../comum/fila/regras.js';
 import { casarResposta, momentoDaHora } from '../../comum/fila/respostas.js';
 
 /**
@@ -36,7 +36,6 @@ const gravarIgnoradas = (ignoradas) => {
   }
 };
 
-const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 const curto = (texto, n = 90) => {
   const t = String(texto ?? '').replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
@@ -57,7 +56,11 @@ export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar 
   let fila = Promise.resolve();
   const emFila = (fn) => (fila = fila.then(fn).catch(() => {}));
 
-  const daVista = async () => pedidosDaVista(await repo.listarTodos(), diaDe(agora()), agora());
+  const daVista = async () => pedidosDaVista(await repo.listarDesde(inicioDaVista(agora())), diaDe(agora()), agora());
+
+  // O e-mail que a própria mesa mandou (a prévia começa pelo "Prezado(a)" de todo modelo do Ordens):
+  // com a pasta Itens Enviados aberta, ele citaria a conta e casaria como se fosse a resposta.
+  const ehDaMesa = (previa) => /^\s*Prezado\(a\)/i.test(previa ?? '');
 
   async function receber(leitura) {
     if (leitura.lista) {
@@ -77,7 +80,7 @@ export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar 
 
     for (const r of leitura.respostas) {
       const em = momentoDaHora(r.hora, agora());
-      if (em === null || estado.ignoradas[r.id]) continue;
+      if (em === null || estado.ignoradas[r.id] || ehDaMesa(r.previa)) continue;
       const resposta = { id: r.id, de: r.de, email: r.email, assunto: r.assunto, previa: r.previa, em, conta: r.conta ?? null };
       // A mesma conversa com uma mensagem nova: a prévia muda, e o cartão fica com a de agora.
       const jaGuardada = doId.get(r.id);

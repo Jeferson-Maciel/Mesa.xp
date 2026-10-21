@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -57,5 +57,38 @@ describe('SnapDOM vendorizada', () => {
 
   it('vem com a licença MIT', () => {
     expect(readFileSync(caminho('./LICENSE-snapdom.txt'), 'utf8')).toMatch(/MIT License[\s\S]*ZumerLab/);
+  });
+});
+
+/**
+ * O SheetJS só no primeiro uso (21/10/2026, "rápido e leve"): são 938 KB que toda carga da Mesa
+ * compilava e executava, e só servem quando alguém escolhe uma planilha. Ele entra no arquivo como
+ * texto e vira código na primeira chamada de `sheetjs()`.
+ */
+describe('SheetJS sob demanda', () => {
+  it('sheetjs() devolve a 0.20.1, a mesma a cada chamada, e lê uma planilha', async () => {
+    const { sheetjs } = await import('./sheetjs.js');
+    const XLSX = sheetjs();
+    expect(XLSX.version).toBe('0.20.1');
+    expect(sheetjs()).toBe(XLSX);
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, XLSX.utils.aoa_to_sheet([['Ativo', 'Taxa'], ['CDB X', 12.5]]), 'Plan1');
+    const lido = XLSX.read(XLSX.write(livro, { type: 'array', bookType: 'xlsx' }), { type: 'array' });
+    expect(XLSX.utils.sheet_to_json(lido.Sheets.Plan1, { header: 1 })).toEqual([['Ativo', 'Taxa'], ['CDB X', 12.5]]);
+  });
+
+  it('nenhum módulo importa o xlsx.full.min.js direto: só o sheetjs.js, como texto', () => {
+    const raiz = caminho('../');
+    const arquivos = [];
+    const andar = (pasta) => {
+      for (const item of readdirSync(pasta, { withFileTypes: true })) {
+        const completo = `${pasta}/${item.name}`;
+        if (item.isDirectory()) andar(completo);
+        else if (/\.js$/.test(item.name) && !/\.test\.js$/.test(item.name)) arquivos.push(completo);
+      }
+    };
+    andar(raiz);
+    const diretos = arquivos.filter((a) => /^import .*xlsx\.full\.min\.js(?!\?raw)/m.test(readFileSync(a, 'utf8')));
+    expect(diretos).toEqual([]);
   });
 });

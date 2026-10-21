@@ -22,7 +22,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.290 testes (`npm test`), o build e 318
+- A última verificação passou inteira (21/10, noite): 1.303 testes (`npm test`), o build e 318
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -32,6 +32,31 @@ cada sessão.
 - **De 20 a 21/10 foram 38 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
   (os colegas precisam copiar o robô de novo: agora a 1.10.0, e recarregar a aba do Outlook).
+
+## 21/10 (fim da noite): revisão, bugs e desempenho
+
+O usuário pediu "utilize todas as skills possíveis em melhoria e otimização, para o sistema ficar sem
+bugs, rápido e leve". Rodadas a `code-review` (padrões e especificação, sobre os commits sem push) e a
+`diagnosing-bugs` (desempenho, com a medição antes da mudança). A `improve-codebase-architecture` só o
+usuário pode chamar.
+
+- **Bugs consertados** (detalhe em `docs/fila.md`): o lote e a ficha com o mesmo ativo duas vezes
+  (a quantidade do último bloco valia para os dois, e a ordem em R$ virava cotas); o Tesouro aberto no
+  Outlook com a taxa nova guardava na Fila o texto velho; o e-mail refeito depois da resposta seguia
+  "respondido" com a resposta antiga; o e-mail da própria mesa (pasta Itens Enviados) podia virar
+  resposta; o Ordens regravava o cartão a partir de uma cópia velha (apagaria uma resposta recém-
+  gravada); faltava o Aprovou no cartão respondido; a ordem por prazo; as animações de entrada da Fila
+  e dos Fundos repetiam a cada redesenho.
+- **Desempenho**: o SheetJS (938 KB, 41% do JS) passou a virar código só no primeiro uso. Medido lado a
+  lado com o build de antes, CPU 4× mais lenta (um PC de escritório), 8 rodadas alternadas: o script da
+  carga caiu 45% (489 → 269 ms) e a memória JS pela metade (9,1 → 4,8 MB). A Fila, o contador da aba e
+  o vigia do Outlook leem só os últimos 7 dias do IndexedDB, não os 90.
+- **Limpeza**: a chave do dia num lugar só (`src/comum/dia.js`), a busca sem acento e as horas da Fila
+  reaproveitadas, `COLUNAS` morto fora, e as regras do `CLAUDE.md` em dia com o código (a exceção da
+  Fila no IndexedDB, os dois rótulos fixos do `clicarSo`).
+- **Em aberto, para o usuário decidir**: o SheetJS "mini" (cortaria ~600 KB, mas não lê `.xls`, que o
+  Renda Fixa aceita); o Supabase sem o `auth-js` (~170 KB, que a fase 2 de segurança vai querer de
+  volta); e o trabalho do Antigravity que estava sem commit (ver abaixo).
 
 ## 21/10 (noite, depois): o lote e o Tesouro na Fila, e a boleta pelo robô
 

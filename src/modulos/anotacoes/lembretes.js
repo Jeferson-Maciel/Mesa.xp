@@ -1,3 +1,5 @@
+import { chaveDoDia } from '../../comum/dia.js';
+
 /**
  * Os lembretes das anotações: quando uma anotação fica amarela, quando fica vermelha, e o que se
  * escreve no selo dela. Funções puras, sem DOM, testadas em `lembretes.test.js`.
@@ -17,7 +19,7 @@
 const doisDigitos = (n) => String(n).padStart(2, '0');
 
 /** A chave local do dia (`YYYY-MM-DD`). */
-export const chaveDoDia = (d) => `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+export { chaveDoDia };
 
 const horaDe = (d) => `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}`;
 

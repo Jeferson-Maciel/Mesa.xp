@@ -68,6 +68,9 @@ a tela e para o código. No ar em **https://mesa-xp.vercel.app** (Vercel, ligada
 - As exportações reais da XP ficam em `src/modulos/rendafixa/fixtures/`, fora do git.
 - Na Mesa, o cliente e a posição dele ficam **só na memória da página**: nunca no `localStorage`, no
   histórico ou em arquivo. No robô, saem do Tampermonkey assim que a Mesa os recebe.
+- **A exceção, decidida com o usuário em 21/10/2026: a Fila do dia.** O cartão de cada e-mail que saiu
+  (a conta, o nome e o e-mail do cliente, o texto do e-mail) fica no IndexedDB deste navegador por 90
+  dias — é o que a faz sobreviver a recarregar. Nada vai para servidor nenhum (`docs/fila.md`).
 
 ### Push é deploy
 
@@ -111,13 +114,15 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
 - **não lê senha, token, cabeçalho, `localStorage` nem `sessionStorage`, e não chama a API do Hub
   por conta própria**: lê só a resposta que o próprio Hub recebe. Um teste confere o texto do script;
 - **nunca põe parâmetro no endereço do Hub**: qualquer um trava o módulo;
-- **só clica no que está numa lista fechada** (`clicarSo`): nunca Próximo, Enviar, Confirmar ou
-  Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu e, na
+- **só clica no que está numa lista fechada** (`clicarSo`, mais dois rótulos fixos que a tarefa
+  passa: a aba "Tesouro Direto" e o resultado "Conta XP: <a conta do pedido>"): nunca Próximo, Enviar,
+  Confirmar ou Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu e, na
   caixa de entrada (1.8.0), só lê a lista de mensagens: das outras, o assunto; dos e-mails de
   confirmação de hoje, o remetente, o e-mail, o assunto, a prévia, a hora e a conta citada (1.9.1). Não clica, não
   abre e-mail e só olha enquanto a Mesa tem pedido esperando o cliente;
 - **a aba que ele abre para a pessoa é dela** (1.10.0, o botão Boleta da Fila): à vista, ele só a leva
-  até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche, não clica em Próximo;
+  até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche a boleta (só a busca de
+  cliente, com a conta do pedido), não clica em Próximo;
 - uma tarefa por vez, numa fila, e tudo com prazo: nada que trave numa aba prende os pedidos seguintes;
 - mudou o robô, sobe a `@version` **e** a constante `VERSAO`; a Mesa mostra "Copiar robô" até a
   versão instalada ser a que ela espera.
@@ -133,6 +138,8 @@ automático bloqueia, com razão; não contorne).
 `npm run build` gera **um único** `dist/index.html`, com JS, CSS e ícone dentro: é o que vai para o
 site e o que os colegas abrem com dois cliques, do disco. **Proibido**: recurso externo (fonte, CDN),
 `import()` dinâmico, `fetch` de arquivo local e service worker. O `vite.config.test.js` confere.
+Biblioteca pesada que só serve sob demanda entra **como texto** e vira código no primeiro uso, como o
+SheetJS (`src/vendor/sheetjs.js`, 21/10/2026): eram 41% do JS, compilados e executados a cada carga.
 
 ### O código
 
@@ -169,7 +176,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.290 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.303 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

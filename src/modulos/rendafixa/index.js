@@ -1,4 +1,5 @@
-import XLSX from '../../vendor/xlsx.full.min.js';
+import { chaveDoDia } from '../../comum/dia.js';
+import { sheetjs } from '../../vendor/sheetjs.js';
 import { aviso } from '../../ui/avisos.js';
 import { buscarReferencia, excluir, lerHistorico, novoRegistro, salvar } from './historico.js';
 import { montarTexto, processRows } from './motor.js';
@@ -111,7 +112,7 @@ export const iniciarRendaFixa = (secao) => {
 
     try {
       const dados = await file.arrayBuffer();
-      const { aba, rows } = lerPlanilha(dados, XLSX);
+      const { aba, rows } = lerPlanilha(dados, sheetjs());
       if (leitura !== estado.leitura) return;
       estado.rows = rows;
       estado.arquivo.aba = aba;
@@ -528,7 +529,7 @@ export const iniciarRendaFixa = (secao) => {
     canvas.toBlob((blob) => {
       if (!blob) return aviso('Não foi possível gerar a imagem.', { tipo: 'erro' });
       const link = document.createElement('a');
-      const dia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+      const dia = chaveDoDia(hoje);
       link.href = URL.createObjectURL(blob);
       link.download = `renda-fixa-${dia}${r.secundario ? '-secundario' : ''}.png`;
       document.body.append(link);

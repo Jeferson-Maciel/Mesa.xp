@@ -1,4 +1,6 @@
+import { chaveDoDia } from '../../comum/dia.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
+import { criarCena } from '../../ui/cena.js';
 import { diaAnteriorComFoto, filtrarPrateleira, fotoDaPrateleira, guardarFoto, linhasDaPrateleira, mudancasNaPrateleira, ordenarPrateleira, semMudanca } from './regras.js';
 import { htmlMudancas, htmlTabela } from './render.js';
 import './fundos.css';
@@ -23,10 +25,7 @@ const lerFotos = () => {
   }
 };
 
-const diaDaCaptura = (estoque) => {
-  const d = new Date(estoque.exportadaEm);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+const diaDaCaptura = (estoque) => chaveDoDia(estoque.exportadaEm);
 
 const tirarFoto = (estoque) => {
   if (!estoque?.fundos?.length || estoque.origem !== 'hub') return;
@@ -48,6 +47,7 @@ export const iniciarFotosDaPrateleira = () =>
 export const iniciarFundos = (secao) => {
   secao.innerHTML = MARCACAO;
   const el = (nome) => secao.querySelector(`[data-fu="${nome}"]`);
+  const encenar = criarCena(secao.querySelector('.fu'));
   const estado = { campo: 'desagio', sentido: 'desc', termo: '', comEstoque: false, estoqueClientes: false };
 
   function render() {
@@ -55,6 +55,8 @@ export const iniciarFundos = (secao) => {
     const todas = linhasDaPrateleira(estoque);
     const linhas = ordenarPrateleira(filtrarPrateleira(todas, estado), estado.campo, estado.sentido);
     el('tabela').innerHTML = htmlTabela(linhas, { campo: estado.campo, sentido: estado.sentido, total: todas.length });
+    // A entrada na primeira carga e quando chega outra Prateleira, não a cada letra ou ordenação.
+    encenar(`${estoque?.origem ?? 'nenhuma'}|${estoque?.exportadaEm ?? ''}|${todas.length}`);
     el('vazio').hidden = todas.length > 0;
     el('mudancas-caixa').hidden = !todas.length || estoque?.origem !== 'hub';
 

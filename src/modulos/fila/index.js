@@ -1,9 +1,11 @@
 import { aviso } from '../../ui/avisos.js';
 import { esc } from '../../ui/html.js';
+import { normalizarBusca } from '../../comum/busca.js';
+import { criarCena } from '../../ui/cena.js';
 import { abrirJanela } from '../../ui/janela.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, linkDaBoleta, mudarEstado, ordensDoLote, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, inicioDaVista, linkDaBoleta, mudarEstado, ordensDoLote, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
 import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlLote, htmlPastas, pastaDoEstado } from './render.js';
@@ -24,6 +26,7 @@ export const iniciarFila = (secao) => {
   secao.innerHTML = MARCACAO;
   const repo = filaDaPagina();
   const el = (nome) => secao.querySelector(`[data-fl="${nome}"]`);
+  const encenar = criarCena(secao.querySelector('.fl'));
   const ui = {
     pastas: el('pastas'),
     lista: el('lista'),
@@ -45,18 +48,14 @@ export const iniciarFila = (secao) => {
   async function carregar() {
     try {
       // Hoje, também o que ficou aberto dos últimos dias (regras.js).
-      estado.pedidos = estado.dia === hoje() ? pedidosDaVista(await repo.listarTodos(), estado.dia) : await repo.listarDoDia(estado.dia);
+      estado.pedidos = estado.dia === hoje() ? pedidosDaVista(await repo.listarDesde(inicioDaVista()), estado.dia) : await repo.listarDoDia(estado.dia);
       render();
     } catch (erro) {
       ui.lista.innerHTML = `<div class="alert alert-danger">${esc(erro.message)}</div>`;
     }
   }
 
-  const semAcento = (t) =>
-    String(t ?? '')
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase();
+  const semAcento = normalizarBusca;
   const filtrados = () => {
     const termo = semAcento(estado.busca).trim();
     if (!termo) return estado.pedidos;
@@ -68,6 +67,9 @@ export const iniciarFila = (secao) => {
     const lista = filtrados();
     ui.pastas.innerHTML = htmlPastas(lista, estado.pasta, agora);
     ui.lista.innerHTML = htmlLista(lista, estado.pasta, agora);
+    // A entrada só quando a vista muda: outro dia, outra pasta, um pedido que chegou ou saiu dela —
+    // não a cada 30 s, nem a cada letra da busca.
+    encenar(`${estado.dia}|${estado.pasta}|${estado.pedidos.filter((p) => pastaDoEstado(p.estado) === estado.pasta).map((p) => p.id).join(',')}`);
     ui.lista.dataset.pasta = estado.pasta;
     ui.dia.value = estado.dia;
     const [ano, mes, d] = estado.dia.split('-');
@@ -318,7 +320,7 @@ export const iniciarContadorDaFila = () => {
   const contar = async () => {
     try {
       const agora = Date.now();
-      const n = pedidosDaVista(await repo.listarTodos(), diaDe(agora), agora).filter((p) => paraExecutar.includes(p.estado)).length;
+      const n = pedidosDaVista(await repo.listarDesde(inicioDaVista(agora)), diaDe(agora), agora).filter((p) => paraExecutar.includes(p.estado)).length;
       contador.hidden = n === 0;
       contador.textContent = n;
       contador.title = n ? `${n} ${n === 1 ? 'pedido para aprovar e executar' : 'pedidos para aprovar e executar'}` : '';

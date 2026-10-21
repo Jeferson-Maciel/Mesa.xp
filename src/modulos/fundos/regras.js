@@ -1,3 +1,5 @@
+import { normalizarBusca } from '../../comum/busca.js';
+
 /**
  * A Prateleira de fundos: os fundos do secundário que o robô traz do Hub (a mesma captura que o
  * Ordens usa para converter R$ em cotas), numa tabela que ordena e filtra, e o que mudou desde o
@@ -28,11 +30,7 @@ export const linhasDaPrateleira = (estoque) =>
     clientes: f.p2p?.pode ? { desagio: f.p2p.desagio ?? null, estoque: f.p2p.estoque ?? null } : null
   }));
 
-const normalizar = (t) =>
-  String(t ?? '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+const normalizar = normalizarBusca;
 
 /**
  * @param {ReturnType<typeof linhasDaPrateleira>} linhas

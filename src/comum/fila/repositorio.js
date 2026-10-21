@@ -11,6 +11,9 @@
  *
  * Contrato:
  *  - `listarDoDia(dia)` → os cartões do dia (`AAAA-MM-DD`), do mais antigo ao mais novo;
+ *  - `listarDesde(dia)` → os cartões desse dia em diante, pelo índice do dia: a janela aberta da Fila
+ *    (`inicioDaVista`, em regras.js), que a tela, o contador da aba e o vigia do Outlook releem a cada
+ *    30 s — sem carregar os 90 dias guardados, com o texto de cada e-mail;
  *  - `listarTodos()` → todos, para as contas conhecidas e a limpeza;
  *  - `salvar(pedido)` → grava (cria ou substitui pelo id);
  *  - `apagar(ids)` → apaga os ids.
@@ -80,6 +83,12 @@ export const criarRepositorioDaFila = (idb = globalThis.indexedDB) => {
         return lista.sort(porCriacao);
       }),
 
+    listarDesde: (dia) =>
+      executar('ler a Fila', async (db) => {
+        const lista = await pedido(db.transaction('pedidos').objectStore('pedidos').index('dia').getAll(IDBKeyRange.lowerBound(dia)));
+        return lista.sort(porCriacao);
+      }),
+
     listarTodos: () =>
       executar('ler a Fila', async (db) => (await pedido(db.transaction('pedidos').objectStore('pedidos').getAll())).sort(porCriacao)),
 
@@ -107,6 +116,7 @@ export const criarRepositorioEmMemoria = () => {
   return {
     modo: 'memoria',
     listarDoDia: async (dia) => [...pedidos.values()].filter((p) => p.dia === dia).sort(porCriacao).map(copia),
+    listarDesde: async (dia) => [...pedidos.values()].filter((p) => p.dia >= dia).sort(porCriacao).map(copia),
     listarTodos: async () => [...pedidos.values()].sort(porCriacao).map(copia),
     salvar: async (registro) => {
       pedidos.set(registro.id, copia(registro));

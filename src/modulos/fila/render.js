@@ -12,11 +12,9 @@
  */
 
 import { esc } from '../../ui/html.js';
-import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, estoqueDaOrdem, fichaDeExecucao, pedeAtencao, prazoMaisUrgente, quantoParaExecutar, situacaoDoPrazo } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, diaEHora, hora, estoqueDaOrdem, fichaDeExecucao, pedeAtencao, prazoMaisUrgente, quantoParaExecutar, situacaoDoPrazo } from '../../comum/fila/regras.js';
 import { quantoFalta } from '../../comum/horarios.js';
 
-const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-const diaEHora = (ms) => new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
 
 export const PASTAS = [
   {
@@ -99,12 +97,13 @@ const cabecaDoCartao = (pedido, agora) => {
 
 /**
  * Um pedido de Aprovação e execução: a resposta do cliente em destaque, as ordens, o prazo, e o que
- * fazer — a ficha, a boleta, executado. "Não aprovou" volta para os Enviados.
+ * fazer — Aprovou (quem lê a resposta e aprova é o operador), o lote ou a ficha, a boleta, executado.
+ * "Não aprovou" volta para os Enviados.
  */
 const cartaoParaExecutar = (pedido, agora) => {
   const aprovadoEm = pedido.estado === 'aprovado' ? quandoFoi(pedido, 'aprovado') : null;
   const resposta = pedido.resposta
-    ? `<blockquote class="fl-resposta"><span>${esc(pedido.resposta.previa || '(sem prévia)')}</span><cite>${esc(pedido.resposta.de ?? 'o cliente')} respondeu às ${hora(pedido.resposta.em)}</cite></blockquote>`
+    ? `<blockquote class="fl-resposta"><span>${esc(pedido.resposta.previa || '(sem prévia)')}</span><cite>${esc(pedido.resposta.de ?? 'o cliente')} respondeu às ${hora(pedido.resposta.em)}</cite></blockquote>${aprovadoEm ? `<p class="fl-aprovado">Aprovado por você às ${hora(aprovadoEm)}.</p>` : ''}`
     : `<p class="fl-aprovado">Aprovado por você${aprovadoEm ? ` às ${hora(aprovadoEm)}` : ''}, sem resposta pelo e-mail.</p>`;
   return `
   <article class="fl-cartao fl-cartao-executar${pedeAtencao(pedido, agora) ? ' fl-atencao' : ''}" data-id="${esc(pedido.id)}" data-grupo="${esc(pedido.grupo)}" data-estado="${esc(pedido.estado)}">
@@ -113,6 +112,7 @@ const cartaoParaExecutar = (pedido, agora) => {
     <ul class="fl-ordens">${pedido.ordens.map((o) => resumoDaOrdem(o, pedido)).join('')}</ul>
     ${htmlPrazo(pedido, agora)}
     <footer class="fl-cartao-acoes">
+      ${pedido.estado === 'respondeu' ? botao('estado', 'Aprovou', { estado: 'aprovado', titulo: 'Li a resposta: o cliente aprovou (a hora fica na ficha)' }) : ''}
       ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado' }) : botao('ficha', 'Ficha de execução')}
       ${boletasDe(pedido)}
       ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados' })}

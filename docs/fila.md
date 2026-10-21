@@ -61,7 +61,18 @@ respondeu, aprovado, executado, cancelado —, e cada pasta mostra os seus.
 
 **Quem diz que o cliente aprovou é o operador.** "Ok, mas só metade" não é aprovação, e nada aqui é
 adivinhado: a resposta do cliente (que o robô vê no Outlook) só passa o cartão para "O cliente
-respondeu" — a pasta Aprovação e execução —, com a prévia à vista.
+respondeu" — a pasta Aprovação e execução —, com a prévia à vista. O cartão respondido tem o
+**Aprovou**, que registra a hora da aprovação (a ficha a mostra).
+
+- **O que pede atenção** é o prazo perto ou vencido, não a resposta: em Aprovação e execução, o de
+  prazo perto vem primeiro, aceso, e os outros pela ordem das respostas.
+- **O e-mail refeito depois da resposta** (o "só metade" corrigido): com o texto diferente, o cartão
+  volta para os Enviados, esperando o cliente de novo; a resposta de antes sai de vista e fica guardada
+  (`respostaAnterior`). O mesmo texto copiado de novo não mexe no cartão.
+- **A entrada dos cartões** só anima quando a vista muda (`em-cena`): outra pasta, outro dia, um pedido
+  que chegou ou saiu. O redesenho de 30 s e a busca não animam nada.
+- **Só a janela aberta é lida**: a tela de hoje, o contador da aba e o vigia do Outlook leem do banco
+  os últimos 7 dias (`listarDesde`, pelo índice do dia), não os 90 guardados.
 
 ## Os prazos
 
@@ -101,13 +112,18 @@ até o certo; e que, igual aos fundos, apareçam as quantidades também".
 
 - **As cotas para executar** (pedido do operador em 21/10/2026: "ter também a quantidade de cotas que
   foi auditada, para executar com base nas cotas"): cada ordem mostra, em destaque, a quantidade que
-  **o e-mail aprovado levou** — lida do texto do e-mail guardado no cartão (`quantidadesDoEmail`): o
-  `Quantidade:` de cada `Ativo:`, ou a coluna `Qtd. Total` do E-mail em tabela. Na compra de fundo em
+  **o e-mail aprovado levou** — lida do texto do e-mail guardado no cartão (`blocosDoEmail`): o
+  `Quantidade:` de cada `Ativo:`, ou a coluna `Qtd. Total` do E-mail em tabela. Cada ordem casa com o
+  bloco **da mesma posição**, conferido o ativo (revisão de 21/10: com o mesmo ativo duas vezes no
+  pedido, o último bloco valia para os dois, e a ordem em R$ virava cotas); fora de posição, só o bloco
+  único de um ativo que também é único no pedido. Sem casar com certeza, nada vem do e-mail. Na compra de fundo em
   R$, são as cotas da conversão, com o ROA escolhido no Copiar; na venda do total, a posição lida na
   boleta. Embaixo, menores, o valor pedido (ou "o total da posição") e o estoque (Estoque XP ou
   clientes). O e-mail que saiu com `Valor:` (sem os fundos carregados) não tem cotas: o valor fica em
   âmbar, com "sem as cotas no e-mail", e nada é convertido na Fila. Vale também para os cartões que já
   estavam lá, porque o texto do e-mail sempre foi guardado.
+- **O Tesouro aberto no Outlook com a taxa de agora** (o robô troca o corpo quando a lista tem mais de
+  2 minutos): a Fila guarda o texto que foi, não o de antes (revisão de 21/10).
 - **O Tesouro** (aplicação e resgate) entra na Fila como os outros e-mails, e cada título mostra o que o
   e-mail aprovado levou (`titulosDoEmail`, pela ordem dos blocos, a mesma das ordens): o **título como o
   Hub o escreve** (o "LFT" digitado vira "Tesouro Selic 2031"), em destaque **o valor** ("Valor a ser

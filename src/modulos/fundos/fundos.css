@@ -79,6 +79,11 @@
   border: 1px solid var(--borda);
   border-radius: var(--r-lg);
   box-shadow: var(--sombra);
+}
+
+/* A entrada só na primeira carga e quando a Prateleira muda (`em-cena`, src/ui/cena.js): a tabela
+   é redesenhada a cada letra da busca e a cada ordenação. */
+.fu.em-cena .fu-tabela-caixa {
   animation: entrar var(--t-lento) var(--curva-saida) both;
 }
 
@@ -156,6 +161,7 @@
   padding: 0 6px;
   border-radius: var(--r-sm);
   background: var(--acento-fundo);
+  border: 1px solid var(--acento-borda);
   color: var(--texto-forte);
   font-size: 0.74rem;
   font-weight: 800;
@@ -189,8 +195,8 @@
   width: calc(var(--forca, 0) * 100% + 8px);
   height: 4px;
   border-radius: 2px;
-  background: var(--acento);
-  opacity: 0.55;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--acento) 60%, transparent), var(--acento));
+  opacity: 0.85;
 }
 
 .fu .fu-sem-estoque .fu-nome,
@@ -269,7 +275,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fu .fu-tabela-caixa {
+  .fu.em-cena .fu-tabela-caixa {
     animation: none;
   }
 }

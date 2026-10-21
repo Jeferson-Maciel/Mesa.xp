@@ -1,4 +1,4 @@
-import XLSX from '../../vendor/xlsx.full.min.js';
+import { sheetjs } from '../../vendor/sheetjs.js';
 import { ErroDosAssessores, lerPlanilhaDosAssessores } from './core/cliente/assessores.js';
 import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
@@ -316,6 +316,9 @@ export const iniciarOrdens = (secao) => {
     const validades = parte.ordens.map((o) => o.print?.validaAte?.getTime?.()).filter(Number.isFinite);
     const confirmados = estado.confirmados[iSolicitacao] ?? new Set();
     try {
+      // Os cartões de hoje como estão no banco agora, não a cópia desta aba: o vigia do Outlook (na Fila)
+      // pode ter acabado de gravar uma resposta, que a cópia ainda não tem e o cartão regravado apagaria.
+      estado.fila.hoje = await filaRepo.listarDoDia(diaDe(Date.now()));
       const pedido = registrarEnvio(
         estado.fila.hoje,
         {
@@ -686,6 +689,11 @@ export const iniciarOrdens = (secao) => {
           if (html) reserva.mandar(html);
           else reserva.cancelar();
           const r = await reserva.resposta;
+          // O Tesouro foi com a taxa (ou a posição) de agora: a Fila guarda o texto que foi, não o de
+          // antes — é com ele que o cliente concorda.
+          if (r.ok && comTaxaNova && comHtml && comHtml.texto !== saida.texto) {
+            registrarNaFila(solicitacao, iSolicitacao, formato, grupo, comHtml.texto);
+          }
           if (r.ok) {
             aviso(
               comPrints && semPrint.length > 0
@@ -842,7 +850,7 @@ export const iniciarOrdens = (secao) => {
       const dataDoArquivo = new Date(arquivo.lastModified || Date.now()).toISOString();
       const { capturadaEm, fundos } = doHub
         ? lerCapturaDoHub(await arquivo.text())
-        : { capturadaEm: null, fundos: lerPlanilhaDoSecundario(await arquivo.arrayBuffer(), XLSX) };
+        : { capturadaEm: null, fundos: lerPlanilhaDoSecundario(await arquivo.arrayBuffer(), sheetjs()) };
 
       estado.estoque = {
         arquivo: arquivo.name,
@@ -1249,7 +1257,7 @@ export const iniciarOrdens = (secao) => {
   /** @returns {Promise<boolean>} se o arquivo era a planilha dos assessores */
   async function carregarAssessores(arquivo, { soSeFor = false } = {}) {
     try {
-      const lista = lerPlanilhaDosAssessores(await arquivo.arrayBuffer(), XLSX);
+      const lista = lerPlanilhaDosAssessores(await arquivo.arrayBuffer(), sheetjs());
       estado.assessores = { arquivo: arquivo.name, carregadaEm: new Date().toISOString(), lista };
       guardadoDosAssessores.salvar(estado.assessores);
       mostrarAssessores();

@@ -1,7 +1,10 @@
-import { IDBFactory } from 'fake-indexeddb';
+import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { ErroDaFila, criarRepositorioDaFila, criarRepositorioEmMemoria } from './repositorio.js';
 import { mudarEstado, novoPedido } from './regras.js';
+
+// O navegador tem o IDBKeyRange global; o Node dos testes, o do fake-indexeddb.
+globalThis.IDBKeyRange ??= IDBKeyRange;
 
 /** A mesma bateria para os dois adaptadores: o do IndexedDB (falso, um banco novo a cada teste) e o em memória. */
 const adaptadores = [
@@ -38,6 +41,15 @@ describe.each(adaptadores)('repositório da Fila: %s', (_nome, criar) => {
     await repo.salvar(b);
     await repo.apagar([a.id]);
     expect((await repo.listarTodos()).map((p) => p.id)).toEqual([b.id]);
+  });
+
+  // Só a janela aberta (os últimos dias), pelo índice do dia: a Fila de hoje, o contador da aba e o
+  // vigia do Outlook leem isto a cada 30 s, e não os 90 dias guardados.
+  it('lista desde um dia, inclusive, do mais antigo ao mais novo', async () => {
+    const repo = criar();
+    const [velho, a, b] = [pedido(10, 9), pedido(15, 9), pedido(21, 9)];
+    for (const p of [b, velho, a]) await repo.salvar(p);
+    expect((await repo.listarDesde('2026-10-15')).map((p) => p.id)).toEqual([a.id, b.id]);
   });
 });
 

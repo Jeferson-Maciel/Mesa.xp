@@ -134,4 +134,13 @@ describe('o vigia no modo conversas do Outlook (robô 1.9.1)', () => {
     await ler([resposta({ id: 'r9', email: 'beltrano@exemplo.com', de: 'Beltrano Souza', prefixo: true })]);
     expect(vigia.soltas().map((s) => s.resposta.id)).toEqual(['r9']);
   });
+
+  // A revisão de 21/10/2026: com a pasta Itens Enviados aberta, cada e-mail de confirmação de hoje traz
+  // "na conta XP n" na prévia e casaria pela conta — o e-mail da própria mesa viraria a resposta.
+  it('o e-mail da própria mesa (a prévia começa pelo "Prezado(a)" do modelo) não é resposta', async () => {
+    const { repo, vigia, ler } = await montar([pedido()]);
+    await ler([resposta({ id: 'enviado', previa: 'Prezado(a) Fulana Tal, Conforme conversado, gostaria de realizar a ordem abaixo na conta XP 1234567:', conta: '1234567', prefixo: false })]);
+    expect((await repo.listarTodos())[0].estado).toBe('enviado');
+    expect(vigia.soltas()).toEqual([]);
+  });
 });

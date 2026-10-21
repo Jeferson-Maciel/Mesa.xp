@@ -8,7 +8,8 @@ import {
   mudarEstado,
   novoPedido,
   pedidosDaVista,
-  quantidadesDoEmail,
+  blocosDoEmail,
+  quantidadeAprovada,
   titulosDoEmail,
   ordensDoLote,
   destinoDaBoleta,
@@ -184,19 +185,19 @@ describe('as cotas do e-mail aprovado', () => {
   const EMAIL_DE_VENDA = ['Prezado(a) Cliente,', '', 'Ativo: Riza Malls Feeder FII RL;', 'Quantidade: 123,45678910;', 'Operação: Venda;', '', 'Condições:', '', 'atte,'].join('\n');
 
   it('o Quantidade de cada Ativo; o bloco com Valor não tem cotas', () => {
-    const mapa = quantidadesDoEmail(EMAIL_DE_COMPRA);
-    expect([...mapa]).toEqual([
-      ['VGPR11', 1193],
-      ['RIZA TERRAX VINTAGE FIAGRO RL', 162]
+    expect(blocosDoEmail(EMAIL_DE_COMPRA)).toEqual([
+      { ativo: 'VGPR11', quantidade: 1193 },
+      { ativo: 'RIZA TERRAX VINTAGE FIAGRO RL', quantidade: 162 },
+      { ativo: 'FUNDO FORA DA PRATELEIRA', quantidade: null }
     ]);
-    expect(quantidadesDoEmail(EMAIL_DE_VENDA).get('RIZA MALLS FEEDER FII RL')).toBe(123.4567891);
+    expect(blocosDoEmail(EMAIL_DE_VENDA)).toEqual([{ ativo: 'RIZA MALLS FEEDER FII RL', quantidade: 123.4567891 }]);
   });
 
   it('e a coluna Qtd. Total do E-mail em tabela', () => {
     const tabela = ['Conforme conversado…', '', 'Ativo\tC/V\tPreço\tQtd. Total', 'PETR4\tC\tA mercado\t100', 'VGPR11\tC\tA mercado\t1193', '', 'Att,'].join('\n');
-    expect([...quantidadesDoEmail(tabela)]).toEqual([
-      ['PETR4', 100],
-      ['VGPR11', 1193]
+    expect(blocosDoEmail(tabela)).toEqual([
+      { ativo: 'PETR4', quantidade: 100 },
+      { ativo: 'VGPR11', quantidade: 1193 }
     ]);
   });
 
@@ -361,5 +362,91 @@ describe('o lote e a boleta de um pedido', () => {
     expect(destinoDaBoleta({ operacao: 'V', fundoId: FUNDO }, '1234567', 'fundos-venda')).toEqual({ tipo: 'fundo', fundoId: FUNDO, conta: '1234567', lado: 'vender' });
     expect(destinoDaBoleta({}, '1234567', 'tesouro-resgate')).toEqual({ tipo: 'tesouro', conta: '1234567', leitura: 'posicoes' });
     expect(destinoDaBoleta({ operacao: 'C' }, '1234567', 'bolsa')).toBeNull();
+  });
+});
+
+// A revisão de 21/10/2026 achou: o mesmo ativo duas vezes no pedido (confirmável no Ordens) fazia o
+// último bloco do e-mail valer para os dois, e a ordem em R$ virar cotas. Cada ordem casa com o bloco
+// dela, pela posição, conferido o nome; sem casar com certeza, nada vem do e-mail.
+describe('o mesmo ativo duas vezes no e-mail aprovado', () => {
+  const EMAIL = [
+    'Ativo: PETR4;', 'Quantidade: 100;', 'Preço: R$ 30,00', 'Operação: Compra', '',
+    'Ativo: PETR4;', 'Valor: R$ 5.000,00;', 'Preço: A mercado', 'Operação: Compra', '',
+    'Ativo: VALE3;', 'Quantidade: 100;', 'Preço: R$ 60,00', 'Operação: Compra', '',
+    'Ativo: VALE3;', 'Quantidade: 200;', 'Preço: R$ 59,00', 'Operação: Compra'
+  ].join('\n');
+  const p = novoPedido({
+    conta: '1234567',
+    grupo: 'bolsa',
+    formato: 'email',
+    assunto: 'x',
+    ordens: [
+      { ativo: 'PETR4', operacao: 'C', quantidade: 100, preco: 'R$ 30,00' },
+      { ativo: 'PETR4', operacao: 'C', financeiro: 5000 },
+      { ativo: 'VALE3', operacao: 'C', quantidade: 100, preco: 'R$ 60,00' },
+      { ativo: 'VALE3', operacao: 'C', quantidade: 200, preco: 'R$ 59,00' }
+    ],
+    texto: EMAIL,
+    em: em(10)
+  });
+
+  it('o lote leva a quantidade de cada bloco, e a ordem em R$ segue em R$', () => {
+    expect(ordensDoLote(p).ordens.map((o) => [o.ativo, o.quantidade, o.financeiro])).toEqual([
+      ['PETR4', 100, null],
+      ['PETR4', null, 5000],
+      ['VALE3', 100, null],
+      ['VALE3', 200, null]
+    ]);
+  });
+
+  it('a ficha também', () => {
+    const ficha = fichaDeExecucao(p, em(11));
+    expect(ficha).toContain('- PETR4: comprar 100 · R$ 30,00');
+    expect(ficha).toContain('- PETR4: comprar R$ 5.000,00 · A mercado');
+    expect(ficha).toContain('- VALE3: comprar 100 · R$ 60,00');
+    expect(ficha).toContain('- VALE3: comprar 200 · R$ 59,00');
+  });
+
+  it('o bloco de outra ordem não vale: o nome na posição não bate e o ativo se repete', () => {
+    const fora = { ...p, texto: EMAIL.replace('Ativo: PETR4;\nQuantidade: 100;', 'Ativo: ITUB4;\nQuantidade: 100;') };
+    // A primeira ordem perdeu o bloco dela; a quantidade é a do pedido, não a de outro bloco.
+    expect(quantidadeAprovada(fora, fora.ordens[0])).toBe(100);
+    expect(quantidadeAprovada(fora, fora.ordens[1])).toBeNull();
+  });
+});
+
+// A revisão de 21/10/2026: o e-mail corrigido depois de "só metade" mantinha o cartão como respondido,
+// com a resposta antiga ao lado das quantidades novas.
+describe('o e-mail refeito depois da resposta do cliente', () => {
+  const resposta = { de: 'FULANO', previa: 'Ok, mas só metade', em: em(10, 30) };
+  const respondido = () => registrarResposta(bolsa(), resposta, em(10, 30));
+  const dados = (texto) => ({
+    conta: '1234567',
+    grupo: 'bolsa',
+    formato: 'email',
+    assunto: 'Confirmação de ordem',
+    ordens: [{ ativo: 'PETR4', operacao: 'C', quantidade: 50, financeiro: null, preco: null }],
+    texto,
+    em: em(11)
+  });
+
+  it('com o texto novo, volta para Enviados, sem a resposta de antes à vista (ela fica guardada)', () => {
+    const r = registrarEnvio([respondido()], dados('Prezado(a) FULANO DE TAL, … 50 …'));
+    expect(r).toMatchObject({ estado: 'enviado', resposta: null, respostaAnterior: resposta });
+    expect(r.ordens[0].quantidade).toBe(50);
+    expect(r.historico.at(-1)).toEqual({ estado: 'enviado', em: em(11) });
+  });
+
+  it('o mesmo texto copiado de novo não mexe no cartão respondido', () => {
+    const r = registrarEnvio([respondido()], dados('Prezado(a) FULANO DE TAL, …'));
+    expect(r).toMatchObject({ estado: 'respondeu', resposta });
+  });
+});
+
+describe('o que pede atenção', () => {
+  it('é o prazo perto ou vencido, não a resposta: o respondido sem pressa não fura a fila', () => {
+    const respondido = registrarResposta(bolsa(), { de: 'FULANO', previa: 'De acordo', em: em(10, 30) }, em(10, 30));
+    expect(pedeAtencao(respondido, em(11))).toBe(false);
+    expect(pedeAtencao(respondido, em(16, 30))).toBe(true);
   });
 });

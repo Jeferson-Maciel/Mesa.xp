@@ -59,8 +59,10 @@ scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda 
   analisa o Ordens, e "m" na aba Ordens não troca o mercado do Renda Fixa. Ao trocar de aba, um
   foco deixado numa seção escondida é solto.
 - **Uma ferramenta que falha ao iniciar não derruba as outras**: o erro aparece no lugar dela.
-- IDs: o Ordens usa os seus de sempre (`entrada`, `solicitacoes`…); os outros módulos não usam
-  `id`, só `data-rf`, `data-cal`, `data-op` e `data-an` consultados dentro da própria seção.
+- IDs: o Ordens usa os seus de sempre (`entrada`, `solicitacoes`…); os outros módulos consultam
+  só `data-rf`, `data-cal`, `data-op`, `data-an`, `data-fl` e `data-fu` dentro da própria seção. O
+  `id` fica para ligar um rótulo (`aria-labelledby` do título da janela, `list` de um `datalist`),
+  com o prefixo do módulo (`cal-dialogo-titulo`, `fl-janela-titulo`).
 
 Um módulo exporta `iniciarX(secao)` e não conhece os outros. O que dois módulos usam mora em
 `src/ui/`; o que um usa só fica nele.
@@ -167,7 +169,8 @@ reduce` desliga tudo, inclusive a revelação do tema.
 ao vivo, e o Ordens a cada clique no cartão. Se a entrada rodasse a cada redesenho, a tela piscaria
 o dia inteiro. Por isso as animações de entrada ficam presas a uma classe posta só quando a vista
 muda: `em-cena` (`src/ui/cena.js`, chave = semana, mês, post, página) no Calendário e no
-Operacional, e `entrando` (`encenar` no `index.js` do Ordens) numa análise nova. Animação nova de
+Operacional, e na Fila (dia, pasta e os pedidos dela) e nos Fundos (a Prateleira que chegou), que
+redesenham a cada 30 s e a cada letra da busca, e `entrando` (`encenar` no `index.js` do Ordens) numa análise nova. Animação nova de
 entrada vai atrás dessas classes, nunca solta no elemento que é redesenhado.
 
 **Ícones** são SVG de traço em máscara (`--i-*` em `base.css`), pintados por `currentColor` ou pelo

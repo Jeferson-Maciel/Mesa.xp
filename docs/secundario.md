@@ -275,7 +275,8 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   - tira o print do painel, recortado da caixa do total ao último valor do detalhe, com a SnapDOM;
   - apaga o campo e volta à Prateleira.
   Os cliques ficam numa lista fechada (`CLIQUES_PERMITIDOS`, conferida por teste): **nunca Próximo**,
-  nem a caixa de notificação ao cliente. A Mesa tira os prints que faltam na hora de copiar ou de abrir
+  nem a caixa de notificação ao cliente. Fora dela, só dois rótulos fixos que a própria tarefa passa ao
+  `clicarSo`: a aba "Tesouro Direto" e o resultado da busca "Conta XP: <a conta do pedido>". A Mesa tira os prints que faltam na hora de copiar ou de abrir
   no Outlook o e-mail de venda ("atualizado em tempo real", pedido do operador), ou no botão **Tirar
   prints** da venda; cada um vale um dia útil, preso à conta, ao fundo, ao estoque e à quantidade — se a posição
   mudar, o print velho não serve —, e fica **só na memória da página**. A miniatura aparece na venda.

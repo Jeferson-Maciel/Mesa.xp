@@ -3,10 +3,10 @@ import { esc } from '../../ui/html.js';
 import { abrirJanela } from '../../ui/janela.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, mudarEstado, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, linkDaBoleta, mudarEstado, ordensDoLote, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
-import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlPastas, pastaDoEstado } from './render.js';
+import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlLote, htmlPastas, pastaDoEstado } from './render.js';
 import { criarVigiaDoOutlook } from './vigiaOutlook.js';
 import './fila.css';
 
@@ -150,6 +150,45 @@ export const iniciarFila = (secao) => {
     abrirJanela(ui.janela, origem);
   }
 
+  /*
+   * "Gerar lote": o Lote Simples e o Lote TWAP do pedido, pelas regras do Ordens (o serviço
+   * ordens.lotes), com as quantidades do e-mail aprovado (regras.js, ordensDoLote).
+   */
+  function abrirLote(pedido, origem) {
+    const formatar = servico('ordens.lotes');
+    const { ordens, fora, semSimples } = ordensDoLote(pedido);
+    const solicitacao = { conta: pedido.conta, ordens, horario: pedido.horario ?? null };
+    const lotes = {
+      simples: formatar && ordens.length && !semSimples.length ? formatar.simples(solicitacao) : null,
+      twap: formatar && ordens.length ? formatar.twap(solicitacao) : null,
+      fora,
+      semSimples
+    };
+    estado.aberto = pedido.id;
+    estado.lotes = lotes;
+    ui.janelaTitulo.textContent = `Lote · conta ${pedido.conta}`;
+    ui.janelaCorpo.innerHTML = htmlLote(pedido, lotes, Date.now());
+    abrirJanela(ui.janela, origem);
+  }
+
+  /*
+   * A boleta certa: o robô (1.10.0) abre uma aba do Hub à vista e leva até ela — a boleta do fundo, ou
+   * o Tesouro do cliente. Sem o robô da versão certa, o link direto, numa aba nova.
+   */
+  function abrirBoleta(pedido, indice) {
+    const ordem = pedido.ordens[indice];
+    const destino = ordem ? destinoDaBoleta(ordem, pedido.conta, pedido.grupo) : null;
+    if (!destino) return;
+    const robo = servico('robo');
+    if (robo?.presente && robo.versao === servico('versaoDoRobo') && robo.abrirParaExecutar(destino)) {
+      aviso(destino.tipo === 'tesouro' ? 'O robô está abrindo o Tesouro Direto com o cliente da conta.' : 'O robô está abrindo a boleta no Hub.');
+      return;
+    }
+    const link = linkDaBoleta(ordem, pedido.conta, pedido.grupo);
+    if (link) window.open(link, '_blank', 'noopener');
+    if (!robo?.presente) aviso('Sem o robô, a boleta abre pelo endereço: confira o cliente e o fundo no Hub.');
+  }
+
   function abrirEmail(pedido, origem) {
     estado.aberto = pedido.id;
     ui.janelaTitulo.textContent = `${pedido.assunto} · conta ${pedido.conta}`;
@@ -175,6 +214,8 @@ export const iniciarFila = (secao) => {
     const acao = botao.dataset.acao;
     if (acao === 'estado') mudar(pedido.id, botao.dataset.estado);
     if (acao === 'ficha') abrirFicha(pedido, botao);
+    if (acao === 'lote') abrirLote(pedido, botao);
+    if (acao === 'boleta') abrirBoleta(pedido, Number(botao.dataset.indice));
     if (acao === 'email') abrirEmail(pedido, botao);
     if (acao === 'anotar') anotar(pedido);
   });
@@ -188,6 +229,14 @@ export const iniciarFila = (secao) => {
       const ok = await copiar(botao.dataset.acao === 'copiar-ficha' ? fichaDeExecucao(pedido) : pedido.texto);
       aviso(ok ? 'Copiado.' : 'Não foi possível copiar.', { tipo: ok ? 'info' : 'erro' });
     }
+    if (botao.dataset.acao === 'copiar-lote') {
+      const formato = botao.dataset.formato;
+      const tsv = estado.lotes?.[formato];
+      if (!tsv) return;
+      const ok = await copiar(tsv);
+      aviso(ok ? `${formato === 'twap' ? 'Lote TWAP' : 'Lote Simples'} copiado: cole na planilha.` : 'Não foi possível copiar.', { tipo: ok ? 'info' : 'erro' });
+    }
+    if (botao.dataset.acao === 'boleta') abrirBoleta(pedido, Number(botao.dataset.indice));
   });
 
   /* ── O dia, a busca e o resumo ─────────────────────────────────────────────────────── */

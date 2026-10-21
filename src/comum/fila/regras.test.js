@@ -9,6 +9,9 @@ import {
   novoPedido,
   pedidosDaVista,
   quantidadesDoEmail,
+  titulosDoEmail,
+  ordensDoLote,
+  destinoDaBoleta,
   quantoParaExecutar,
   pedeAtencao,
   prazoMaisUrgente,
@@ -211,7 +214,7 @@ describe('as cotas do e-mail aprovado', () => {
       texto: EMAIL_DE_COMPRA,
       em: em(10)
     });
-    expect(quantoParaExecutar(p, p.ordens[0])).toEqual({ principal: '1.193 cotas', detalhes: ['pedido R$ 10.000,00'] });
+    expect(quantoParaExecutar(p, p.ordens[0])).toEqual({ principal: '1.193 cotas', detalhes: ['pedido R$ 10.000,00'], ativo: 'VGPR11' });
     const ficha = fichaDeExecucao(p, em(11));
     expect(ficha).toContain('- VGPR11: comprar 1.193 cotas · Estoque XP · pedido R$ 10.000,00');
     expect(ficha).toContain('- Riza Terrax Vintage FIAgro RL: comprar 162 cotas · Estoque clientes · pedido R$ 15.000,00');
@@ -266,5 +269,97 @@ describe('o resumo do dia e a guarda', () => {
   it('o que passou de 90 dias sai', () => {
     const velho = { ...bolsa(), dia: '2026-07-01' };
     expect(vencidosDaGuarda([velho, bolsa()], em(10))).toEqual([velho]);
+  });
+});
+
+describe('o Tesouro na Fila: o título, o vencimento e o valor aprovados', () => {
+  const EMAIL_DO_TESOURO = [
+    'Prezado(a) Cliente,',
+    '',
+    'Conforme conversado, gostaria de realizar as ordens para a aplicação no Tesouro Direto abaixo na conta XP 1234567:',
+    '',
+    '',
+    'Título: Tesouro Selic 2031;',
+    'Taxa: SELIC + 0,0992 %;',
+    'Vencimento: 01/03/2031;',
+    'Valor a ser aplicado: R$ 2.000,00',
+    '',
+    'Título: Tesouro Prefixado 2029;',
+    'Taxa: ;',
+    'Vencimento: ;',
+    'Valor a ser aplicado: R$ 5.000,00'
+  ].join('\n');
+
+  it('lê cada título do e-mail, na ordem, com a taxa, o vencimento e o valor', () => {
+    expect(titulosDoEmail(EMAIL_DO_TESOURO)).toEqual([
+      { titulo: 'Tesouro Selic 2031', taxa: 'SELIC + 0,0992 %', vencimento: '01/03/2031', valor: 2000 },
+      { titulo: 'Tesouro Prefixado 2029', taxa: null, vencimento: null, valor: 5000 }
+    ]);
+  });
+
+  it('o pedido mostra o título do Hub (não o que foi digitado), o valor e o vencimento', () => {
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'tesouro',
+      formato: 'email',
+      assunto: 'Confirmação aplicação Tesouro Direto',
+      ordens: [
+        { ativo: 'LFT', operacao: 'C', financeiro: 2000 },
+        { ativo: 'Tesouro Prefixado 2029', operacao: 'C', financeiro: 5000 }
+      ],
+      texto: EMAIL_DO_TESOURO,
+      em: em(10)
+    });
+    expect(quantoParaExecutar(p, p.ordens[0])).toEqual({ principal: 'R$ 2.000,00', detalhes: ['venc. 01/03/2031', 'taxa SELIC + 0,0992 %'], ativo: 'Tesouro Selic 2031' });
+    expect(fichaDeExecucao(p, em(11))).toContain('- Tesouro Selic 2031: aplicar R$ 2.000,00 · venc. 01/03/2031 · taxa SELIC + 0,0992 %');
+  });
+
+  it('o resgate do total leva o disponível que o e-mail aprovou', () => {
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'tesouro-resgate',
+      formato: 'email',
+      assunto: 'Confirmação resgate Tesouro Direto',
+      ordens: [{ ativo: 'Tesouro Selic 2029', operacao: 'V', total: true }],
+      texto: 'Título: Tesouro Selic 2029;\nVencimento: 01/03/2029;\nValor a ser resgatado: R$ 10.045,13',
+      em: em(10)
+    });
+    expect(fichaDeExecucao(p, em(11))).toContain('- Tesouro Selic 2029: resgatar R$ 10.045,13 · venc. 01/03/2029 · o total disponível');
+  });
+});
+
+describe('o lote e a boleta de um pedido', () => {
+  const EMAIL = ['Ativo: KLBN11;', 'Quantidade: 674;', 'Preço: A mercado', 'Operação: Venda', '', 'Ativo: VULC3;', 'Valor: R$ 11.800,00;', 'Preço: A mercado', 'Operação: Compra'].join('\n');
+  const p = novoPedido({
+    conta: '1234567',
+    grupo: 'bolsa',
+    formato: 'email',
+    assunto: 'x',
+    ordens: [
+      { ativo: 'KLBN11', operacao: 'V', quantidade: 674 },
+      { ativo: 'VULC3', operacao: 'C', financeiro: 11800 },
+      { ativo: 'Fundo Por Nome', operacao: 'C', quantidade: 10 }
+    ],
+    texto: EMAIL,
+    em: em(10),
+    horario: { inicial: '10:00', final: '15:00' }
+  });
+
+  it('as ordens do lote com a quantidade aprovada; a em R$ só no TWAP; o que não é ticker, fora', () => {
+    expect(ordensDoLote(p)).toEqual({
+      ordens: [
+        { ativo: 'KLBN11', operacao: 'V', preco: null, quantidade: 674, financeiro: null },
+        { ativo: 'VULC3', operacao: 'C', preco: null, quantidade: null, financeiro: 11800 }
+      ],
+      fora: ['Fundo Por Nome'],
+      semSimples: ['VULC3']
+    });
+    expect(p.horario).toEqual({ inicial: '10:00', final: '15:00' });
+  });
+
+  it('o destino da boleta: o fundo com o lado, o Tesouro do cliente; a bolsa não tem', () => {
+    expect(destinoDaBoleta({ operacao: 'V', fundoId: FUNDO }, '1234567', 'fundos-venda')).toEqual({ tipo: 'fundo', fundoId: FUNDO, conta: '1234567', lado: 'vender' });
+    expect(destinoDaBoleta({}, '1234567', 'tesouro-resgate')).toEqual({ tipo: 'tesouro', conta: '1234567', leitura: 'posicoes' });
+    expect(destinoDaBoleta({ operacao: 'C' }, '1234567', 'bolsa')).toBeNull();
   });
 });

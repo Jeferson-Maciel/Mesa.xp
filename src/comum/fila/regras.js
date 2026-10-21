@@ -90,7 +90,7 @@ const novoId = (em) => `${em.toString(36)}-${(++sequencia).toString(36)}-${Math.
  * @param {number} p.em
  * @param {number|null} [p.validadeDaCotacao]  na venda de fundo, até quando vale a cotação (o print)
  */
-export const novoPedido = ({ conta, cliente = null, assessor = null, grupo, formato, assunto, ordens, texto, em, validadeDaCotacao = null }) => ({
+export const novoPedido = ({ conta, cliente = null, assessor = null, grupo, formato, assunto, ordens, texto, em, validadeDaCotacao = null, horario = null }) => ({
   id: novoId(em),
   dia: diaDe(em),
   criadoEm: em,
@@ -107,7 +107,9 @@ export const novoPedido = ({ conta, cliente = null, assessor = null, grupo, form
   historico: [{ estado: 'enviado', em }],
   prazos: prazosDoPedido({ grupo, ordens, em, validadeDaCotacao }),
   resposta: null,
-  chave: chaveDoPedido({ conta, grupo, ordens })
+  chave: chaveDoPedido({ conta, grupo, ordens }),
+  // O horário do TWAP, como o pedido o disse: o lote TWAP da Fila o leva.
+  horario
 });
 
 /**
@@ -129,7 +131,7 @@ export const registrarEnvio = (pedidosDoDia, dados, { novo: pedidoNovo = false, 
   const candidatos = pedidoNovo ? pedidosDoDia.filter((p) => proprios.has(p.id)) : pedidosDoDia;
   const mesmo = candidatos.find((p) => p.chave === novo.chave && (p.estado === 'enviado' || p.estado === 'respondeu'));
   if (!mesmo) return novo;
-  return { ...mesmo, cliente: novo.cliente ?? mesmo.cliente, assessor: novo.assessor ?? mesmo.assessor, ordens: novo.ordens, texto: novo.texto, prazos: novo.prazos, atualizadoEm: dados.em };
+  return { ...mesmo, cliente: novo.cliente ?? mesmo.cliente, assessor: novo.assessor ?? mesmo.assessor, ordens: novo.ordens, texto: novo.texto, prazos: novo.prazos, horario: novo.horario, atualizadoEm: dados.em };
 };
 
 /** O cartão no estado novo, com a passagem no histórico. */
@@ -244,6 +246,40 @@ export const quantidadesDoEmail = (texto) => {
 /** A quantidade da ordem como o e-mail aprovado a escreveu; sem ela no e-mail, a da própria ordem. */
 export const quantidadeAprovada = (pedido, ordem) => quantidadesDoEmail(pedido.texto).get(normalizar(ordem.ativo)) ?? ordem.quantidade ?? null;
 
+// "R$ 2.000,00" → 2000.
+const reaisDoEmail = (texto) => {
+  const t = String(texto ?? '').replace(/R\$\s*/, '').trim();
+  return /^\d[\d.]*(,\d+)?$/.test(t) ? Number(t.replace(/\./g, '').replace(',', '.')) : null;
+};
+
+/**
+ * Os títulos do e-mail do Tesouro que saiu (a aplicação e o resgate), na ordem do e-mail — a mesma das
+ * ordens do pedido: o título como o Hub o escreve, a taxa (só na aplicação), o vencimento e o valor
+ * aprovado ("Valor a ser aplicado/resgatado: R$ …"; no resgate do total, o disponível da posição).
+ *
+ * @returns {Array<{titulo: string, taxa: string|null, vencimento: string|null, valor: number|null}>}
+ */
+export const titulosDoEmail = (texto) => {
+  const blocos = [];
+  let atual = null;
+  for (const linha of String(texto ?? '').split(/\r?\n/).map((l) => l.trim())) {
+    const campo = /^(Título|Taxa|Vencimento|Valor a ser (?:aplicado|resgatado)):\s*(.*?);?\s*$/.exec(linha);
+    if (!campo) continue;
+    const [, nome, valor] = campo;
+    if (nome === 'Título') {
+      atual = { titulo: valor, taxa: null, vencimento: null, valor: null };
+      blocos.push(atual);
+    } else if (atual && nome === 'Taxa') atual.taxa = valor || null;
+    else if (atual && nome === 'Vencimento') atual.vencimento = valor || null;
+    else if (atual) atual.valor = reaisDoEmail(valor);
+  }
+  return blocos;
+};
+
+/** O título do e-mail do Tesouro de uma ordem do pedido (pela posição), ou nada. */
+export const tituloAprovado = (pedido, ordem) =>
+  pedido.grupo?.startsWith('tesouro') ? (titulosDoEmail(pedido.texto)[pedido.ordens.indexOf(ordem)] ?? null) : null;
+
 // Com o espaço comum depois do R$ (o toLocaleString põe o não separável): a ficha é copiada e colada.
 const reais = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, ' ');
 const numeroNaTela = (n) => n.toLocaleString('pt-BR', { maximumFractionDigits: 8 });
@@ -254,11 +290,22 @@ export const estoqueDaOrdem = (pedido, ordem) =>
 
 /**
  * O quanto de cada ordem, para executar: as cotas do e-mail aprovado (ou a quantidade da bolsa) em
- * primeiro lugar, e o que o pedido disse — o valor em R$, o total da posição — ao lado.
+ * primeiro lugar, e o que o pedido disse — o valor em R$, o total da posição — ao lado. No Tesouro, o
+ * valor aprovado, com o título como o Hub o escreve, o vencimento e a taxa.
  *
- * @returns {{principal: string, detalhes: string[]}}
+ * @returns {{principal: string, detalhes: string[], ativo: string}}
  */
 export const quantoParaExecutar = (pedido, ordem) => {
+  if (pedido.grupo.startsWith('tesouro')) {
+    const t = tituloAprovado(pedido, ordem);
+    const valor = t?.valor ?? ordem.financeiro ?? null;
+    const detalhes = [t?.vencimento ? `venc. ${t.vencimento}` : null, t?.taxa ? `taxa ${t.taxa}` : null, ordem.total ? 'o total disponível' : null].filter(Boolean);
+    return { principal: valor !== null ? reais(valor) : ordem.total ? 'o total disponível' : '', detalhes: valor === null && ordem.total ? [] : detalhes, ativo: t?.titulo || ordem.ativo };
+  }
+  return { ...quantoDeFundoOuBolsa(pedido, ordem), ativo: ordem.ativo };
+};
+
+const quantoDeFundoOuBolsa = (pedido, ordem) => {
   const fundo = pedido.grupo.startsWith('fundos');
   const quantidade = quantidadeAprovada(pedido, ordem);
   const detalhes = [];
@@ -279,9 +326,9 @@ export const fichaDeExecucao = (pedido, agora = Date.now()) => {
   const aprovado = [...pedido.historico].reverse().find((h) => h.estado === 'aprovado');
   const sub = `${NOMES_DOS_GRUPOS[pedido.grupo] ?? pedido.grupo}${aprovado ? ` · aprovado às ${hora(aprovado.em)}` : ''}`;
   const linhas = pedido.ordens.map((o) => {
-    const { principal, detalhes } = quantoParaExecutar(pedido, o);
+    const { principal, detalhes, ativo } = quantoParaExecutar(pedido, o);
     const partes = [`${verbo(o, pedido.grupo)} ${principal}`, estoqueDaOrdem(pedido, o), pedido.grupo === 'bolsa' ? (o.preco ?? 'A mercado') : null, ...detalhes];
-    return `- ${o.ativo}: ${partes.filter(Boolean).join(' · ')}`;
+    return `- ${ativo}: ${partes.filter(Boolean).join(' · ')}`;
   });
   const prazo = prazoMaisUrgente(pedido, agora);
   const rodape = prazo ? `Prazo: ${prazo.rotulo} ${diaEHora(prazo.ate)}` : null;
@@ -299,6 +346,48 @@ export const linkDaBoleta = (ordem, conta, grupo) => {
   if (grupo === 'tesouro') return 'https://hub.xpi.com.br/new/renda-fixa/#/produtos/tesouro-direto';
   if (grupo === 'tesouro-resgate') return 'https://hub.xpi.com.br/new/renda-fixa/#/posicoes/cliente/tesouro-direto';
   return null;
+};
+
+/**
+ * Para onde o robô leva a pessoa no botão Boleta (robô 1.10.0): a boleta do fundo, de compra ou de
+ * venda, para a conta; ou o Tesouro do cliente — Produtos na aplicação, a posição no resgate. Sem o
+ * id do fundo, nenhum. A bolsa se executa pelo lote.
+ */
+export const destinoDaBoleta = (ordem, conta, grupo) => {
+  if (grupo?.startsWith('fundos') && ordem.fundoId) return { tipo: 'fundo', fundoId: ordem.fundoId, conta: String(conta), lado: ordem.operacao === 'V' ? 'vender' : 'comprar' };
+  if (grupo === 'tesouro' || grupo === 'tesouro-resgate') return { tipo: 'tesouro', conta: String(conta), leitura: grupo === 'tesouro-resgate' ? 'posicoes' : 'lista' };
+  return null;
+};
+
+/** Um ticker da B3 — ação, FII, ETF, BDR —: o que cabe na coluna Ativo do lote. */
+const TICKER_DO_LOTE = /^(?=.*[A-Z])[A-Z0-9]{4}\d{1,2}[A-Z]?$/;
+
+/**
+ * As ordens do lote de um pedido (21/10/2026: "o botão gera a ordem lote TWAP ou lote, para
+ * executarmos"), com a quantidade que o e-mail aprovado levou; a ordem em R$ segue em R$. O que não é
+ * ticker fica fora (vai pela boleta do Hub). O Lote Simples não tem coluna de financeiro: a ordem em
+ * R$ só cabe no TWAP (`semSimples`).
+ *
+ * @returns {{ordens: object[], fora: string[], semSimples: string[]}}
+ */
+export const ordensDoLote = (pedido) => {
+  const ordens = [];
+  const fora = [];
+  for (const o of pedido.ordens) {
+    if (!TICKER_DO_LOTE.test(String(o.ativo ?? '').trim().toUpperCase())) {
+      fora.push(o.ativo);
+      continue;
+    }
+    const emReais = Boolean(o.financeiro) && !o.quantidade && quantidadeAprovada(pedido, o) === null;
+    ordens.push({
+      ativo: o.ativo,
+      operacao: o.operacao,
+      preco: o.preco ?? null,
+      quantidade: emReais ? null : quantidadeAprovada(pedido, o),
+      financeiro: emReais ? o.financeiro : null
+    });
+  }
+  return { ordens, fora, semSimples: ordens.filter((o) => o.financeiro !== null).map((o) => o.ativo) };
 };
 
 /** O resumo do dia, para o fim do expediente: quantos em cada estado, e o que ficou pendente. */

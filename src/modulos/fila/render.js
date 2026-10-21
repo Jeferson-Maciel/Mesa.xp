@@ -12,7 +12,7 @@
  */
 
 import { esc } from '../../ui/html.js';
-import { NOMES_DOS_GRUPOS, diaDe, estoqueDaOrdem, fichaDeExecucao, linkDaBoleta, pedeAtencao, prazoMaisUrgente, quantoParaExecutar, situacaoDoPrazo } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, estoqueDaOrdem, fichaDeExecucao, pedeAtencao, prazoMaisUrgente, quantoParaExecutar, situacaoDoPrazo } from '../../comum/fila/regras.js';
 import { quantoFalta } from '../../comum/horarios.js';
 
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -40,11 +40,11 @@ const OPERACAO = { C: 'compra', V: 'venda' };
  * 21/10/2026: "executar com base nas cotas") —, com o valor pedido e o estoque embaixo, menores.
  */
 const resumoDaOrdem = (o, pedido) => {
-  const { principal, detalhes } = quantoParaExecutar(pedido, o);
+  const { principal, detalhes, ativo } = quantoParaExecutar(pedido, o);
   const sem = detalhes.includes('sem as cotas no e-mail');
   const notas = [...detalhes.filter((d) => d !== 'sem as cotas no e-mail'), estoqueDaOrdem(pedido, o), sem ? 'sem as cotas no e-mail' : null].filter(Boolean);
   const lado = pedido.grupo === 'tesouro' ? 'aplica' : pedido.grupo === 'tesouro-resgate' ? 'resgata' : OPERACAO[o.operacao] ?? '';
-  return `<li><span class="fl-op fl-op-${o.operacao === 'V' ? 'v' : 'c'}">${esc(lado)}</span><span class="fl-ativo" title="${esc(o.ativo)}">${esc(o.ativo)}</span><span class="fl-quanto"><b${sem ? ' class="fl-sem-cotas"' : ''}>${esc(principal)}</b>${notas.length ? `<small>${esc(notas.join(' · '))}</small>` : ''}</span></li>`;
+  return `<li><span class="fl-op fl-op-${o.operacao === 'V' ? 'v' : 'c'}">${esc(lado)}</span><span class="fl-ativo" title="${esc(ativo)}">${esc(ativo)}</span><span class="fl-quanto"><b${sem ? ' class="fl-sem-cotas"' : ''}>${esc(principal)}</b>${notas.length ? `<small>${esc(notas.join(' · '))}</small>` : ''}</span></li>`;
 };
 
 /** O prazo que pede atenção, como chip: âmbar perto, vermelho vencido. */
@@ -61,12 +61,24 @@ const botao = (acao, rotulo, { estado = null, tipo = '', titulo = '' } = {}) =>
 const icone = (acao, simbolo, titulo, { estado = null, classe = '' } = {}) =>
   `<button type="button" class="fl-icone${classe ? ` ${classe}` : ''}" data-acao="${acao}"${estado ? ` data-estado="${estado}"` : ''} title="${esc(titulo)}" aria-label="${esc(titulo)}">${simbolo}</button>`;
 
-const boletasDe = (pedido) =>
-  pedido.ordens
-    .map((o) => [o, linkDaBoleta(o, pedido.conta, pedido.grupo)])
-    .filter(([, link]) => link)
-    .map(([o, link]) => `<a class="fl-boleta" href="${esc(link)}" target="_blank" rel="noopener" title="Abrir a boleta de ${esc(o.ativo)} no Hub">Boleta ${esc(o.ativo.split(' ')[0])}</a>`)
+/*
+ * As boletas do pedido: botões que pedem ao robô a boleta certa, numa aba do Hub à vista (robô 1.10.0).
+ * Um por fundo (o lado e a conta do pedido); no Tesouro, um só — o Tesouro do cliente, na aplicação, ou
+ * a posição dele, no resgate. A bolsa se executa pelo lote.
+ */
+const boletasDe = (pedido, { classe = 'fl-boleta' } = {}) => {
+  if (pedido.grupo.startsWith('tesouro')) {
+    const rotulo = pedido.grupo === 'tesouro-resgate' ? 'Posição no Tesouro' : 'Tesouro do cliente';
+    return destinoDaBoleta(pedido.ordens[0] ?? {}, pedido.conta, pedido.grupo)
+      ? `<button type="button" class="${classe}" data-acao="boleta" data-indice="0" title="O robô abre o Tesouro Direto no Hub, já com o cliente da conta ${esc(pedido.conta)}">${rotulo}</button>`
+      : '';
+  }
+  return pedido.ordens
+    .map((o, i) => [o, i, destinoDaBoleta(o, pedido.conta, pedido.grupo)])
+    .filter(([, , destino]) => destino)
+    .map(([o, i]) => `<button type="button" class="${classe}" data-acao="boleta" data-indice="${i}" title="O robô abre no Hub a boleta de ${o.operacao === 'V' ? 'venda' : 'compra'} de ${esc(o.ativo)} para a conta ${esc(pedido.conta)}">Boleta ${esc(o.ativo.split(' ')[0])}</button>`)
     .join('');
+};
 
 const quandoFoi = (pedido, estado) => [...pedido.historico].reverse().find((h) => h.estado === estado)?.em ?? null;
 
@@ -101,7 +113,7 @@ const cartaoParaExecutar = (pedido, agora) => {
     <ul class="fl-ordens">${pedido.ordens.map((o) => resumoDaOrdem(o, pedido)).join('')}</ul>
     ${htmlPrazo(pedido, agora)}
     <footer class="fl-cartao-acoes">
-      ${botao('ficha', 'Ficha de execução')}
+      ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado' }) : botao('ficha', 'Ficha de execução')}
       ${boletasDe(pedido)}
       ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados' })}
       <span class="fl-mais">
@@ -207,11 +219,7 @@ export const htmlConferir = (soltas, pedidos) => {
 
 /** A ficha de execução, na janela: o texto, copiar e as boletas. */
 export const htmlFicha = (pedido, agora = Date.now()) => {
-  const boletas = pedido.ordens
-    .map((o) => [o, linkDaBoleta(o, pedido.conta, pedido.grupo)])
-    .filter(([, link]) => link)
-    .map(([o, link]) => `<a class="copy-btn" href="${esc(link)}" target="_blank" rel="noopener">Abrir a boleta · ${esc(o.ativo)}</a>`)
-    .join('');
+  const boletas = boletasDe(pedido, { classe: 'copy-btn' });
   return `
     <pre class="fl-ficha-texto">${esc(fichaDeExecucao(pedido, agora))}</pre>
     <div class="fl-ficha-acoes">
@@ -219,4 +227,42 @@ export const htmlFicha = (pedido, agora = Date.now()) => {
       ${boletas}
     </div>
     <p class="fl-nota">Sai do que o e-mail aprovado pediu: nada é refeito nem recalculado. Confira na boleta antes de enviar.</p>`;
+};
+
+/* ── O lote de um pedido de bolsa ─────────────────────────────────────────────────────── */
+
+// O TSV numa tabela, para conferir de olho antes de copiar (o que vai para a área de transferência é
+// o TSV, como o Ordens o gera).
+const htmlTabelaDoTsv = (tsv) => {
+  const [cabeca, ...linhas] = tsv.trimEnd().split('\n').map((l) => l.split('\t'));
+  return `<div class="fl-tsv"><table><thead><tr>${cabeca.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${linhas
+    .map((l) => `<tr>${l.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
+    .join('')}</tbody></table></div>`;
+};
+
+/**
+ * "Gerar lote" (21/10/2026: "o botão gera a ordem lote TWAP ou lote, para executarmos"): o Lote Simples
+ * e o Lote TWAP do pedido, com as quantidades do e-mail aprovado (`ordensDoLote`), cada um com o seu
+ * Copiar; o que não cabe no lote, e a ficha do pedido embaixo.
+ *
+ * @param {object} pedido
+ * @param {{simples: string|null, twap: string|null, fora: string[], semSimples: string[]}} lotes
+ */
+export const htmlLote = (pedido, { simples, twap, fora, semSimples }, agora = Date.now()) => {
+  const semHorario = !pedido.horario?.inicial && !pedido.horario?.final;
+  const secao = (titulo, formato, tsv, nota) => `
+    <section class="fl-lote" data-formato="${formato}">
+      <header class="fl-lote-topo">
+        <h3>${titulo}</h3>
+        ${tsv ? `<button type="button" class="copy-btn btn-primario" data-acao="copiar-lote" data-formato="${formato}">Copiar ${titulo}</button>` : ''}
+      </header>
+      ${tsv ? htmlTabelaDoTsv(tsv) : ''}
+      ${nota ? `<p class="fl-nota">${nota}</p>` : ''}
+    </section>`;
+  return `
+    ${secao('Lote Simples', 'simples', simples, simples ? '' : semSimples.length ? `O Lote Simples não tem coluna de financeiro: ${esc(semSimples.join(', '))} ${semSimples.length > 1 ? 'estão' : 'está'} em R$. Use o Lote TWAP.` : 'Nenhuma ordem para o lote.')}
+    ${secao('Lote TWAP', 'twap', twap, twap && semHorario ? 'O pedido não disse o horário: as colunas de hora saem vazias.' : '')}
+    ${fora.length ? `<p class="fl-nota">Fora do lote (não são ticker): ${esc(fora.join(', '))}.</p>` : ''}
+    <details class="fl-lote-ficha"><summary>A ficha do pedido</summary><pre class="fl-ficha-texto">${esc(fichaDeExecucao(pedido, agora))}</pre></details>
+    <p class="fl-nota">As quantidades são as do e-mail que o cliente aprovou; a ordem em R$ segue em R$. Nada é recalculado aqui.</p>`;
 };

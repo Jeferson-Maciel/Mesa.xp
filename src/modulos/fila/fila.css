@@ -797,3 +797,74 @@
     animation: none;
   }
 }
+
+/* ── O lote (Gerar lote) ────────────────────────────────────────────────────────────── */
+
+.fl .fl-janela:has(.fl-lote) {
+  width: min(56rem, calc(100vw - 2 * var(--esp-4)));
+}
+
+.fl .fl-lote {
+  margin-bottom: var(--esp-4);
+}
+
+.fl .fl-lote-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-2);
+}
+
+.fl .fl-lote-topo h3 {
+  margin: 0;
+  color: var(--texto-forte);
+  font-size: 0.92rem;
+}
+
+.fl .fl-tsv {
+  overflow-x: auto;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.fl .fl-tsv table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fl .fl-tsv th,
+.fl .fl-tsv td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--borda);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.fl .fl-tsv th {
+  background: var(--cabecalho);
+  color: var(--texto-fraco);
+  font-weight: 700;
+}
+
+.fl .fl-tsv tr:last-child td {
+  border-bottom: 0;
+}
+
+.fl .fl-lote-ficha {
+  margin: var(--esp-3) 0;
+  color: var(--texto-fraco);
+  font-size: 0.82rem;
+}
+
+.fl .fl-lote-ficha summary {
+  margin-bottom: var(--esp-2);
+  cursor: pointer;
+}
+
+.fl .fl-lote .fl-tsv + .fl-nota {
+  margin-top: var(--esp-2);
+}

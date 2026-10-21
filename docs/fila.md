@@ -42,8 +42,9 @@ mudar algo ou confirmar alguma coisa, e o já executado o mesmo"), a Fila é uma
 pastas**, e não um quadro de colunas:
 
 - **Aprovação e execução** — o que fica à vista, e onde a aba abre: o que o cliente respondeu, com a
-  resposta em destaque, e o que o operador marcou como aprovado. Cada pedido num cartão, com a
-  **Ficha de execução**, a **boleta** do Hub e **Executado**; e, menores, ver o e-mail, anotar,
+  resposta em destaque, e o que o operador marcou como aprovado. Cada pedido num cartão, com o
+  **Gerar lote** (na bolsa) ou a **Ficha de execução** (nos fundos e no Tesouro), a **boleta** do Hub
+  e **Executado**; e, menores, ver o e-mail, anotar,
   "não aprovou" (volta para os Enviados, com a resposta guardada) e cancelar. Os que pedem atenção
   (o prazo perto) vêm primeiro; depois, pela ordem das respostas.
 - **Enviados** — os e-mails que esperam o cliente, uma linha cada, como a lista de e-mails: a conta,
@@ -92,7 +93,11 @@ vez; nos Enviados, a pasta ganha o ponto âmbar.
 O `index.js` do Ordens anota `ordem.repetidoHoje` e `solicitacao.contaNova`; o validador os lê
 (`repetido-hoje`, bloqueio confirmável; `conta-nova`, aviso).
 
-## A ficha de execução, a boleta e o resumo
+## O lote, a ficha de execução, a boleta e o resumo
+
+Pedido do operador em 21/10/2026: "o botão de ficha de execução seja um botão que gera ordem lote TWAP
+ou ordem lote, para executarmos; que apareçam os e-mails de Tesouro lá; que o botão boleta leve a gente
+até o certo; e que, igual aos fundos, apareçam as quantidades também".
 
 - **As cotas para executar** (pedido do operador em 21/10/2026: "ter também a quantidade de cotas que
   foi auditada, para executar com base nas cotas"): cada ordem mostra, em destaque, a quantidade que
@@ -103,11 +108,31 @@ O `index.js` do Ordens anota `ordem.repetidoHoje` e `solicitacao.contaNova`; o v
   clientes). O e-mail que saiu com `Valor:` (sem os fundos carregados) não tem cotas: o valor fica em
   âmbar, com "sem as cotas no e-mail", e nada é convertido na Fila. Vale também para os cartões que já
   estavam lá, porque o texto do e-mail sempre foi guardado.
+- **O Tesouro** (aplicação e resgate) entra na Fila como os outros e-mails, e cada título mostra o que o
+  e-mail aprovado levou (`titulosDoEmail`, pela ordem dos blocos, a mesma das ordens): o **título como o
+  Hub o escreve** (o "LFT" digitado vira "Tesouro Selic 2031"), em destaque **o valor** ("Valor a ser
+  aplicado/resgatado"; no resgate do total, o disponível da posição) e, menores, o vencimento e a taxa.
+- **Gerar lote** (na bolsa, no lugar da ficha): o **Lote Simples** e o **Lote TWAP** do pedido, cada um
+  numa tabela para conferir de olho e com o seu Copiar (o TSV, como o Ordens o gera: os formatadores
+  dele, pelo serviço `ordens.lotes`). A quantidade é a do e-mail aprovado (`ordensDoLote`); a ordem em
+  R$ segue em R$, e por isso só cabe no TWAP — o Lote Simples, que não tem coluna de financeiro, diz por
+  que não saiu. O horário do TWAP é o que o pedido disse (guardado no cartão desde 21/10); sem ele, as
+  colunas de hora saem vazias, com o aviso. O que não é ticker (um fundo pelo nome) fica fora do lote.
+  A ficha do pedido vem embaixo, recolhida.
 - **A ficha** (no aprovado): a conta e o cliente, o que fazer com cada ativo (comprar, vender, aplicar,
-  resgatar; as cotas, o valor ou "o total da posição"; Estoque XP ou clientes; o preço na bolsa) e o
-  prazo que vale. Sai do que o e-mail aprovado pediu: nada é refeito nem recalculado.
-- **A boleta do Hub**: o link pela rota do próprio Hub, com a conta no caminho como o Hub a escreve —
-  nunca num parâmetro. Só para o fundo do secundário (com o id do fundo) e o Tesouro; a bolsa não tem.
+  resgatar; as cotas, o valor ou "o total da posição"; Estoque XP ou clientes; o preço na bolsa; no
+  Tesouro, o vencimento e a taxa) e o prazo que vale. Sai do que o e-mail aprovado pediu: nada é refeito
+  nem recalculado.
+- **A boleta do Hub** (robô 1.10.0): o botão pede ao robô a boleta certa, e ele abre uma aba do Hub
+  **à vista, para a pessoa** (`destinoDaBoleta`). No fundo do secundário — um botão por fundo, com o id
+  dele —, a aba carrega a Prateleira e só então troca a rota para a boleta de compra ou de venda da
+  conta: o caminho que a aba do robô usa, porque a boleta aberta direto pelo endereço não carrega o
+  cliente no Hub de verdade. No Tesouro, um botão só: **Tesouro do cliente** (aplicação) abre Produtos →
+  Tesouro Direto e escolhe o cliente da conta; **Posição no Tesouro** (resgate) abre a renda fixa da
+  posição, escolhe o cliente e abre a aba Tesouro Direto. O robô só leva até lá: não preenche
+  quantidade, não escolhe estoque, não clica em Próximo, e a aba não vira dele. Sem o robô da versão
+  certa, o botão abre o link direto (a conta no caminho, nunca num parâmetro). A bolsa não tem boleta:
+  vai pelo lote.
 - **O resumo do dia** (copiado): quantos em cada estado e o que ficou pendente, conta a conta.
 - **Anotar**: abre uma anotação nova com o pedido escrito. O pedido passa pela memória da página
   (`anotarDeFora.js`), nunca pelo endereço, que iria para o histórico do navegador com a conta.

@@ -8,8 +8,8 @@ XP usarem o dia inteiro:
   resgate —, e-mail em tabela, Lote Simples e Lote TWAP), com o robô do Hub trazendo a cotação, o
   cliente, a posição e o print.
 - **Fila do dia** — o pedido depois que o e-mail sai, numa caixa limpa: à vista, Aprovação e
-  execução (o que o cliente respondeu, com a ficha e a boleta do Hub); Enviados e Executados em
-  pastas. Fica no navegador.
+  execução (o que o cliente respondeu, com as quantidades aprovadas, o lote da bolsa ou a ficha, e a
+  boleta do Hub, que o robô abre); Enviados e Executados em pastas. Fica no navegador.
 - **Fundos** — a Prateleira do secundário numa tabela que ordena e filtra (deságio, ROA máximo,
   mínimo, estoques), e o que mudou desde o último dia.
 - **Renda Fixa** — o RendaFixa Pro: lê a planilha de renda fixa exportada pela XP e monta o texto
@@ -116,6 +116,8 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
   caixa de entrada (1.8.0), só lê a lista de mensagens: das outras, o assunto; dos e-mails de
   confirmação de hoje, o remetente, o e-mail, o assunto, a prévia, a hora e a conta citada (1.9.1). Não clica, não
   abre e-mail e só olha enquanto a Mesa tem pedido esperando o cliente;
+- **a aba que ele abre para a pessoa é dela** (1.10.0, o botão Boleta da Fila): à vista, ele só a leva
+  até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche, não clica em Próximo;
 - uma tarefa por vez, numa fila, e tudo com prazo: nada que trave numa aba prende os pedidos seguintes;
 - mudou o robô, sobe a `@version` **e** a constante `VERSAO`; a Mesa mostra "Copiar robô" até a
   versão instalada ser a que ela espera.
@@ -167,7 +169,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.283 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.290 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

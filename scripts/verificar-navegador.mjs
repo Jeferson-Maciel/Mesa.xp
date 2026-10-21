@@ -471,11 +471,21 @@ try {
     const cartao = '.fl-cartao';
     await pagina.waitForSelector(cartao);
     ok((await pagina.textContent(cartao)).includes('Aprovado por você'), 'em Aprovação e execução, o pedido diz que foi aprovado por você');
-    await pagina.click(`${cartao} [data-acao="ficha"]`);
-    await pagina.waitForSelector('.fl-janela[open]');
-    ok((await pagina.textContent('.fl-ficha-texto')).startsWith('EXECUTAR · conta 1234567'), 'a ficha de execução abre com a conta');
-    await pagina.click('[data-acao="copiar-ficha"]');
-    ok((await areaDeTransferencia()).includes('- KLBN11: vender 674'), 'copiar a ficha leva cada ativo com o que fazer');
+    // Na bolsa, "Gerar lote" (21/10/2026): o Lote Simples e o TWAP com as quantidades do e-mail. A
+    // ordem em R$ (VULC3) não cabe no Lote Simples; o TWAP a leva em R$.
+    await pagina.click(`${cartao} [data-acao="lote"]`);
+    await pagina.waitForSelector('.fl-janela[open] .fl-lote');
+    ok(
+      (await pagina.textContent('.fl-lote[data-formato="simples"]')).includes('VULC3 está em R$. Use o Lote TWAP.'),
+      '"Gerar lote": o Lote Simples diz que a ordem em R$ não cabe nele'
+    );
+    await pagina.click('[data-acao="copiar-lote"][data-formato="twap"]');
+    const twap = await areaDeTransferencia();
+    ok(
+      twap.startsWith('Estratégia\tCliente\tAtivo') && twap.includes('TWAP\t1234567\tKLBN11\tV\t674\t') && twap.includes('TWAP\t1234567\tVULC3\tC\t\tR$ 11.800,00'),
+      'e o Lote TWAP sai copiado, com a quantidade do e-mail aprovado e a ordem em R$'
+    );
+    ok((await pagina.textContent('.fl-lote-ficha pre')).startsWith('EXECUTAR · conta 1234567'), 'a ficha do pedido fica embaixo do lote');
     await pagina.click('.fl-janela [data-fechar]');
 
     await pagina.click(`${cartao} [data-estado="executado"]`);
@@ -992,10 +1002,16 @@ try {
       window.GM_getValue = (k, padrao) => (k in dados() && cache[k] !== null ? JSON.parse(JSON.stringify(cache[k])) : padrao);
       window.GM_setValue = (k, v) => { dados(); cache[k] = v; window.__gm('set', k, v); };
       window.GM_addValueChangeListener = (k, fn) => { (ouvintes[k] ||= []).push(fn); };
-      window.GM_openInTab = (url) => { window.__gm('abrir', url); };
+      window.GM_openInTab = (url, opcoes) => { window.__gm('abrir', url, Boolean(opcoes && opcoes.active)); };
       window.unsafeWindow = window;
-      // O Hub como o Chrome o trata em segundo plano: escondido e sem quadro de desenho.
-      if (location.hostname === 'hub.xpi.com.br') {
+      // O Hub como o Chrome o trata em segundo plano: escondido e sem quadro de desenho. A aba que o
+      // robô abre à vista (a boleta da Fila, 1.10.0) fica como está: a pessoa está nela.
+      const aVista = () => {
+        const pedido = new XMLHttpRequest();
+        pedido.open('GET', 'https://gm.teste/vista', false);
+        try { pedido.send(); return pedido.responseText === 'sim'; } catch { return false; }
+      };
+      if (location.hostname === 'hub.xpi.com.br' && !aVista()) {
         Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => 'hidden' });
         Object.defineProperty(Document.prototype, 'hidden', { configurable: true, get: () => true });
         window.requestAnimationFrame = () => 0;
@@ -1012,8 +1028,11 @@ try {
     // Tudo o que passou pelo armazenamento do robô, para conferir o que nunca pode passar por ele.
     const escritas = [];
     const pedidosAoHub = { lista: 0, preCheck: 0, ficha: 0 };
-    const novaAba = async (url) => {
+    // As abas que o robô abriu à vista (GM_openInTab com active), para o Hub falso não as esconder.
+    const abasAVista = new Set();
+    const novaAba = async (url, aVista = false) => {
       const p = await contexto.newPage();
+      if (aVista) abasAVista.add(p);
       await p.addInitScript(`window.__gmFoto = ${JSON.stringify(loja)};`);
       await p.goto(url).catch(() => {});
       return p;
@@ -1024,11 +1043,16 @@ try {
         escritas.push(JSON.stringify(valor) ?? '');
         for (const p of contexto.pages()) p.evaluate(([k, v]) => window.__gmMudou?.(k, v), [chave, valor]).catch(() => {});
       }
-      if (op === 'abrir') novaAba(chave);
+      if (op === 'abrir') novaAba(chave, valor === true);
     });
-    await contexto.route('https://gm.teste/**', (r) =>
-      r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(loja) })
-    );
+    await contexto.route('https://gm.teste/**', (r) => {
+      if (r.request().url().endsWith('/vista')) {
+        let pagina = null;
+        try { pagina = r.request().frame().page(); } catch {}
+        return r.fulfill({ contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: abasAVista.has(pagina) ? 'sim' : 'nao' });
+      }
+      return r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(loja) });
+    });
     await contexto.addInitScript(GM);
     await contexto.addInitScript(robo);
     await contexto.route(`${API}/**`, (r) => {
@@ -1371,6 +1395,16 @@ try {
             };
           })
       );
+    // Na Fila, o pedido dos Enviados aprovado ("Aprovou"), e o cartão dele em Aprovação e execução.
+    const aprovarNaFila = async () => {
+      await mesa.keyboard.press(altDe('fila'));
+      await mesa.waitForSelector('[data-pasta="enviados"]');
+      await mesa.click('[data-pasta="enviados"]');
+      await mesa.waitForSelector('.fl-linha [data-estado="aprovado"]');
+      await mesa.click('.fl-linha [data-estado="aprovado"]');
+      await mesa.click('[data-pasta="executar"]');
+      await mesa.waitForSelector('.fl-cartao [data-acao="boleta"]');
+    };
     const colar = async () => {
       await esquecerFila();
       await mesa.fill('#entrada', PEDIDO);
@@ -1623,6 +1657,23 @@ try {
     ok(!JSON.stringify(loja).includes('data:image'), 'o corpo em HTML não fica no armazenamento do robô depois de colado');
     await janelaDoOutlook.close();
 
+    // ── A boleta pela Fila (robô 1.10.0) ──
+    // O e-mail de venda entrou na Fila; aprovado, o botão Boleta pede ao robô a boleta do fundo: ele
+    // abre o Hub numa aba à vista, espera a Prateleira e troca a rota para a boleta de venda da conta.
+    // A aba é da pessoa: não vira do robô, e nada é preenchido.
+    await aprovarNaFila();
+    const [abaDaBoleta] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.fl-cartao [data-acao="boleta"]')]);
+    const levouABoleta = await abaDaBoleta
+      .waitForFunction(() => /^#\/secundario\/vender\/[^/]+\/1234567$/.test(location.hash), null, { timeout: 30_000 })
+      .then(() => true, () => false);
+    ok(
+      levouABoleta && (await abaDaBoleta.evaluate(() => window.name)) === '' && !(await abaDaBoleta.title()).startsWith('🤖'),
+      `o botão Boleta da Fila: o robô abre o Hub à vista e leva à boleta de venda do fundo na conta, sem tomar a aba (${await abaDaBoleta.evaluate(() => location.hash)})`
+    );
+    ok((await abaDaBoleta.evaluate(() => window.__proximo ?? 0)) === 0 && (await abaDaBoleta.evaluate(() => (window.__estoqueEscolhido ?? []).length)) === 0, 'na boleta da pessoa, o robô não escolhe estoque nem clica em nada');
+    await abaDaBoleta.close();
+    await mesa.keyboard.press(altDe('ordens'));
+
     // ── O Tesouro Direto (robô 1.6.0) ──
     // O robô abre a aba dele no Renda Fixa, escolhe o cliente da conta e traz a lista que o Hub
     // recebe; a Mesa acha o título e monta o e-mail do modelo, com a taxa e o vencimento.
@@ -1648,6 +1699,28 @@ try {
     const enderecoDoTesouro = decodeURIComponent(decodeURIComponent(outlookDoTesouro.url()));
     ok(enderecoDoTesouro.includes('subject=Confirmação aplicação Tesouro Direto'), 'o e-mail do Tesouro abre no Outlook com o assunto dele');
     await outlookDoTesouro.close();
+
+    // O e-mail do Tesouro entra na Fila (21/10/2026: "que apareçam os e-mails de Tesouro lá"), com o
+    // título do Hub, o valor e o vencimento que saíram; o botão do Tesouro do cliente faz o robô abrir
+    // o Tesouro Direto à vista e escolher o cliente da conta.
+    await aprovarNaFila();
+    const cartaoDoTesouro = await mesa.textContent('.fl-cartao');
+    ok(
+      cartaoDoTesouro.includes('Tesouro · Aplicação') && cartaoDoTesouro.includes('Tesouro Selic 2031') && cartaoDoTesouro.includes('R$ 2.000,00') && cartaoDoTesouro.includes('venc. 01/03/2031'),
+      'o e-mail do Tesouro aparece na Fila, com o título do Hub, o valor e o vencimento do e-mail aprovado'
+    );
+    const listasAntes = pedidosDoTesouro.length;
+    const [abaDoTesouro] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.fl-cartao [data-acao="boleta"]')]);
+    const pediuALista = await (async () => {
+      for (let i = 0; i < 60 && !pedidosDoTesouro.slice(listasAntes).includes('1234567'); i++) await abaDoTesouro.waitForTimeout(500);
+      return pedidosDoTesouro.slice(listasAntes).includes('1234567');
+    })();
+    ok(
+      pediuALista && (await abaDoTesouro.evaluate(() => window.name)) === '' && abaDoTesouro.url().startsWith('https://hub.xpi.com.br/new/renda-fixa/'),
+      'o botão "Tesouro do cliente": o robô abre o Tesouro Direto à vista e escolhe o cliente da conta, sem tomar a aba'
+    );
+    await abaDoTesouro.close();
+    await mesa.keyboard.press(altDe('ordens'));
 
     // Outra conta, não habilitada no Tesouro: o erro do Hub segura o e-mail, com a mensagem dele.
     await mesa.fill('.campo-conta', '7654321');

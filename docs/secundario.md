@@ -71,6 +71,13 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     (`abaPedida`) antes de abrir a aba, e a primeira aba do Hub que nasce em segundo plano nos 30 s
     seguintes fica com ele; a aba antiga com a marca recarrega limpa. O Hub falso do `verificar`
     trava com parâmetro no endereço, para isso não voltar;
+  - **a aba de execução é da pessoa** (1.10.0). O botão Boleta da Fila pede ao robô a boleta de um
+    pedido aprovado (`abrir-execucao`), e ele a abre **à vista**, com outro bilhete
+    (`abaPedidaExecucao`), que só a aba nova e à vista pega — a aba do robô nasce escondida e não o
+    leva. Nela o robô só conduz: no fundo, espera a Prateleira e troca a rota para a boleta de compra ou
+    de venda da conta (o fundo e a conta passam na forma exata, como nos outros pedidos); no Tesouro,
+    escolhe o cliente da conta (e, no resgate, abre a aba Tesouro Direto da posição). Não preenche
+    nada, não escolhe estoque, não clica em Próximo, e a aba não vira dele;
   - **a aba dele abre junto com a Mesa** (1.2.0), em segundo plano, se não houver uma viva: abrir o
     Hub do zero leva uns 7 s, que assim não caem na primeira colagem — e a Prateleira dela já traz a
     cotação. Se a última aba aberta nunca deu sinal (Hub deslogado), a Mesa recarregada espera 10

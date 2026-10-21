@@ -267,6 +267,17 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     },
 
     /**
+     * Pede ao robô (1.10.0) que abra, numa aba do Hub à vista, a boleta de um pedido da Fila: a do fundo
+     * (`{tipo: 'fundo', fundoId, conta, lado}`) ou o Tesouro do cliente (`{tipo: 'tesouro', conta,
+     * leitura}`). O robô só leva até lá. Sem robô, devolve false, e a Fila abre o link direto.
+     */
+    abrirParaExecutar(destino) {
+      if (versao === null || !destino) return false;
+      enviar({ tipo: 'abrir-execucao', destino });
+      return true;
+    },
+
+    /**
      * Pede ao robô que atualize a Prateleira no Hub e espera a resposta daquele pedido.
      *
      * @param {{prazo?: number}} [opcoes]  o prazo cobre abrir a aba do Hub, se for preciso

@@ -22,16 +22,33 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.283 testes (`npm test`), o build e 313
+- A última verificação passou inteira (21/10, noite): 1.290 testes (`npm test`), o build e 318
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 37 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
+- **De 20 a 21/10 foram 38 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo: agora a 1.9.1, e recarregar a aba do Outlook).
+  (os colegas precisam copiar o robô de novo: agora a 1.10.0, e recarregar a aba do Outlook).
+
+## 21/10 (noite, depois): o lote e o Tesouro na Fila, e a boleta pelo robô
+
+Pedido do operador: "o botão de ficha de execução seja um botão que gera ordem lote TWAP ou ordem lote,
+para executarmos; que apareçam os e-mails de Tesouro lá; que o botão boleta leve a gente até o certo; e
+que, igual aos fundos, apareçam as quantidades também". Detalhe em `docs/fila.md`, "O lote, a ficha de
+execução, a boleta e o resumo".
+
+- **Gerar lote** (na bolsa, no lugar da ficha): o Lote Simples e o Lote TWAP com as quantidades do
+  e-mail aprovado, pelos formatadores do Ordens (serviço `ordens.lotes`). A ordem em R$ só cabe no
+  TWAP. O cartão passou a guardar o horário do TWAP; os cartões antigos saem com as horas vazias.
+- **O Tesouro na Fila**: já entrava (o mesmo registro dos outros e-mails; agora o `verificar` confere);
+  cada título mostra o título do Hub, o valor aprovado, o vencimento e a taxa, lidos do e-mail.
+- **Robô 1.10.0: a boleta pela Fila.** O botão Boleta pede ao robô uma aba do Hub à vista, que ele
+  leva à boleta do fundo (pela Prateleira, como a aba dele) ou ao Tesouro do cliente; sem o robô, o
+  link direto. Testado no Hub de mentira, que agora distingue a aba aberta à vista; **falta o teste no
+  Hub de verdade** ("A testar").
 
 ## 21/10 (noite): a Fila em pastas, e o estoque no print
 
@@ -176,7 +193,13 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.9.0)
+### A testar no Hub e no Outlook de verdade (robôs 1.9.0 e 1.10.0)
+
+**A boleta pela Fila (1.10.0)**: com um pedido de fundo aprovado na Fila, o botão **Boleta** deve abrir
+o Hub numa aba nova, à vista, ir à Prateleira e, carregada, à boleta do fundo com o cliente da conta —
+sem preencher nada. No Tesouro, **Tesouro do cliente** deve abrir Produtos → Tesouro Direto com o
+cliente escolhido; **Posição no Tesouro**, a aba Tesouro Direto da posição. Se a aba ficar parada na
+Prateleira ou sem o cliente, dizer onde parou: o caminho é o mesmo da aba do robô, mas à vista.
 
 **O print da venda (1.9.0)**: o operador viu em 21/10 que, na boleta de venda de verdade, é preciso
 escolher "Estoque XP" ou "Estoque clientes" antes da quantidade, e só então aparece embaixo o

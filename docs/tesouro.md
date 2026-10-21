@@ -27,6 +27,10 @@ pedido real e as páginas do Tesouro vistas no Hub de verdade. Código em `core/
   outra conta XP Inc atrelada ao CPF"). **A taxa muda ao longo do dia** (o Prefixado 2029 foi de
   12,58% a 12,63% em minutos): o robô a lê ao colar e de novo na hora de gerar, se tiver mais de 2
   minutos; passados 10, o e-mail segura com "Atualizar a taxa" (confirmável).
+- **Na Fila do dia** (21/10/2026), o e-mail do Tesouro entra como os outros; cada título mostra o
+  título do Hub, o valor aprovado, o vencimento e a taxa do e-mail, e o botão **Tesouro do cliente**
+  (ou **Posição no Tesouro**, no resgate) faz o robô (1.10.0) abrir o Tesouro Direto numa aba à vista,
+  já com o cliente da conta escolhido. Detalhe em `docs/fila.md`.
 - **O robô** tem uma aba só dele no Renda Fixa ("🤖 Tesouro"). Se o Hub não mandar a lista da conta
   pedida ao entrar na tela, ele **digita a conta no "Pesquisar cliente" e clica só no resultado "Conta
   XP: <conta>"** (liberado pelo operador, T5); em Posições, clica também na aba "Tesouro Direto". Nada

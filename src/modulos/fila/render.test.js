@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mudarEstado, novoPedido, registrarResposta } from '../../comum/fila/regras.js';
-import { htmlConferir, htmlFicha, htmlLista, htmlPastas, pastaDoEstado } from './render.js';
+import { htmlConferir, htmlFicha, htmlLista, htmlLote, htmlPastas, pastaDoEstado } from './render.js';
 
 // Contas fictícias. 21/10/2026, uma quarta-feira.
 const em = (hora, min = 0) => new Date(2026, 9, 21, hora, min).getTime();
@@ -55,7 +55,8 @@ describe('Aprovação e execução', () => {
     const html = htmlLista([respondido()], 'executar', em(11));
     expect(html).toContain('De acordo, pode seguir.');
     expect(html).toContain('Fulano respondeu às 10:42');
-    expect(html).toContain('data-acao="ficha"');
+    // Na bolsa, o botão gera o lote (21/10/2026).
+    expect(html).toContain('data-acao="lote"');
     expect(html).toMatch(/data-estado="executado"[^>]*>Executado/);
     expect(html).toContain('data-estado="enviado"');
   });
@@ -75,8 +76,9 @@ describe('Aprovação e execução', () => {
 
   it('a boleta do Hub aparece no fundo, e nada na bolsa', () => {
     const fundo = respondido({ grupo: 'fundos-venda', ordens: [{ ativo: 'XP Hedge Fund', operacao: 'V', quantidade: 10, fundoId: FUNDO }] });
-    expect(htmlLista([fundo], 'executar', em(11))).toContain(`#/secundario/vender/${FUNDO}/1234567`);
-    expect(htmlLista([respondido()], 'executar', em(11))).not.toContain('fl-boleta');
+    expect(htmlLista([fundo], 'executar', em(11))).toMatch(/data-acao="boleta" data-indice="0"[^>]*>Boleta XP</);
+    expect(htmlLista([fundo], 'executar', em(11))).toContain('data-acao="ficha"');
+    expect(htmlLista([respondido()], 'executar', em(11))).not.toContain('data-acao="boleta"');
   });
 
   it('vazia, diz o que vai aparecer nela', () => {
@@ -133,7 +135,7 @@ describe('as respostas a conferir e a ficha', () => {
     const p = mudarEstado(pedido({ grupo: 'tesouro', cliente: { nome: '<i>x</i>', email: null }, ordens: [{ ativo: 'Tesouro Selic 2031', operacao: 'C', financeiro: 1000 }] }), 'aprovado', em(11));
     const html = htmlFicha(p, em(11));
     expect(html).toContain('&lt;i&gt;x');
-    expect(html).toContain('#/produtos/tesouro-direto');
+    expect(html).toMatch(/data-acao="boleta"[^>]*>Tesouro do cliente/);
     expect(html).toContain('Copiar a ficha');
   });
 });
@@ -155,5 +157,33 @@ describe('as cotas para executar', () => {
     const html = htmlLista([p], 'executar', em(11));
     expect(html).toContain('class="fl-sem-cotas"');
     expect(html).toContain('sem as cotas no e-mail');
+  });
+});
+
+describe('o lote e o Tesouro na Fila', () => {
+  it('a janela do lote: as tabelas, o Copiar de cada uma, e o porquê do que falta', () => {
+    const p = respondido();
+    const tsvSimples = 'Estratégia\tCliente\tAtivo\tC/V\tPreço\tQtd. Total\nSimples\t1234567\t<b>PETR4</b>\tC\tA mercado\t100\n';
+    const html = htmlLote(p, { simples: tsvSimples, twap: null, fora: ['Fundo X'], semSimples: [] }, em(11));
+    expect(html).toContain('data-acao="copiar-lote" data-formato="simples"');
+    expect(html).not.toContain('<b>PETR4');
+    expect(html).toContain('<td>1234567</td>');
+    expect(html).toContain('Fora do lote (não são ticker): Fundo X.');
+    const semSimples = htmlLote(p, { simples: null, twap: 'Estratégia\tCliente\nTWAP\t1234567\n', fora: [], semSimples: ['VULC3'] }, em(11));
+    expect(semSimples).toContain('O Lote Simples não tem coluna de financeiro: VULC3 está em R$. Use o Lote TWAP.');
+    expect(semSimples).toContain('O pedido não disse o horário: as colunas de hora saem vazias.');
+  });
+
+  it('o Tesouro mostra o título do Hub, o valor e o vencimento do e-mail, e o botão do Tesouro do cliente', () => {
+    const p = respondido({
+      grupo: 'tesouro',
+      ordens: [{ ativo: 'LFT', operacao: 'C', financeiro: 2000 }],
+      texto: 'Título: Tesouro Selic 2031;\nTaxa: SELIC + 0,0992 %;\nVencimento: 01/03/2031;\nValor a ser aplicado: R$ 2.000,00'
+    });
+    const html = htmlLista([p], 'executar', em(11));
+    expect(html).toContain('>Tesouro Selic 2031</span>');
+    expect(html).toContain('<b>R$');
+    expect(html).toContain('venc. 01/03/2031');
+    expect(html).toMatch(/data-acao="boleta" data-indice="0"[^>]*>Tesouro do cliente/);
   });
 });

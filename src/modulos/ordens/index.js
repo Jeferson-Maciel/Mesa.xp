@@ -7,6 +7,7 @@ import { marcarTexto } from './core/texto/marcarTexto.js';
 import { juntarPrateleira } from './core/validate/fundo.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
 import { ASSUNTOS_DOS_GRUPOS, ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
+import { formatarLoteSimples, formatarLoteTwap } from './core/format/formatadores.js';
 import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } from './core/tesouro/tesouro.js';
 import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
@@ -327,7 +328,8 @@ export const iniciarOrdens = (secao) => {
           ordens: parte.ordens.map(ordemNaFila),
           texto,
           em: Date.now(),
-          validadeDaCotacao: validades.length ? Math.min(...validades) : null
+          validadeDaCotacao: validades.length ? Math.min(...validades) : null,
+          horario: solicitacao.horario ?? null
         },
         {
           novo: confirmados.has(chaveDaConfirmacao(doGrupo, 'repetido-hoje')) || confirmados.has('repetido-hoje'),
@@ -875,6 +877,9 @@ export const iniciarOrdens = (secao) => {
   // A ponte é uma só na página: a Fila (as respostas no Outlook) e a Prateleira de fundos a pegam daqui.
   registrarServico('robo', robo);
   registrarServico('versaoDoRobo', VERSAO_DO_ROBO);
+  // Os lotes, para a Fila do dia gerar o de um pedido aprovado com as quantidades do e-mail: a regra
+  // do formato mora aqui, num lugar só (core/format/formatadores.js).
+  registrarServico('ordens.lotes', { simples: formatarLoteSimples, twap: formatarLoteTwap });
   // A prateleira do secundário, para a aba Fundos: a captura de agora, o aviso quando ela muda e o
   // pedido de uma nova ao robô.
   const ouvintesDaPrateleira = new Set();

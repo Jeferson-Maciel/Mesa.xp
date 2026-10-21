@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.9.1
+// @version      1.10.0
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
@@ -65,6 +65,12 @@
  *                          saber que não são. Não clica, não abre e-mail, não marca como lido
  *   aba da Mesa  ←── as respostas, para a Fila do dia; saem do armazenamento assim que a Mesa as recebe
  *
+ *   aba da Mesa   pede ──→ a boleta de um pedido da Fila do dia, para a pessoa executar (1.10.0): o
+ *                          robô abre uma aba do Hub à vista e a leva até a boleta do fundo (pela
+ *                          Prateleira, como na aba dele) ou, no Tesouro, escolhe o cliente (e, no
+ *                          resgate, abre a aba Tesouro Direto da posição). E a larga: a quantidade,
+ *                          o Próximo e o resto são da pessoa
+ *
  *   São abas separadas porque a Posição Consolidada e o Renda Fixa são outros módulos do Hub: ir e voltar da Prateleira
  *   recarregaria a página inteira a cada cliente, e a Prateleira deixaria de estar pronta para a
  *   cotação. Na aba de clientes, trocar de cliente é só trocar o fim do endereço.
@@ -112,7 +118,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.9.1';
+  const VERSAO = '1.10.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -200,6 +206,19 @@
     // guarda isso enquanto a aba existir, inclusive depois de recarregar. Cada papel tem o bilhete
     // dele, e o módulo em que a aba nasce diz qual ela pode pegar: a do robô nasce na Prateleira, a de
     // clientes na Posição Consolidada.
+    // A aba de execução (1.10.0): a Mesa pediu a boleta de um pedido da Fila, e o robô abriu esta aba à
+    // vista, para a pessoa. Vale para a primeira aba do Hub nova (no máximo a página em branco antes no
+    // histórico) e à vista que nasce nos 30 s seguintes ao pedido — a aba do robô nasce escondida, e
+    // não pega o pedido da pessoa; esta não vira aba do robô.
+    let destinoDeExecucao = null;
+    if (!pagina.name && pagina.history.length <= 2 && visibilidadeReal() !== 'hidden') {
+      const pedidoDeExecucao = GM_getValue('abaPedidaExecucao', null);
+      if (pedidoDeExecucao && Date.now() - pedidoDeExecucao.em < 30000) {
+        GM_setValue('abaPedidaExecucao', null);
+        destinoDeExecucao = pedidoDeExecucao.destino;
+      }
+    }
+
     const papelDoNome = () => Object.keys(PAPEIS).find((p) => PAPEIS[p].nome === pagina.name) ?? null;
     const papelPossivel = location.pathname.startsWith('/new/posicao-consolidada')
       ? 'clientes'
@@ -208,7 +227,7 @@
         : location.pathname.startsWith('/new/renda-fixa')
           ? 'tesouro'
           : null;
-    if (!papelDoNome() && papelPossivel && visibilidadeReal() === 'hidden') {
+    if (!destinoDeExecucao && !papelDoNome() && papelPossivel && visibilidadeReal() === 'hidden') {
       const { bilhete: chave, nome } = PAPEIS[papelPossivel];
       const bilhete = GM_getValue(chave, null);
       if (bilhete && Date.now() - bilhete.em < 30000) {
@@ -1127,6 +1146,25 @@
       receber({ ...pedido, conta: String(pedido.conta) }, lerCliente);
     };
 
+    /*
+     * A boleta para a pessoa (1.10.0): só a leva até lá. No fundo, espera a Prateleira montar e troca a
+     * rota para a boleta — o caminho que a aba do robô usa, e que funciona no Hub de verdade. No
+     * Tesouro, escolhe o cliente (o mesmo "Pesquisar cliente" da aba do Tesouro) e, no resgate, abre a
+     * aba Tesouro Direto da posição. Nada de quantidade, nada de Próximo: a boleta é da pessoa.
+     */
+    const levarAte = async (destino) => {
+      if (destino.tipo === 'fundo') {
+        await esperar(() => naPrateleira() && botao(), 20000);
+        location.hash = `#/secundario/${destino.lado}/${destino.fundoId}/${destino.conta}`;
+        return;
+      }
+      if (destino.tipo === 'tesouro') {
+        if (destino.leitura === 'posicoes') await trocarDeTela(ROTA_DA_RENDA_FIXA);
+        const escolheu = await escolherCliente(destino.conta);
+        if (escolheu && destino.leitura === 'posicoes') await abrirAbaDoTesouro();
+      }
+    };
+
     const pegarPendentes = () => {
       receberCotacao(GM_getValue('pedido', null));
       receberCotas(GM_getValue('pedidoCotas', null));
@@ -1144,6 +1182,7 @@
       darSinal();
       // A aba que o robô acabou de abrir chega depois do pedido: confere se há um esperando.
       pegarPendentes();
+      if (destinoDeExecucao) levarAte(destinoDeExecucao);
     });
     pagina.addEventListener('hashchange', darSinal);
     pagina.addEventListener('pagehide', sair);
@@ -1468,6 +1507,26 @@
       // As respostas dos clientes no Outlook (1.8.0): a Mesa pede a cada minuto enquanto tem pedido
       // esperando o cliente; a caixa de entrada olha por 3 minutos a partir do último pedido.
       if (mensagem.tipo === 'vigiar-outlook') GM_setValue('vigiaOutlook', { ate: Date.now() + 3 * 60 * 1000 });
+
+      // A boleta de um pedido da Fila, numa aba do Hub à vista, para a pessoa (1.10.0). O fundo e a conta
+      // vão para o endereço da boleta: só passam na forma exata.
+      if (mensagem.tipo === 'abrir-execucao' && mensagem.destino && typeof mensagem.destino === 'object') {
+        const d = mensagem.destino;
+        const conta = String(d.conta ?? '');
+        let destino = null;
+        let endereco = null;
+        if (CONTA.test(conta) && d.tipo === 'fundo' && FUNDO.test(String(d.fundoId))) {
+          destino = { tipo: 'fundo', fundoId: String(d.fundoId), conta, lado: d.lado === 'vender' ? 'vender' : 'comprar' };
+          endereco = ABA_DO_ROBO;
+        } else if (CONTA.test(conta) && d.tipo === 'tesouro') {
+          destino = { tipo: 'tesouro', conta, leitura: d.leitura === 'posicoes' ? 'posicoes' : 'lista' };
+          endereco = TESOURO;
+        }
+        if (!destino) return enviar({ tipo: 'execucao', id: mensagem.id ?? null, ok: false });
+        GM_setValue('abaPedidaExecucao', { destino, em: Date.now() });
+        GM_openInTab(endereco, { active: true, insert: true });
+        enviar({ tipo: 'execucao', id: mensagem.id ?? null, ok: true });
+      }
 
       // A lista do Tesouro da conta, na aba do Tesouro (1.6.0).
       if (mensagem.tipo === 'pedir-tesouro') {

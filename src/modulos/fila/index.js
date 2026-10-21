@@ -3,19 +3,20 @@ import { esc } from '../../ui/html.js';
 import { abrirJanela } from '../../ui/janela.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, mudarEstado, pedeAtencao, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, mudarEstado, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
-import { htmlCancelados, htmlConferir, htmlFicha, htmlNumeros, htmlQuadro } from './render.js';
+import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlPastas, pastaDoEstado } from './render.js';
 import { criarVigiaDoOutlook } from './vigiaOutlook.js';
 import './fila.css';
 
 /**
  * A Fila do dia: o caminho de cada pedido depois que o e-mail sai (as regras em
- * `src/comum/fila/regras.js`). Um quadro de quatro colunas — aguardando o cliente, o cliente
- * respondeu, aprovado e a executar, executado —, com os prazos de cada pedido, a resposta que o robô
- * viu no Outlook, a ficha de execução e a boleta do Hub. Os cartões vêm do Ordens (ao copiar ou abrir
- * um e-mail no Outlook) e ficam só neste navegador.
+ * `src/comum/fila/regras.js`). Uma caixa de entrada com pastas (21/10/2026, "me acostumei com o
+ * e-mail limpo"): à vista, **Aprovação e execução** — o que o cliente respondeu, ou foi aprovado, e
+ * falta executar, com a resposta, a ficha de execução e a boleta do Hub. **Enviados** e **Executados**
+ * são pastas, abertas só para mudar ou conferir alguma coisa. Os pedidos vêm do Ordens (ao copiar ou
+ * abrir um e-mail no Outlook) e ficam só neste navegador.
  *
  * @param {HTMLElement} secao a seção `#modulo-fila`
  */
@@ -24,9 +25,8 @@ export const iniciarFila = (secao) => {
   const repo = filaDaPagina();
   const el = (nome) => secao.querySelector(`[data-fl="${nome}"]`);
   const ui = {
-    quadro: el('quadro'),
-    cancelados: el('cancelados'),
-    numeros: el('numeros'),
+    pastas: el('pastas'),
+    lista: el('lista'),
     subtitulo: el('subtitulo'),
     dia: el('dia'),
     busca: el('busca'),
@@ -36,7 +36,8 @@ export const iniciarFila = (secao) => {
     outlook: el('outlook'),
     conferir: el('conferir')
   };
-  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null };
+  // Abre sempre em Aprovação e execução: a caixa limpa, com o que falta fazer.
+  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null, pasta: 'executar' };
   const hoje = () => diaDe(Date.now());
 
   /* ── Carregar e mostrar ───────────────────────────────────────────────────────────── */
@@ -47,33 +48,27 @@ export const iniciarFila = (secao) => {
       estado.pedidos = estado.dia === hoje() ? pedidosDaVista(await repo.listarTodos(), estado.dia) : await repo.listarDoDia(estado.dia);
       render();
     } catch (erro) {
-      ui.quadro.innerHTML = `<div class="alert alert-danger">${esc(erro.message)}</div>`;
+      ui.lista.innerHTML = `<div class="alert alert-danger">${esc(erro.message)}</div>`;
     }
   }
 
-  const filtrados = () => {
-    const termo = estado.busca
+  const semAcento = (t) =>
+    String(t ?? '')
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .trim();
+      .toLowerCase();
+  const filtrados = () => {
+    const termo = semAcento(estado.busca).trim();
     if (!termo) return estado.pedidos;
-    return estado.pedidos.filter((p) =>
-      [p.conta, p.cliente?.nome, NOMES_DOS_GRUPOS[p.grupo], ...p.ordens.map((o) => o.ativo)]
-        .join(' ')
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .toLowerCase()
-        .includes(termo)
-    );
+    return estado.pedidos.filter((p) => semAcento([p.conta, p.cliente?.nome, NOMES_DOS_GRUPOS[p.grupo], ...p.ordens.map((o) => o.ativo)].join(' ')).includes(termo));
   };
 
   function render() {
     const agora = Date.now();
     const lista = filtrados();
-    ui.quadro.innerHTML = htmlQuadro(lista, agora);
-    ui.cancelados.innerHTML = htmlCancelados(lista, agora);
-    ui.numeros.innerHTML = htmlNumeros(estado.pedidos, agora);
+    ui.pastas.innerHTML = htmlPastas(lista, estado.pasta, agora);
+    ui.lista.innerHTML = htmlLista(lista, estado.pasta, agora);
+    ui.lista.dataset.pasta = estado.pasta;
     ui.dia.value = estado.dia;
     const [ano, mes, d] = estado.dia.split('-');
     const nome = estado.dia === hoje() ? 'hoje' : new Date(Number(ano), Number(mes) - 1, Number(d)).toLocaleDateString('pt-BR', { weekday: 'long' });
@@ -88,7 +83,7 @@ export const iniciarFila = (secao) => {
     ui.outlook.dataset.tipo = situacao.tipo;
     ui.outlook.textContent = situacao.texto;
     ui.outlook.title = situacao.titulo;
-    const conferir = vigia && estado.dia === hoje() ? htmlConferir(vigia.soltas(), estado.pedidos) : '';
+    const conferir = vigia && estado.dia === hoje() && estado.pasta === 'executar' ? htmlConferir(vigia.soltas(), estado.pedidos) : '';
     ui.conferir.hidden = !conferir;
     ui.conferir.innerHTML = conferir;
   }
@@ -106,11 +101,19 @@ export const iniciarFila = (secao) => {
     if (botao.dataset.acao === 'ignorar') vigia.ignorar(idResposta);
   });
 
-  /* ── Mexer num cartão ─────────────────────────────────────────────────────────────── */
+  ui.pastas.addEventListener('click', (e) => {
+    const pasta = e.target.closest('[data-pasta]')?.dataset.pasta;
+    if (!pasta || pasta === estado.pasta) return;
+    estado.pasta = pasta;
+    render();
+  });
+
+  /* ── Mexer num pedido ─────────────────────────────────────────────────────────────── */
 
   const doId = (id) => estado.pedidos.find((p) => p.id === id);
+  const nomeDaPasta = (estadoDoPedido) => PASTAS.find((p) => p.id === pastaDoEstado(estadoDoPedido))?.titulo ?? '';
 
-  async function mudar(id, novo) {
+  async function mudar(id, novo, { desfazendo = false } = {}) {
     const pedido = doId(id);
     if (!pedido || pedido.estado === novo) return;
     const atualizado = mudarEstado(pedido, novo);
@@ -122,8 +125,13 @@ export const iniciarFila = (secao) => {
     } catch (erro) {
       aviso(erro.message, { tipo: 'erro' });
       carregar();
+      return;
     }
-    if (novo === 'cancelado') aviso('Pedido cancelado.', { acao: { rotulo: 'Desfazer', fazer: () => mudar(id, pedido.estado) } });
+    // O pedido sai da pasta aberta: o aviso diz para onde foi, com o "Desfazer".
+    if (!desfazendo) {
+      const texto = novo === 'cancelado' ? `Conta ${pedido.conta}: cancelado.` : `Conta ${pedido.conta}: está em ${nomeDaPasta(novo)}.`;
+      aviso(texto, { acao: { rotulo: 'Desfazer', fazer: () => mudar(id, pedido.estado, { desfazendo: true }) } });
+    }
   }
 
   async function copiar(texto) {
@@ -159,7 +167,7 @@ export const iniciarFila = (secao) => {
     });
   }
 
-  ui.quadro.parentElement.addEventListener('click', async (e) => {
+  ui.lista.addEventListener('click', (e) => {
     const botao = e.target.closest('[data-acao]');
     if (!botao) return;
     const pedido = doId(botao.closest('[data-id]')?.dataset.id);
@@ -180,34 +188,6 @@ export const iniciarFila = (secao) => {
       const ok = await copiar(botao.dataset.acao === 'copiar-ficha' ? fichaDeExecucao(pedido) : pedido.texto);
       aviso(ok ? 'Copiado.' : 'Não foi possível copiar.', { tipo: ok ? 'info' : 'erro' });
     }
-  });
-
-  // Arrastar um cartão para outra coluna muda o estado dele.
-  ui.quadro.addEventListener('dragstart', (e) => {
-    const cartao = e.target.closest?.('.fl-cartao');
-    if (!cartao) return;
-    e.dataTransfer.setData('text/x-fila', cartao.dataset.id);
-    e.dataTransfer.effectAllowed = 'move';
-    cartao.classList.add('arrastando');
-  });
-  ui.quadro.addEventListener('dragend', (e) => e.target.closest?.('.fl-cartao')?.classList.remove('arrastando'));
-  ui.quadro.addEventListener('dragover', (e) => {
-    const alvo = e.target.closest?.('[data-soltar]');
-    if (!alvo || !e.dataTransfer.types.includes('text/x-fila')) return;
-    e.preventDefault();
-    for (const outra of ui.quadro.querySelectorAll('.fl-coluna.alvo')) if (outra !== alvo.parentElement) outra.classList.remove('alvo');
-    alvo.parentElement.classList.add('alvo');
-  });
-  ui.quadro.addEventListener('dragleave', (e) => {
-    if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget)) for (const c of ui.quadro.querySelectorAll('.fl-coluna.alvo')) c.classList.remove('alvo');
-  });
-  ui.quadro.addEventListener('drop', (e) => {
-    const alvo = e.target.closest?.('[data-soltar]');
-    const id = e.dataTransfer.getData('text/x-fila');
-    for (const c of ui.quadro.querySelectorAll('.fl-coluna.alvo')) c.classList.remove('alvo');
-    if (!alvo || !id) return;
-    e.preventDefault();
-    mudar(id, alvo.dataset.soltar);
   });
 
   /* ── O dia, a busca e o resumo ─────────────────────────────────────────────────────── */
@@ -233,9 +213,10 @@ export const iniciarFila = (secao) => {
     aviso(ok ? 'Resumo do dia copiado.' : 'Não foi possível copiar o resumo.', { tipo: ok ? 'info' : 'erro' });
   });
 
-  // A busca da Mesa (Ctrl+K) abre um cartão: a Fila vai ao dia dele, já filtrada pela conta.
+  // A busca da Mesa (Ctrl+K) abre um pedido: a Fila vai ao dia e à pasta dele, já filtrada pela conta.
   registrarServico('fila.mostrar', (pedido) => {
     estado.dia = pedido.dia;
+    estado.pasta = pastaDoEstado(pedido.estado);
     estado.busca = pedido.conta;
     ui.busca.value = pedido.conta;
     carregar();
@@ -247,7 +228,7 @@ export const iniciarFila = (secao) => {
     if (!secao.hidden) render();
   }, 30000);
 
-  // Os cartões de mais de 90 dias saem, uma vez por abertura.
+  // Os pedidos de mais de 90 dias saem, uma vez por abertura.
   repo
     .listarTodos()
     .then((todos) => {
@@ -276,20 +257,22 @@ export const iniciarVigiaDaFila = () => {
 };
 
 /**
- * O contador da aba Fila: quantos pedidos pedem atenção agora — o cliente respondeu, ou um prazo está
- * perto ou passou. Começa com a página, como o vigia das Anotações: quem está no Ordens também vê.
+ * O contador da aba Fila: quantos pedidos estão em Aprovação e execução — o cliente respondeu, ou foi
+ * aprovado, e falta executar. Começa com a página, como o vigia das Anotações: quem está no Ordens
+ * também vê.
  */
 export const iniciarContadorDaFila = () => {
   const contador = document.querySelector('[data-contador="fila"]');
   if (!contador) return;
   const repo = filaDaPagina();
+  const paraExecutar = PASTAS.find((p) => p.id === 'executar').estados;
   const contar = async () => {
     try {
       const agora = Date.now();
-      const n = pedidosDaVista(await repo.listarTodos(), diaDe(agora), agora).filter((p) => pedeAtencao(p, agora)).length;
+      const n = pedidosDaVista(await repo.listarTodos(), diaDe(agora), agora).filter((p) => paraExecutar.includes(p.estado)).length;
       contador.hidden = n === 0;
       contador.textContent = n;
-      contador.title = n ? `${n} ${n === 1 ? 'pedido pede' : 'pedidos pedem'} atenção` : '';
+      contador.title = n ? `${n} ${n === 1 ? 'pedido para aprovar e executar' : 'pedidos para aprovar e executar'}` : '';
     } catch {
       contador.hidden = true;
     }
@@ -312,7 +295,6 @@ const MARCACAO = `
       <button type="button" class="copy-btn fl-seta" data-fl="seguinte" aria-label="Dia seguinte" title="Dia seguinte">›</button>
       <button type="button" class="copy-btn" data-fl="hoje">Hoje</button>
     </div>
-    <div class="fl-numeros" data-fl="numeros"></div>
     <span class="fl-outlook" data-fl="outlook" data-tipo="sem-robo">Outlook</span>
     <div class="fl-ferramentas">
       <input type="search" class="fl-busca" data-fl="busca" placeholder="Buscar conta, cliente ou ativo" aria-label="Buscar na Fila" />
@@ -320,14 +302,15 @@ const MARCACAO = `
     </div>
   </section>
 
-  <section class="panel fl-conferir" data-fl="conferir" aria-label="Respostas a conferir" hidden></section>
-
-  <div class="fl-area">
-    <div class="fl-quadro" data-fl="quadro"></div>
-    <div data-fl="cancelados"></div>
+  <div class="fl-caixa">
+    <nav class="fl-pastas" data-fl="pastas" aria-label="Pastas da Fila"></nav>
+    <div class="fl-principal">
+      <section class="panel fl-conferir" data-fl="conferir" aria-label="Respostas a conferir" hidden></section>
+      <div class="fl-lista" data-fl="lista"></div>
+    </div>
   </div>
 
-  <p class="fl-nota">Cada e-mail copiado ou aberto no Outlook pelo Ordens entra em "Aguardando o cliente". Com o Outlook aberto numa aba e o robô instalado, a resposta do cliente aparece no cartão. Quem diz que o cliente aprovou é você. Fica só neste navegador, por 90 dias.</p>
+  <p class="fl-nota">O e-mail copiado ou aberto no Outlook pelo Ordens vai para Enviados. Quando o cliente responde (com o Outlook aberto numa aba e o robô instalado), o pedido vem para Aprovação e execução, com a resposta dele; o executado vai para Executados. Quem diz que o cliente aprovou é você. Fica só neste navegador, por 90 dias.</p>
 
   <dialog class="fl-janela" data-fl="janela" aria-labelledby="fl-janela-titulo">
     <div class="panel-header-row">

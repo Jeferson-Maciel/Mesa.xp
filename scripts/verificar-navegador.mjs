@@ -279,8 +279,9 @@ try {
       // O e-mail copiado entra na Fila do dia.
       await pagina.locator('[data-copiar="email"]').first().click();
       await pagina.keyboard.press(altDe('fila'));
-      await pagina.waitForSelector('.fl-cartao');
-      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Fila do dia, com um cartão, sem rolagem lateral`);
+      await pagina.click('[data-pasta="enviados"]');
+      await pagina.waitForSelector('.fl-linha');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Fila do dia, a pasta Enviados com um e-mail, sem rolagem lateral`);
       await pagina.keyboard.press(altDe('fundos'));
       await pagina.waitForSelector('.fu-topo');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Prateleira de fundos, sem a captura, sem rolagem lateral`);
@@ -434,13 +435,12 @@ try {
   {
     const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T16:10:00-03:00' });
     const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+    // A caixa limpa (21/10/2026): o e-mail enviado vai para a pasta Enviados; à vista fica só
+    // Aprovação e execução, e o contador da aba conta o que está nela.
     await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
     await pagina.locator('[data-copiar="email"]').first().click();
-    await pagina.waitForFunction(() => !document.querySelector('[data-contador="fila"]').hidden, null, { timeout: 5000 }).catch(() => {});
-    ok(
-      (await pagina.$eval('[data-contador="fila"]', (c) => !c.hidden && c.textContent)) === '1',
-      'copiar o e-mail cria o cartão, e o prazo perto (leilão em 45 min) acende o contador da aba Fila, mesmo no Ordens'
-    );
+    await pagina.waitForTimeout(400);
+    ok(await pagina.$eval('[data-contador="fila"]', (c) => c.hidden), 'o e-mail copiado vai para Enviados, sem acender a aba Fila: nada para executar ainda');
 
     await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
     await pagina.waitForSelector('.alert-danger');
@@ -450,31 +450,51 @@ try {
     );
 
     await pagina.keyboard.press(altDe('fila'));
-    await pagina.waitForSelector('.fl-coluna[data-estado="enviado"] .fl-cartao');
-    const cartao = '.fl-cartao';
-    ok((await pagina.textContent('.fl-coluna[data-estado="enviado"] ' + cartao)).includes('KLBN11'), 'o cartão está em "Aguardando o cliente", com os ativos do e-mail');
-    ok(await pagina.$eval(cartao + ' .fl-prazo', (p) => p.dataset.situacao === 'perto'), 'o prazo do leilão aparece âmbar, perto');
+    await pagina.waitForSelector('[data-pasta="enviados"]');
+    ok(
+      (await pagina.textContent('[data-fl="lista"]')).includes('Quando o cliente responder') && (await pagina.$eval('[data-pasta="executar"]', (b) => b.getAttribute('aria-pressed'))) === 'true',
+      'a Fila abre em Aprovação e execução, limpa: o enviado não aparece nela'
+    );
+    ok(
+      (await pagina.textContent('[data-pasta="enviados"] b')) === '1' && Boolean(await pagina.$('[data-pasta="enviados"] .fl-pasta-alerta')),
+      'a pasta Enviados conta o e-mail, com o ponto âmbar do prazo perto (leilão em 45 min)'
+    );
+    await pagina.click('[data-pasta="enviados"]');
+    await pagina.waitForSelector('.fl-linha');
+    ok((await pagina.textContent('.fl-linha')).includes('KLBN11') && (await pagina.$eval('.fl-linha .fl-prazo', (p) => p.dataset.situacao)) === 'perto', 'em Enviados, uma linha por e-mail, com os ativos e o prazo âmbar');
 
-    await pagina.click(cartao + ' [data-estado="aprovado"]');
-    await pagina.waitForSelector(`.fl-coluna[data-estado="aprovado"] ${cartao}`);
+    // O cliente aprovou por outro canal: "Aprovou" leva o pedido para Aprovação e execução.
+    await pagina.click('.fl-linha [data-estado="aprovado"]');
+    await pagina.waitForFunction(() => document.querySelector('[data-contador="fila"]') && !document.querySelector('[data-contador="fila"]').hidden, null, { timeout: 5000 }).catch(() => {});
+    ok((await pagina.textContent('[data-contador="fila"]')) === '1', '"Aprovou" leva o pedido para Aprovação e execução, e a aba conta 1');
+    await pagina.click('[data-pasta="executar"]');
+    const cartao = '.fl-cartao';
+    await pagina.waitForSelector(cartao);
+    ok((await pagina.textContent(cartao)).includes('Aprovado por você'), 'em Aprovação e execução, o pedido diz que foi aprovado por você');
     await pagina.click(`${cartao} [data-acao="ficha"]`);
     await pagina.waitForSelector('.fl-janela[open]');
-    ok((await pagina.textContent('.fl-ficha-texto')).startsWith('EXECUTAR · conta 1234567'), 'aprovado, a ficha de execução abre com a conta');
+    ok((await pagina.textContent('.fl-ficha-texto')).startsWith('EXECUTAR · conta 1234567'), 'a ficha de execução abre com a conta');
     await pagina.click('[data-acao="copiar-ficha"]');
     ok((await areaDeTransferencia()).includes('- KLBN11: vender 674'), 'copiar a ficha leva cada ativo com o que fazer');
     await pagina.click('.fl-janela [data-fechar]');
 
     await pagina.click(`${cartao} [data-estado="executado"]`);
-    await pagina.waitForSelector(`.fl-coluna[data-estado="executado"] ${cartao}`);
+    await pagina.waitForFunction(() => !document.querySelector('[data-fl="lista"] .fl-cartao'), null, { timeout: 5000 }).catch(() => {});
+    ok(
+      !(await pagina.$('[data-fl="lista"] .fl-cartao')) && (await pagina.textContent('[data-pasta="executados"] b')) === '1',
+      'Executado tira o pedido da caixa e o põe na pasta Executados'
+    );
     await pagina.click('[data-fl="resumo"]');
     ok((await areaDeTransferencia()).startsWith('21/10/2026: 1 pedido — 1 executado.'), 'o resumo do dia sai copiado');
 
     await pagina.reload();
     await pagina.keyboard.press(altDe('fila'));
-    await pagina.waitForSelector(`.fl-coluna[data-estado="executado"] ${cartao}`);
-    ok(true, 'recarregar a página não perde o cartão (IndexedDB)');
+    await pagina.waitForSelector('[data-pasta="executados"]');
+    await pagina.click('[data-pasta="executados"]');
+    await pagina.waitForSelector('.fl-linha');
+    ok((await pagina.textContent('.fl-linha')).includes('executado'), 'recarregar a página não perde o pedido (IndexedDB), e ele está em Executados');
 
-    await pagina.click(`${cartao} [data-acao="anotar"]`);
+    await pagina.click('.fl-linha [data-acao="anotar"]');
     await pagina.waitForSelector('[data-campo="titulo"]', { state: 'visible' });
     ok(
       (await pagina.evaluate(() => location.hash)) === '#anotacoes/nova' && (await pagina.inputValue('[data-campo="titulo"]')).startsWith('Conta 1234567'),
@@ -1745,9 +1765,9 @@ try {
     );
     await mesa.keyboard.press(altDe('fila'));
     const respondeu = await mesa
-      .waitForFunction(() => document.querySelector('.fl-coluna[data-estado="respondeu"] .fl-cartao')?.textContent.includes('De acordo, pode seguir.'), null, { timeout: 30_000 })
+      .waitForFunction(() => document.querySelector('[data-fl="lista"] .fl-cartao[data-estado="respondeu"]')?.textContent.includes('De acordo, pode seguir.'), null, { timeout: 30_000 })
       .then(() => true, () => false);
-    ok(respondeu, 'a resposta do cliente no Outlook passa o cartão para "O cliente respondeu", com a prévia');
+    ok(respondeu, 'a resposta do cliente no Outlook traz o pedido para Aprovação e execução, com a prévia');
     ok((await mesa.getAttribute('[data-fl="outlook"]', 'data-tipo')) === 'vigiando', 'a Fila diz que está vendo as respostas no Outlook');
     const todasAsEscritas = escritas.join('\n');
     ok(

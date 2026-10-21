@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════════════════
-   Fila do dia — o quadro dos pedidos depois que o e-mail sai.
+   Fila do dia — uma caixa de entrada com pastas (21/10/2026: "me acostumei com o e-mail limpo").
 
-   A pedra é a kunzita (base.css). Cada coluna tem o seu fio no alto: neutro aguardando o cliente,
-   a kunzita quando o cliente respondeu (é a novidade), o ouro no aprovado e o verde no executado.
-   Âmbar e vermelho ficam só para os prazos — perto e vencido —, como no resto da mesa.
-   Todo seletor começa por `.fl` (escopo-css.test.js).
+   À vista, Aprovação e execução: um cartão por pedido, com a resposta do cliente em destaque. Os
+   Enviados, os Executados e os Cancelados são pastas, numa linha por pedido, como a lista de
+   e-mails. A pedra é a kunzita (base.css); âmbar e vermelho ficam só para os prazos — perto e
+   vencido —, como no resto da mesa. Todo seletor começa por `.fl` (escopo-css.test.js).
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 .fl {
@@ -16,11 +16,11 @@
   padding: var(--esp-5) var(--esp-4) var(--esp-6);
 }
 
-/* ── O topo: título, dia, números e ferramentas ─────────────────────────────────────── */
+/* ── O topo: título, dia, o Outlook e as ferramentas ──────────────────────────────────── */
 
 .fl .fl-topo {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--esp-3) var(--esp-5);
 }
@@ -71,48 +71,6 @@
   width: 15rem;
 }
 
-.fl .fl-numeros {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--esp-2);
-}
-
-.fl .fl-numero {
-  --cor: var(--texto-fraco);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.25rem 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--cor) 34%, transparent);
-  border-radius: var(--r-pilula);
-  background: color-mix(in srgb, var(--cor) 10%, transparent);
-  color: var(--texto);
-  font-size: 0.8rem;
-}
-
-.fl .fl-numero b {
-  color: var(--cor);
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.fl .fl-numero[data-estado='respondeu'] {
-  --cor: var(--acento);
-}
-
-.fl .fl-numero[data-estado='aprovado'] {
-  --cor: var(--marca);
-}
-
-.fl .fl-numero[data-estado='executado'] {
-  --cor: var(--positivo);
-}
-
-.fl .fl-numero.fl-numero-atencao {
-  --cor: var(--atencao);
-  animation: fl-estalar var(--t-lento) var(--curva-mola);
-}
-
 .fl .fl-ferramentas {
   display: flex;
   gap: var(--esp-2);
@@ -157,6 +115,114 @@
   --cor: var(--atencao);
 }
 
+/* ── A caixa: as pastas e o que está nela ──────────────────────────────────────────────── */
+
+.fl .fl-caixa {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: var(--esp-4);
+  align-items: start;
+}
+
+.fl .fl-pastas {
+  position: sticky;
+  top: calc(var(--altura-do-topo, 59px) + var(--esp-3));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--esp-2);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+}
+
+.fl .fl-pasta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  width: 100%;
+  padding: 0.55rem var(--esp-3);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.fl .fl-pasta:hover {
+  background: color-mix(in srgb, var(--texto-fraco) 8%, transparent);
+  color: var(--texto-forte);
+}
+
+.fl .fl-pasta.ativa {
+  background: var(--acento-fundo);
+  box-shadow: inset 3px 0 0 var(--acento);
+  color: var(--texto-forte);
+}
+
+.fl .fl-pasta:focus-visible {
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.fl .fl-pasta-nome {
+  flex: 1;
+  min-width: 0;
+}
+
+.fl .fl-pasta b {
+  min-width: 24px;
+  padding: 0 7px;
+  border-radius: var(--r-pilula);
+  background: var(--fundo-sutil);
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A pasta principal, com o que falta fazer, conta na pedra da aba. */
+.fl .fl-pasta[data-pasta='executar'] b {
+  background: var(--acento);
+  color: var(--texto-no-acento);
+}
+
+/* Um e-mail esperando o cliente com o prazo perto: um ponto âmbar na pasta Enviados. */
+.fl .fl-pasta-alerta {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--atencao);
+  box-shadow: 0 0 0 3px var(--atencao-fundo);
+}
+
+.fl .fl-principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  min-width: 0;
+}
+
+.fl .fl-vazio {
+  margin: 0;
+  padding: var(--esp-6) var(--esp-4);
+  background: var(--superficie-afundada);
+  border: 1px dashed var(--borda);
+  border-radius: var(--r-lg);
+  color: var(--texto-fraco);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* ── As respostas a conferir ────────────────────────────────────────────────────────── */
 
 .fl .fl-conferir {
@@ -196,7 +262,7 @@
   color: var(--texto-fraco);
 }
 
-/* O cartão aberto de outro dia: a data dele, para não passar por pedido de hoje. */
+/* O pedido aberto de outro dia: a data dele, para não passar por pedido de hoje. */
 .fl .fl-outro-dia {
   padding: 0 6px;
   border-radius: var(--r-sm);
@@ -207,125 +273,45 @@
   white-space: nowrap;
 }
 
-/* ── O quadro ───────────────────────────────────────────────────────────────────────── */
-
-.fl .fl-quadro {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--esp-3);
-  align-items: start;
-}
-
-.fl .fl-coluna {
-  --cor: var(--texto-fraco);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 12rem;
-  background: var(--superficie-afundada);
-  border: 1px solid var(--borda);
-  border-radius: var(--r-lg);
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--cor) 70%, transparent);
-  transition: border-color var(--t-medio) var(--curva), background-color var(--t-medio) var(--curva);
-}
-
-.fl .fl-coluna[data-estado='respondeu'] {
-  --cor: var(--acento);
-}
-
-.fl .fl-coluna[data-estado='aprovado'] {
-  --cor: var(--marca);
-}
-
-.fl .fl-coluna[data-estado='executado'] {
-  --cor: var(--positivo);
-}
-
-/* A coluna onde o cartão arrastado vai cair. */
-.fl .fl-coluna.alvo {
-  border-color: var(--cor);
-  border-style: dashed;
-  background: color-mix(in srgb, var(--cor) 7%, var(--superficie-afundada));
-}
-
-.fl .fl-coluna-topo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--esp-3) var(--esp-4) var(--esp-2);
-  color: var(--texto-forte);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.fl .fl-coluna-topo b {
-  min-width: 24px;
-  padding: 0 7px;
-  border-radius: var(--r-pilula);
-  background: color-mix(in srgb, var(--cor) 16%, transparent);
-  color: var(--cor);
-  font-size: 0.78rem;
-  line-height: 22px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
+/* ── O cartão de Aprovação e execução ───────────────────────────────────────────────── */
 
 .fl .fl-cartoes {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  gap: var(--esp-2);
-  padding: 0 var(--esp-2) var(--esp-2);
+  gap: var(--esp-3);
 }
 
-.fl .fl-vazio {
-  margin: var(--esp-2) var(--esp-2) var(--esp-4);
-  color: var(--texto-fraco);
-  font-size: 0.82rem;
-  line-height: 1.45;
+.fl .fl-cartao,
+.fl .fl-linha {
+  --grupo: var(--safira);
 }
 
-/* ── O cartão ───────────────────────────────────────────────────────────────────────── */
+.fl .fl-cartao[data-grupo^='fundos'],
+.fl .fl-linha[data-grupo^='fundos'] {
+  --grupo: var(--peridoto);
+}
+
+.fl .fl-cartao[data-grupo^='tesouro'],
+.fl .fl-linha[data-grupo^='tesouro'] {
+  --grupo: var(--marca);
+}
 
 .fl .fl-cartao {
-  --grupo: var(--safira);
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--esp-2);
-  padding: var(--esp-3);
+  padding: var(--esp-4);
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-left: 3px solid var(--grupo);
   border-radius: var(--r-md);
   box-shadow: var(--sombra);
-  cursor: grab;
   animation: fl-entrar var(--t-lento) var(--curva-saida) both;
-  transition: transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva), opacity var(--t-medio) var(--curva);
 }
 
-.fl .fl-cartao:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--sombra-media);
-}
-
-.fl .fl-cartao.arrastando {
-  opacity: 0.45;
-  cursor: grabbing;
-}
-
-.fl .fl-cartao[data-grupo^='fundos'] {
-  --grupo: var(--peridoto);
-}
-
-.fl .fl-cartao[data-grupo^='tesouro'] {
-  --grupo: var(--marca);
-}
-
-/* Pede atenção: o cliente respondeu ou um prazo está perto. Um brilho que acende uma vez, ao
-   aparecer — não um laço chamando o olho o dia inteiro. */
+/* Pede atenção: o prazo perto. Um brilho que acende uma vez, ao aparecer — não um laço chamando o
+   olho o dia inteiro. */
 .fl .fl-cartao.fl-atencao {
   --brilho: var(--atencao);
   border-color: color-mix(in srgb, var(--brilho) 55%, var(--borda));
@@ -333,23 +319,16 @@
   animation: fl-entrar var(--t-lento) var(--curva-saida) both, fl-acender 1.4s var(--curva) 0.2s 1;
 }
 
-/* A resposta do cliente é a novidade: na pedra da aba. O prazo perto fica no âmbar. */
+/* A resposta do cliente é a novidade: na pedra da aba. */
 .fl .fl-cartao.fl-atencao[data-estado='respondeu'] {
   --brilho: var(--acento);
 }
 
-.fl .fl-cartao[data-estado='executado'] {
-  opacity: 0.78;
-}
-
-.fl .fl-cartao[data-estado='executado']:hover {
-  opacity: 1;
-}
-
 .fl .fl-cartao-topo {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--esp-2);
+  gap: var(--esp-1) var(--esp-2);
   min-width: 0;
 }
 
@@ -361,12 +340,15 @@
 
 .fl .fl-cliente {
   overflow: hidden;
-  flex: 1;
   min-width: 0;
   color: var(--texto);
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fl .fl-cartao-topo .fl-cliente {
+  flex: 1;
 }
 
 .fl .fl-cliente.fl-sem {
@@ -374,20 +356,54 @@
   font-style: italic;
 }
 
-.fl .fl-hora {
+.fl .fl-hora,
+.fl .fl-quando {
   color: var(--texto-fraco);
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .fl .fl-grupo {
-  align-self: flex-start;
   padding: 1px 8px;
   border-radius: var(--r-pilula);
   background: color-mix(in srgb, var(--grupo) 14%, transparent);
   color: var(--texto-forte);
   font-size: 0.72rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+/* A resposta do cliente, como o robô a viu na caixa de entrada: o que se lê primeiro. */
+.fl .fl-resposta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: var(--esp-3) var(--esp-4);
+  border-left: 3px solid var(--acento);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--acento-fundo);
+  color: var(--texto-forte);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.fl .fl-resposta cite {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+  font-style: normal;
+}
+
+.fl .fl-aprovado {
+  margin: 0;
+  padding: var(--esp-2) var(--esp-3);
+  border-left: 3px solid var(--marca);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--marca-fundo);
+  color: var(--texto);
+  font-size: 0.84rem;
 }
 
 .fl .fl-ordens {
@@ -399,16 +415,22 @@
   list-style: none;
 }
 
+/* No cartão largo, a quantidade fica perto do ativo. */
+.fl .fl-cartao .fl-ordens {
+  max-width: 36rem;
+}
+
 .fl .fl-ordens li {
   display: flex;
   align-items: baseline;
   gap: var(--esp-2);
   min-width: 0;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
 }
 
 .fl .fl-op {
   flex: 0 0 auto;
+  min-width: 4.2rem;
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -445,6 +467,7 @@
   background: var(--fundo-sutil);
   color: var(--texto);
   font-size: 0.74rem;
+  white-space: nowrap;
 }
 
 .fl .fl-prazo[data-situacao='perto'] {
@@ -461,47 +484,26 @@
   font-weight: 700;
 }
 
-/* A resposta do cliente, como o robô a viu na caixa de entrada. */
-.fl .fl-resposta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 0;
-  padding: var(--esp-2) var(--esp-3);
-  border-left: 2px solid var(--acento);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  background: var(--acento-fundo);
-  color: var(--texto-forte);
-  font-size: 0.82rem;
-  line-height: 1.4;
-  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
-}
-
-.fl .fl-resposta cite {
-  color: var(--texto-fraco);
-  font-size: 0.72rem;
-  font-style: normal;
-}
-
 .fl .fl-cartao-acoes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--esp-1);
-  margin-top: 2px;
+  gap: var(--esp-2);
+  margin-top: var(--esp-1);
 }
 
 .fl .fl-botao,
 .fl .fl-boleta {
-  padding: 0.22rem 0.6rem;
+  padding: 0.3rem 0.75rem;
   border: 1px solid var(--borda-forte);
   border-radius: var(--r-sm);
   background: var(--superficie-alta);
   color: var(--texto-forte);
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
 }
@@ -532,13 +534,13 @@
 }
 
 .fl .fl-icone {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
   color: var(--texto-fraco);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   cursor: pointer;
 }
 
@@ -558,27 +560,65 @@
   outline: none;
 }
 
-/* ── Cancelados, a nota e a janela ──────────────────────────────────────────────────── */
+/* ── As linhas das pastas (Enviados, Executados, Cancelados) ────────────────────────────── */
 
-.fl .fl-cancelados {
-  margin-top: var(--esp-3);
-  color: var(--texto-fraco);
+.fl .fl-linhas {
+  overflow: hidden;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.fl .fl-linha {
+  display: grid;
+  grid-template-columns: 6rem minmax(8rem, 13rem) auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-3);
+  padding: 0.55rem var(--esp-4);
+  border-bottom: 1px solid var(--borda);
+  box-shadow: inset 3px 0 0 var(--grupo);
   font-size: 0.84rem;
 }
 
-.fl .fl-cancelados summary {
-  cursor: pointer;
+.fl .fl-linha:last-child {
+  border-bottom: 0;
 }
 
-.fl .fl-cancelados .fl-cartoes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  padding: var(--esp-3) 0 0;
+.fl .fl-linha:hover {
+  background: color-mix(in srgb, var(--acento) 5%, transparent);
 }
 
-.fl .fl-cancelados .fl-cartao {
-  opacity: 0.7;
+.fl .fl-linha.fl-atencao {
+  background: color-mix(in srgb, var(--atencao) 7%, transparent);
 }
+
+.fl .fl-linha[data-estado='cancelado'] > :not(.fl-linha-acoes) {
+  opacity: 0.6;
+}
+
+.fl .fl-ativos {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--texto-forte);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl .fl-linha-acoes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.fl .fl-linha-acoes .fl-botao {
+  margin-right: var(--esp-1);
+}
+
+/* ── A nota e a janela ──────────────────────────────────────────────────────────────── */
 
 .fl .fl-nota {
   margin: 0;
@@ -647,12 +687,6 @@
   }
 }
 
-@keyframes fl-estalar {
-  0% {
-    transform: scale(0.8);
-  }
-}
-
 /* ── Larguras ───────────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 1100px) {
@@ -660,18 +694,13 @@
     grid-template-columns: 1fr auto;
   }
 
-  .fl .fl-numeros {
-    grid-column: 1 / -1;
-    order: 3;
-  }
-
   .fl .fl-outlook {
-    order: 4;
+    order: 3;
   }
 
   .fl .fl-ferramentas {
     grid-column: 1 / -1;
-    order: 5;
+    order: 4;
   }
 
   .fl .fl-busca {
@@ -680,8 +709,34 @@
     min-width: 0;
   }
 
-  .fl .fl-quadro {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .fl .fl-linha {
+    grid-template-columns: 6rem minmax(0, 1fr) auto auto;
+  }
+
+  .fl .fl-linha .fl-ativos {
+    grid-column: 1 / 3;
+  }
+
+  .fl .fl-linha .fl-linha-acoes {
+    grid-column: 3 / -1;
+  }
+}
+
+/* As pastas sobem para uma linha de fichas acima da lista. */
+@media (max-width: 860px) {
+  .fl .fl-caixa {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fl .fl-pastas {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .fl .fl-pasta {
+    width: auto;
+    flex: 1 1 auto;
   }
 }
 
@@ -694,12 +749,19 @@
     grid-template-columns: 1fr;
   }
 
-  .fl .fl-quadro {
-    grid-template-columns: minmax(0, 1fr);
+  .fl .fl-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-inline: var(--esp-3);
   }
 
-  .fl .fl-coluna {
-    min-height: 0;
+  .fl .fl-linha .fl-cliente,
+  .fl .fl-linha .fl-ativos,
+  .fl .fl-linha .fl-linha-acoes {
+    grid-column: 1 / -1;
+  }
+
+  .fl .fl-linha .fl-linha-acoes {
+    justify-content: flex-start;
   }
 }
 
@@ -707,7 +769,7 @@
   .fl .fl-cartao,
   .fl .fl-cartao.fl-atencao,
   .fl .fl-resposta,
-  .fl .fl-numero.fl-numero-atencao,
+  .fl .fl-linhas,
   .fl .fl-conferir,
   .fl .fl-outlook[data-tipo='vigiando']::before {
     animation: none;

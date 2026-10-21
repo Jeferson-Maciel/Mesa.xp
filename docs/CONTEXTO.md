@@ -22,16 +22,28 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, fim do dia): 1.265 testes (`npm test`), o build e 308
+- A última verificação passou inteira (21/10, noite): 1.270 testes (`npm test`), o build e 313
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 33 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
+- **De 20 a 21/10 foram 35 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo).
+  (os colegas precisam copiar o robô de novo: agora a 1.9.0).
+
+## 21/10 (noite): a Fila em pastas, e o estoque no print
+
+- **A Fila virou uma caixa de entrada com pastas**, da conversa do usuário com um colega ("me
+  acostumei com o e-mail limpo"; "o fluxo é e-mail enviado > aprovação e execução"): à vista só
+  **Aprovação e execução** (o que o cliente respondeu ou foi aprovado), e **Enviados**, **Executados**
+  e Cancelados em pastas. Sem colunas e sem arrastar. Detalhe em `docs/fila.md`, "A caixa e as pastas".
+- **Robô 1.9.0: o estoque antes do print.** O operador viu que, na boleta de venda de verdade, o campo
+  e o detalhe só aparecem depois de escolher "Estoque XP" ou "Estoque clientes": o robô passou a
+  escolher o do pedido, espera a opção do detalhe aparecer, e confere o deságio do painel. A aba do
+  robô também perdia o estoque ao receber o pedido (corrigido). Testado no Hub de mentira, que agora
+  faz como o de verdade; **falta o teste na boleta de verdade** ("A testar").
 
 ## 21/10 (tarde): o que foi sugerido, e as respostas do Outlook
 
@@ -39,7 +51,7 @@ O usuário pediu "pode fazer tudo isso que você me indicou" e perguntou se dava
 para a resposta do cliente aparecer no sistema já formatada para executar. Feito, em 9 commits:
 
 - **Fila do dia** (aba nova, Alt+2, `docs/fila.md`): cada e-mail copiado ou aberto no Outlook vira um
-  cartão — aguardando o cliente, o cliente respondeu, aprovado, executado —, com os prazos (leilão,
+  pedido (à noite, em pastas: ver acima), com os prazos (leilão,
   Estoque clientes, secundário, cotação da venda, Tesouro), a ficha de execução, a boleta do Hub, o
   resumo do dia e o "Anotar". No Ordens, o pedido repetido de hoje bloqueia (confirmável) e a conta
   nunca vista avisa. Os cartões abertos dos últimos 7 dias entram na Fila de hoje.

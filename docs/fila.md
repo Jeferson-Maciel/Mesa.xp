@@ -15,7 +15,7 @@ src/comum/fila/repositorio.js  o IndexedDB (banco mesa_fila, loja pedidos, índi
 src/comum/fila/eventos.js      "a Fila mudou", na página e entre abas do navegador (BroadcastChannel)
 src/comum/horarios.js          os horários de mercado: o pregão, o Estoque clientes, o secundário, o Tesouro
 src/comum/anotarDeFora.js      o "Anotar" que leva às Anotações com o pedido escrito
-src/modulos/fila/              a aba: o quadro, a ficha de execução, o resumo do dia
+src/modulos/fila/              a aba: as pastas, a ficha de execução, o resumo do dia
 ```
 
 As regras moram em `src/comum/` porque dois módulos as usam: o Ordens grava o cartão e confere o
@@ -34,15 +34,33 @@ pedido repetido; a aba Fila mostra e muda o estado.
   e-mail e a conta do cliente, e o banco da mesa ainda é aberto a quem tiver o link (a fase 2 de
   segurança). Sem IndexedDB (janela anônima), o erro aparece na aba; nada vai para outro lugar.
 
-## Os estados
+## A caixa e as pastas
 
-As colunas: **Aguardando o cliente** → **O cliente respondeu** → **Aprovado: executar** →
-**Executado**. Cancelado sai do quadro (fica embaixo, com "Reabrir"). Os botões de cada cartão
-andam uma casa; arrastar um cartão para outra coluna também muda o estado.
+Desde 21/10/2026, da conversa do usuário com um colega ("me acostumei com o e-mail limpo"; "o fluxo
+para mim é e-mail enviado > aprovação e execução"; "o e-mail enviado eu só vou olhar caso precise
+mudar algo ou confirmar alguma coisa, e o já executado o mesmo"), a Fila é uma **caixa de entrada com
+pastas**, e não um quadro de colunas:
+
+- **Aprovação e execução** — o que fica à vista, e onde a aba abre: o que o cliente respondeu, com a
+  resposta em destaque, e o que o operador marcou como aprovado. Cada pedido num cartão, com a
+  **Ficha de execução**, a **boleta** do Hub e **Executado**; e, menores, ver o e-mail, anotar,
+  "não aprovou" (volta para os Enviados, com a resposta guardada) e cancelar. Os que pedem atenção
+  (o prazo perto) vêm primeiro; depois, pela ordem das respostas.
+- **Enviados** — os e-mails que esperam o cliente, uma linha cada, como a lista de e-mails: a conta,
+  o cliente, o grupo, os ativos, a hora e o prazo. **Aprovou** (o cliente aprovou por outro canal)
+  leva o pedido para Aprovação e execução. Com um prazo perto, a pasta ganha um ponto âmbar.
+- **Executados** — o que foi feito, com a hora da execução, a ficha e o **Desfazer** (volta para
+  Aprovação e execução).
+- **Cancelados** — só aparece quando há algum; **Reabrir** volta para os Enviados.
+
+Toda mudança que tira um pedido da pasta aberta avisa para onde ele foi, com **Desfazer**. O
+contador da aba Fila conta o que está em Aprovação e execução, em qualquer aba. No celular, as pastas
+viram uma linha de fichas acima da lista. Os estados por baixo continuam os mesmos — enviado,
+respondeu, aprovado, executado, cancelado —, e cada pasta mostra os seus.
 
 **Quem diz que o cliente aprovou é o operador.** "Ok, mas só metade" não é aprovação, e nada aqui é
 adivinhado: a resposta do cliente (que o robô vê no Outlook) só passa o cartão para "O cliente
-respondeu", com a prévia à vista.
+respondeu" — a pasta Aprovação e execução —, com a prévia à vista.
 
 ## Os prazos
 
@@ -57,8 +75,8 @@ Vêm do que o pedido é, pelos horários de `src/comum/horarios.js` (conferidos 
 | Tesouro | até as 18h |
 
 Depois da hora, o prazo é o do próximo dia útil. O prazo a uma hora ou menos fica **âmbar**; o que
-passou, **vermelho**. O cartão com prazo perto, ou com a resposta do cliente, **pede atenção**: o
-contador da aba Fila mostra quantos, em qualquer aba (como o das Anotações).
+passou, **vermelho**. Em Aprovação e execução, o pedido com prazo perto vem primeiro e acende uma
+vez; nos Enviados, a pasta ganha o ponto âmbar.
 
 ## O pedido repetido e a conta nova (no Ordens)
 

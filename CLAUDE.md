@@ -7,8 +7,9 @@ XP usarem o dia inteiro:
   do back office (e-mail por grupo — bolsa, fundos comprados, fundos vendidos, Tesouro aplicação e
   resgate —, e-mail em tabela, Lote Simples e Lote TWAP), com o robô do Hub trazendo a cotação, o
   cliente, a posição e o print.
-- **Fila do dia** — o pedido depois que o e-mail sai: aguardando o cliente, o cliente respondeu,
-  aprovado, executado; os prazos de cada um, a ficha de execução e a boleta do Hub. Fica no navegador.
+- **Fila do dia** — o pedido depois que o e-mail sai, numa caixa limpa: à vista, Aprovação e
+  execução (o que o cliente respondeu, com a ficha e a boleta do Hub); Enviados e Executados em
+  pastas. Fica no navegador.
 - **Fundos** — a Prateleira do secundário numa tabela que ordena e filtra (deságio, ROA máximo,
   mínimo, estoques), e o que mudou desde o último dia.
 - **Renda Fixa** — o RendaFixa Pro: lê a planilha de renda fixa exportada pela XP e monta o texto
@@ -166,7 +167,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.265 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.270 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

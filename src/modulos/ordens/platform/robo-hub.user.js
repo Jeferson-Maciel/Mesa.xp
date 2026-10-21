@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.7.0
+// @version      1.7.1
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
@@ -103,7 +103,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.7.0';
+  const VERSAO = '1.7.1';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -162,6 +162,11 @@
   const TROCA_DIRETA_MS = 8 * 1000;
   // Quanto espera a ficha do cliente depois de trocar de cliente, antes de recarregar a página.
   const FICHA_MS = 10 * 1000;
+  // Quanto a foto da boleta pode levar (1.7.1). No verificar ela sai em menos de 1 s.
+  const PRINT_MS = 30 * 1000;
+  // Quanto uma tarefa pode segurar a fila da aba (1.7.1): passado isso, a fila segue para a próxima,
+  // para nada que trave numa aba prender os pedidos seguintes.
+  const TAREFA_MS = 3 * 60 * 1000;
 
   /* ── Na aba do Hub ──────────────────────────────────────────────────────────────────── */
 
@@ -696,7 +701,17 @@
 
       const biblioteca = carregarSnapdom();
       if (!biblioteca) return { erro: 'sem-snapdom' };
-      const tela = await biblioteca.toCanvas(regiao, { scale: 2, backgroundColor: '#ffffff' });
+      // A foto tem prazo (1.7.1): numa aba escondida há muito tempo, o Chrome segura os relógios dela, e
+      // uma foto que não termina prendia a fila da aba — nem a cotação andava mais.
+      const tela = await Promise.race([
+        biblioteca.toCanvas(regiao, { scale: 2, backgroundColor: '#ffffff' }),
+        new Promise((r) => setTimeout(() => r(null), PRINT_MS))
+      ]);
+      if (!tela) {
+        preencher(campo, '');
+        registrar('a foto passou do prazo');
+        return { erro: 'print-demorou' };
+      }
       const caixa = regiao.getBoundingClientRect();
       const escala = tela.width / Math.max(1, caixa.width);
       const topo = Math.max(0, (primeiro.getBoundingClientRect().top - caixa.top - 28) * escala);
@@ -996,7 +1011,10 @@
       fila = fila
         .then(() => {
           registrar('tarefa começou', { tipo, escondida: visibilidadeReal() === 'hidden', onde: ondeEsta(), botao: Boolean(botao()) });
-          return trabalho(pedido);
+          return Promise.race([
+            trabalho(pedido),
+            new Promise((r) => setTimeout(() => r(registrar('a tarefa passou do limite', { tipo })), TAREFA_MS))
+          ]);
         })
         .catch(() => {})
         .then(gravarRegistro);

@@ -31,13 +31,39 @@ const lerAplicacaoMinima = (texto) => {
   return Number.isFinite(n) ? n : null;
 };
 
-const CATALOGO = FUNDOS_XP.map((f) => ({
-  nome: f.nome,
-  ticker: f.ticker,
-  aplicacaoMinima: lerAplicacaoMinima(f.aplicacaoMinima),
-  chave: normalizar(f.nome),
-  chaveTicker: f.ticker ? normalizar(f.ticker) : null
-}));
+const noCatalogo = ({ nome, ticker, aplicacaoMinima }) => ({
+  nome,
+  ticker: ticker ?? null,
+  aplicacaoMinima,
+  chave: normalizar(nome),
+  chaveTicker: ticker ? normalizar(ticker) : null
+});
+
+const DA_LISTA = FUNDOS_XP.map((f) => noCatalogo({ ...f, aplicacaoMinima: lerAplicacaoMinima(f.aplicacaoMinima) }));
+let CATALOGO = DA_LISTA;
+
+/**
+ * A prateleira do dia (a captura do robô ou do favorito, ou a planilha) entra no catálogo **junto**
+ * com a lista gerada (`fundosXP.js`): fundo novo na prateleira é reconhecido pelo nome sem esperar
+ * `npm run fundos:update`. Somar, e não trocar: o fundo que saiu da prateleira continua na lista — o
+ * pedido pode ser de venda —, e um nome que cabe nos dois continua sem escolha automática (se o "XP
+ * Habitat … Feeder" saísse da prateleira e só o "II" ficasse, a prateleira sozinha escolheria o "II"
+ * calada). O nome que já está na lista não entra duas vezes.
+ *
+ * @param {Array<{nome: string, ticker?: string|null, aplicacaoMinima?: number|null}>} fundos
+ */
+export const juntarPrateleira = (fundos) => {
+  const vistos = new Set(DA_LISTA.map((f) => f.chave));
+  const novos = [];
+  for (const f of Array.isArray(fundos) ? fundos : []) {
+    if (!f || typeof f.nome !== 'string' || !f.nome.trim()) continue;
+    const fundo = noCatalogo({ nome: f.nome.trim(), ticker: f.ticker, aplicacaoMinima: f.aplicacaoMinima ?? null });
+    if (!fundo.chave || vistos.has(fundo.chave)) continue;
+    vistos.add(fundo.chave);
+    novos.push(fundo);
+  }
+  CATALOGO = [...DA_LISTA, ...novos];
+};
 
 const semCatalogo = (consulta) => ({ consulta, situacao: 'nenhum', fundo: null, candidatos: [] });
 
@@ -112,4 +138,5 @@ export const fundoPeloTicker = (texto) => {
   return achado.length === 1 ? { consulta, situacao: 'exato', fundo: publico(achado[0]), candidatos: [] } : null;
 };
 
-export const TOTAL_DE_FUNDOS = CATALOGO.length;
+// Os da lista gerada, sem a prateleira do dia.
+export const TOTAL_DE_FUNDOS = DA_LISTA.length;

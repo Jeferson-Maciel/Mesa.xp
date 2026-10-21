@@ -77,7 +77,7 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
     }
   };
 
-  const mostrar = (id) => {
+  const mostrar = (id, { medir = true } = {}) => {
     iniciar(id);
 
     for (const aba of ABAS) secaoDe(aba).hidden = aba !== id;
@@ -94,7 +94,7 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
 
     // A cor da ferramenta aberta, para o topo, os avisos e o brilho do fundo (base.css).
     document.body.dataset.aba = id;
-    moverIndicador();
+    if (medir) moverIndicador();
 
     // Ações de um módulo que moram no topo (o Histórico do Ordens) só aparecem com ele.
     for (const el of document.querySelectorAll('[data-so-na-aba]')) el.hidden = el.dataset.soNaAba !== id;
@@ -114,7 +114,12 @@ export const ligarAbas = ({ preguicosos, aoFalhar }) => {
     if (!location.hash || abaDoHash(location.hash) !== id) location.hash = id;
   });
 
-  mostrar(abaDoHash(location.hash));
-  // Só depois da primeira medida a pílula passa a deslizar; antes disso ela entraria voando.
-  requestAnimationFrame(() => trilho?.classList.add('pronto'));
+  mostrar(abaDoHash(location.hash), { medir: false });
+  // A primeira medida espera o primeiro quadro: medir no meio do início obrigava o navegador a
+  // montar o layout da página inteira ali, antes da hora (~200 ms parados na abertura). Só depois
+  // dela a pílula passa a deslizar; antes disso ela entraria voando.
+  requestAnimationFrame(() => {
+    moverIndicador();
+    trilho?.classList.add('pronto');
+  });
 };

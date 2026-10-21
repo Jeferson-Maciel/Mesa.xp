@@ -3,6 +3,7 @@ import { ErroDosAssessores, lerPlanilhaDosAssessores } from './core/cliente/asse
 import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
 import { separarConta } from './core/texto/separarConta.js';
+import { juntarPrateleira } from './core/validate/fundo.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
 import { ASSUNTOS_DOS_GRUPOS, ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
 import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } from './core/tesouro/tesouro.js';
@@ -86,6 +87,10 @@ export const iniciarOrdens = (secao) => {
     // A posição de cada conta no Tesouro, para o resgate (robô 1.7.0). Também só na memória.
     posicoesTesouro: new Map()
   };
+
+  // Os fundos da prateleira guardada entram no catálogo dos nomes, junto com a lista gerada: fundo
+  // novo é reconhecido sem esperar `npm run fundos:update` (core/validate/fundo.js).
+  juntarPrateleira(estado.estoque?.fundos);
 
   const formatosDe = (indice) => estado.escolhaManual ?? estado.detectados[indice] ?? [];
 
@@ -247,6 +252,8 @@ export const iniciarOrdens = (secao) => {
    * @returns {Promise<string[]>} os motivos dos que não saíram
    */
   async function garantirPrints(solicitacao) {
+    // Os prints vencidos saem da memória: são imagens, e a página fica aberta por dias.
+    for (const [chave, print] of estado.prints) if (Date.now() > print.validaAte) estado.prints.delete(chave);
     calcularSecundario([solicitacao]);
     const faltam = solicitacao.ordens.filter(
       (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print && !o.buscandoPrint
@@ -641,6 +648,7 @@ export const iniciarOrdens = (secao) => {
         fundos
       };
       guardado.salvarEstoque(estado.estoque);
+      juntarPrateleira(estado.estoque.fundos);
       mostrarEstoque();
       render();
       aviso(doHub ? `Fundos do Hub carregados: ${fundos.length}, com o ROA de cada um.` : `Planilha do secundário carregada: ${fundos.length} fundos.`);
@@ -735,6 +743,7 @@ export const iniciarOrdens = (secao) => {
       return;
     }
     guardado.salvarEstoque(estado.estoque);
+    juntarPrateleira(estado.estoque.fundos);
     mostrarEstoque();
     render();
   }
@@ -810,6 +819,8 @@ export const iniciarOrdens = (secao) => {
   function guardarBoleta(bruta, conta) {
     const lida = lerBoletaDoHub(bruta);
     if (!lida) return;
+    // As vencidas saem da memória: têm a posição do cliente, e a página fica aberta por dias.
+    for (const [chave, boleta] of Object.entries(estado.boletas)) if (Date.now() > umDiaUtilDepois(boleta.em)) delete estado.boletas[chave];
     estado.boletas[chaveDaBoleta(lida.fundoId, lida.lado, conta)] = lida;
     if (lida.valorDaCota && lida.dataDaCota) guardarCota({ fundoId: lida.fundoId, valor: lida.valorDaCota, dataDaCota: lida.dataDaCota, em: lida.em });
   }

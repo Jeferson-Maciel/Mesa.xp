@@ -21,14 +21,14 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.112 testes (`npm test`), o build e 216
+- A última verificação passou inteira (20/10): 1.117 testes (`npm test`), o build e 216
   conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 17 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
+- **Em 20/10 foram 18 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
   do usuário.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
@@ -90,7 +90,7 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.7.0)
+### A testar no Hub e no Outlook de verdade (robô 1.7.1)
 
 1. Copiar robô → Tampermonkey (o script agora tem ~260 KB, com a SnapDOM); fechar as abas 🤖 antigas.
    Ao abrir o Outlook na web pela primeira vez com o robô novo, o Tampermonkey pode pedir permissão.

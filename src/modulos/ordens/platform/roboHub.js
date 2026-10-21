@@ -45,6 +45,7 @@ const MENSAGENS = {
   'sem-regiao': 'não achei o painel do valor da operação na boleta',
   'sem-snapdom': 'o robô veio sem a biblioteca do print — copie o robô de novo',
   'falhou-o-print': 'o print falhou na aba do robô',
+  'print-demorou': 'a foto da boleta passou de 30 s na aba do robô — clique em "Tirar prints" de novo',
   'sem-print': 'o robô não trouxe o print',
   'sem-tesouro': 'o Hub não mostrou a lista do Tesouro para essa conta — a conta é de um cliente seu?',
   'sem-posicoes-tesouro': 'o Hub não mostrou a posição no Tesouro dessa conta — a conta é de um cliente seu?'

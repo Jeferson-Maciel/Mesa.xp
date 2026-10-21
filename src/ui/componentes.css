@@ -399,24 +399,6 @@
   transform: rotate(90deg);
 }
 
-/* ── Status ao vivo ─────────────────────────────────────────────────────────────────────
-   Calendário e Operacional mostram a conexão com o banco. "ao vivo" leva o ponto que pulsa. */
-
-.status-vivo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.status-vivo::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulso-vivo 2.4s var(--curva) infinite;
-}
-
 /* ── Esqueleto de carregamento ──────────────────────────────────────────────────────────── */
 
 .esqueleto {

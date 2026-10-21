@@ -99,7 +99,7 @@ uma tem a sua cor.
   janelas (`<dialog>`), a revelação do tema, os avisos de tela, as animações comuns e o movimento
   reduzido.
 - `src/ui/componentes.css` — painel, segmentado, selos, botões (`.copy-btn` secundário e
-  `.btn-primario`), alerta, estado vazio, status ao vivo e esqueleto de carregamento. Um componente
+  `.btn-primario`), alerta, estado vazio e esqueleto de carregamento. Um componente
   só entra aqui quando dois módulos o usam.
 - `src/shell/casca.css` — o topo. Tem **59px** de altura: o painel de entrada do Ordens e a barra
   lateral do Operacional grudam logo abaixo dele, e as abas ficam em 34px para não crescê-lo.
@@ -322,6 +322,14 @@ passou a 150 fundos, 32 com ticker. Guardamos só nome, ticker e aplicação mí
 disponibilidade mudam todo dia, e guardá-los seria carregar dado vencido dentro de um sistema cuja
 regra é não inventar dado.
 
+**A prateleira do dia entra no catálogo** (21/10/2026, `juntarPrateleira`): a captura do robô ou do
+favorito, ou a planilha, soma os fundos dela à lista gerada. Fundo novo na prateleira é reconhecido
+pelo nome sem esperar o `fundos:update`; antes, a lista gerada envelhecia calada, e todo fundo lançado
+depois dela virava "nome que não é fundo da prateleira". **Somar, e não trocar**: o fundo que saiu da
+prateleira continua na lista (o pedido pode ser de venda), e um nome que cabe em dois continua sem
+escolha automática — se o "XP Habitat … Feeder" saísse da prateleira e só o "II" ficasse, a
+prateleira sozinha escolheria o "II" calada.
+
 **O ticker de um fundo da prateleira, escrito sozinho, é o fundo** (decisão da mesa em
 06/10/2026): `VGPR11 R$ 10.000,00` é compra pela boleta do secundário, como se tivesse vindo o
 nome. `fundoPeloTicker` só aceita a igualdade com o ticker, e o ativo fica como foi escrito —
@@ -412,7 +420,9 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     à toa (a marca já era a do outro), e numa colagem com várias contas as abas 🤖 se acumulavam. Uma aba viva avisa em menos de
     1 s; ocupada desenhando a Prateleira, levou até 3 s, e por isso não é menos. Se a última que
     abriu nunca deu sinal (Hub deslogado), espera um minuto antes de abrir mais uma;
-  - uma tarefa por vez, numa fila;
+  - uma tarefa por vez, numa fila. Desde a 1.7.1, uma tarefa segura a fila por no máximo 3 minutos,
+    e a foto do print tem 30 s: uma foto que não terminava (aba escondida há muito tempo, com os
+    relógios segurados pelo Chrome) prendia a fila da aba, e nem a cotação andava mais;
   - **a aba do robô age como à vista** (1.1.1). O Chrome não desenha aba em segundo plano: diz que
     ela está escondida e não roda os quadros de desenho (`requestAnimationFrame`), e a boleta pode
     depender disso — no piloto, a falta do pre-check foi atribuída a isso antes de se achar o
@@ -1324,7 +1334,7 @@ atalhos, etiquetas, links, checklist, agenda, lixeira, rascunho, data na frase, 
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.112 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.117 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

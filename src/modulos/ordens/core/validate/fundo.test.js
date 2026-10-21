@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { TOTAL_DE_FUNDOS, fundoPeloTicker, procurarFundo } from './fundo.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { TOTAL_DE_FUNDOS, fundoPeloTicker, juntarPrateleira, procurarFundo } from './fundo.js';
 
 describe('nomes reais do grupo', () => {
   it('reconhece o BGR exatamente como foi escrito no WhatsApp', () => {
@@ -127,5 +127,42 @@ describe('a prateleira de 06/10/2026', () => {
     expect(procurarFundo('XP SS 1 FIC FIDC RL-NP').fundo.aplicacaoMinima).toBe(100380);
     expect(procurarFundo('XP Special Opportunities FIP Multi - Classe A').fundo.aplicacaoMinima).toBe(25859);
     expect(fundoPeloTicker('IDZA11').fundo.aplicacaoMinima).toBe(10000);
+  });
+});
+
+// A prateleira do dia (captura do robô ou do favorito, ou a planilha) entra no catálogo junto com a
+// lista gerada: fundo novo é reconhecido pelo nome sem esperar `npm run fundos:update`.
+describe('a prateleira do dia no catálogo', () => {
+  afterEach(() => juntarPrateleira([]));
+  const novo = { nome: 'Fundo Lançado Ontem Feeder FII RL', ticker: null, aplicacaoMinima: 5000 };
+
+  it('reconhece pelo nome o fundo que só a prateleira do dia tem', () => {
+    expect(procurarFundo('Fundo Lançado Ontem Feeder FII RL').situacao).not.toBe('exato');
+    juntarPrateleira([novo]);
+    expect(procurarFundo('Fundo Lançado Ontem Feeder FII RL')).toMatchObject({ situacao: 'exato', fundo: { nome: novo.nome, aplicacaoMinima: 5000 } });
+  });
+
+  it('e pelo ticker, o fundo novo com ticker', () => {
+    juntarPrateleira([{ nome: 'Fundo Novo Com Ticker FII', ticker: 'NOVO11', aplicacaoMinima: null }]);
+    expect(fundoPeloTicker('NOVO11')?.fundo.nome).toBe('Fundo Novo Com Ticker FII');
+  });
+
+  it('o fundo que saiu da prateleira continua lá: o nome que cabe nos dois não escolhe sozinho', () => {
+    // Só o II na prateleira do dia: o "XP Habitat … Feeder" sem numeral continua ambíguo, como antes.
+    juntarPrateleira([{ nome: 'XP Habitat Renda Imobiliária II Feeder FII RL', ticker: null, aplicacaoMinima: null }]);
+    expect(procurarFundo('XP Habitat Renda Imobiliária Feeder FII').fundo?.nome).not.toBe('XP Habitat Renda Imobiliária II Feeder FII RL');
+  });
+
+  it('o mesmo nome da lista não vira dois fundos, e sem prateleira vale a lista sozinha', () => {
+    juntarPrateleira([{ nome: 'BGR Galpões Logísticos I Feeder FII', ticker: null, aplicacaoMinima: 1 }]);
+    expect(procurarFundo('BGR Galpões Logísticos I Feeder FII').situacao).toBe('exato');
+    juntarPrateleira([]);
+    expect(procurarFundo('Fundo Lançado Ontem Feeder FII RL').situacao).not.toBe('exato');
+    expect(TOTAL_DE_FUNDOS).toBe(150);
+  });
+
+  it('ignora o que não é fundo', () => {
+    juntarPrateleira([null, { nome: '' }, { nome: 42 }, novo]);
+    expect(procurarFundo(novo.nome).situacao).toBe('exato');
   });
 });

@@ -128,11 +128,18 @@ src/modulos/fila/vigiaOutlook.js  o vigia, do lado da Mesa: pede ao robô, casa,
   aguardando o cliente ou respondido (de hoje, ou aberto dos últimos 7 dias), pede ao robô que olhe a
   caixa de entrada pelos próximos 3 minutos. O robô olha quando a lista muda (no máximo a cada 2 s) e
   manda tudo de novo a cada minuto.
-- **O e-mail do cliente casa sozinho.** A resposta do endereço do cliente de um cartão (o e-mail que o
-  robô trouxe da ficha do Hub) vai para ele, e o cartão passa para "O cliente respondeu", com a prévia
+- **A conta citada casa primeiro** (robô 1.9.1, sugestão do operador: "pegar o código do cliente e
+  linkar os dois"). No Outlook de verdade, a linha de cada conversa traz na prévia o começo do e-mail
+  original — "na conta XP 1234567" —, e o robô a lê da própria lista, sem abrir a mensagem. A resposta
+  vai para o pedido daquela conta, mesmo que o pedido não tenha o e-mail do cliente ("cliente não
+  identificado") ou que o cliente responda de outro endereço. Duas contas do mesmo cliente não se
+  confundem.
+- **O e-mail do cliente casa** quando não há conta na prévia. A resposta do endereço do cliente de um
+  cartão (o e-mail que o robô trouxe da ficha do Hub) vai para ele, e o cartão passa para "O cliente respondeu", com a prévia
   e um aviso na tela ("Ver na Fila"). Com mais de um cartão do mesmo cliente vale o que ainda espera a
   resposta, e depois o do mesmo assunto (o resgate do Tesouro não é o e-mail da bolsa).
-- **O resto fica "a conferir"**, no alto da Fila: a resposta ambígua (dois cartões esperando, com o
+- **O resto fica "a conferir"**, no alto da Fila — se for resposta a e-mail nosso (com "RE:" ou com a
+  conta citada; outro e-mail com "Confirmação" no assunto, um aviso de sistema, é ignorado): a resposta ambígua (dois cartões esperando, com o
   mesmo assunto), a achada só pelo nome (o cliente respondeu de outro endereço: todas as partes do
   nome de quem respondeu, duas ou mais, estão no nome do cliente) e a que não casou com nada. Cada uma
   com um botão por cartão candidato e "Não é de pedido" (que a esconde até o fim do dia; o id fica no
@@ -145,8 +152,15 @@ src/modulos/fila/vigiaOutlook.js  o vigia, do lado da Mesa: pede ao robô, casa,
 - **Os cartões abertos de outros dias** aparecem na Fila de hoje, com a data em âmbar: o e-mail das
   17h tem resposta na manhã seguinte.
 
-**O que o Outlook de verdade pode mudar**: a lista do Outlook na web foi lida pelo que ele expõe aos
-leitores de tela — a lista (`role="listbox"`), cada mensagem uma opção (`role="option"`), o e-mail
-no `title` do remetente, a hora nas de hoje. Só o Outlook de mentira do `verificar` foi testado; o
-de verdade está em "A testar" no [`CONTEXTO.md`](CONTEXTO.md). Se o selo ficar em "abra a caixa de
-entrada" com ela aberta, é a lista que mudou de forma.
+**O Outlook de verdade** (conferido em 21/10/2026, na caixa de entrada do operador, só pela forma —
+os textos mascarados): a lista é um `role="listbox"`, cada conversa uma opção (`role="option"`,
+com `data-convid`), o e-mail do remetente no `title`, a hora nas de hoje; a linha tem um ícone e as
+iniciais do avatar antes do remetente; **o assunto aparece sem o "RE:"** (modo conversas); e a prévia
+traz "na conta XP" com o número. O Outlook de mentira do `verificar` foi refeito assim.
+
+Para funcionar:
+- **depois de atualizar o robô, recarregar a aba do Outlook** (F5): o Tampermonkey põe o script na
+  página quando ela carrega, e a aba aberta desde antes continua com o robô velho;
+- **a "Caixa de Entrada Destaques"** separa a caixa em "Destaques" e "Outros", e o robô só vê a lista
+  que está à vista: a resposta que cai em "Outros" não aparece. Desligar em Exibir → Configurações de
+  exibição → Caixa de Entrada Destaques ("Não classificar minhas mensagens"), ou deixar "Outros" aberto.

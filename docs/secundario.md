@@ -84,10 +84,14 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
   - **na caixa de entrada do Outlook (1.8.0) só lê a lista de mensagens**, numa aba que a pessoa já
     tem aberta — o robô não abre o Outlook. Só olha enquanto a Mesa pede (a cada minuto, enquanto a
     Fila do dia tem pedido aguardando o cliente ou respondido). De cada linha da lista, lê o texto e
-    para no assunto, se não for resposta a um e-mail de confirmação ("RE:/RES:/ENC: … Confirmação");
-    das que são, e de hoje (o Outlook mostra a hora nas de hoje, e a data nas outras), guarda o
-    remetente, o e-mail (do `title` do remetente), o assunto, a prévia e a hora, com um id que é um
-    resumo, sem nome. Não clica, não rola, não abre e-mail nem marca como lido; um teste confere que o
+    para no assunto, se não for de um e-mail de confirmação ("Confirmação…", **com ou sem "RE:"**: no
+    modo conversas do Outlook na web, a lista mostra o assunto da conversa sem o prefixo — visto na
+    caixa de entrada do operador em 21/10/2026, e a 1.8.0, que exigia o "RE:", não via nenhuma
+    resposta); dos que são, e de hoje (o Outlook mostra a hora nas de hoje, e a data nas outras),
+    guarda o remetente (a última linha antes do assunto com mais de duas letras: antes dele vêm um
+    ícone e as iniciais do avatar), o e-mail (do `title` do remetente), o assunto, a prévia, a hora e
+    **a conta citada** (1.9.1: "na conta XP 1234567", do começo do e-mail original que a prévia traz),
+    com um id que é um resumo, sem nome. Não clica, não rola, não abre e-mail nem marca como lido; um teste confere que o
     trecho não tem clique, foco, rolagem nem evento. As respostas passam pelo armazenamento do
     Tampermonkey e saem dele assim que a Mesa as recebe; o `verificar` confere, numa caixa de entrada
     de mentira, que a outra mensagem e a resposta antiga nunca passam por ele;

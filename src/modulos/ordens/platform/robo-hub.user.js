@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.9.0
+// @version      1.9.1
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
@@ -112,7 +112,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.9.0';
+  const VERSAO = '1.9.1';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -1246,7 +1246,14 @@
 
   // A resposta (ou o encaminhamento) a um e-mail de confirmação da mesa; a hora que o Outlook mostra
   // nas mensagens de hoje; um endereço de e-mail.
-  const RESPOSTA_DE_PEDIDO = /^\s*(?:(?:re|res|resp|enc|fw|fwd|tr|aw|wg)\s*:\s*)+.*confirma[çc][ãa]o/i;
+  // O assunto de um e-mail de confirmação da mesa. Com "RE:" na frente, ou sem: no modo "conversas"
+  // do Outlook na web, a linha da lista mostra o assunto da conversa sem o prefixo (visto na caixa de
+  // entrada do operador em 21/10/2026 — a 1.8.0 exigia o "RE:" e não via nenhuma resposta).
+  const ASSUNTO_DE_PEDIDO = /confirma[çc][ãa]o/i;
+  const PREFIXO_DE_RESPOSTA = /^\s*(?:(?:re|res|resp|enc|fw|fwd|tr|aw|wg)\s*:\s*)+/i;
+  // A conta do e-mail citado na resposta: "na conta XP 1234567". A prévia da linha traz o começo do
+  // e-mail original, e é por ela que a Mesa liga a resposta ao pedido certo (1.9.1).
+  const CONTA_CITADA = /conta\s+XP\s*:?\s*(\d{5,9})/i;
   const HORA_DE_HOJE = /^\d{1,2}:\d{2}$/;
   const ENDERECO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // Um resumo curto e estável de um texto, para a identidade de uma resposta: a Mesa guarda os ids
@@ -1263,10 +1270,11 @@
    *  - enquanto a Mesa pede (`vigiaOutlook`, renovado a cada minuto enquanto há pedido esperando o
    *    cliente): com a Mesa fechada, ou sem pedido esperando, não lê nada;
    *  - na lista de mensagens que o Outlook já desenhou: não rola, não clica, não abre e-mail.
-   * De cada mensagem lê o texto da linha e para no assunto, se não for resposta a um e-mail de
-   * confirmação; das que são, e de hoje (com a hora, não a data), guarda o remetente, o e-mail (do
-   * `title` do remetente), o assunto, a prévia e a hora. Manda tudo de novo quando muda, e a cada
-   * minuto, para a Mesa que acabou de abrir também saber.
+   * De cada mensagem lê o texto da linha e para no assunto, se não for de um e-mail de confirmação
+   * ("Confirmação…", com ou sem "RE:"); das que são, e de hoje (com a hora, não a data), guarda o
+   * remetente, o e-mail (do `title` do remetente), o assunto, a prévia, a hora e a conta citada (1.9.1:
+   * "na conta XP 1234567", do começo do e-mail original que a prévia traz). Manda tudo de novo quando
+   * muda, e a cada minuto, para a Mesa que acabou de abrir também saber.
    */
   const naCaixaDoOutlook = () => {
     if (location.pathname.includes('/deeplink/')) return;
@@ -1279,19 +1287,27 @@
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean);
-      const iAssunto = linhas.findIndex((l) => RESPOSTA_DE_PEDIDO.test(l));
+      const iAssunto = linhas.findIndex((l) => ASSUNTO_DE_PEDIDO.test(l));
       if (iAssunto < 0) return null;
       const hora = linhas.find((l) => HORA_DE_HOJE.test(l));
       if (!hora) return null;
       const email = [...item.querySelectorAll('[title]')].map((el) => el.getAttribute('title').trim()).find((t) => ENDERECO.test(t)) || null;
-      const de = linhas.slice(0, iAssunto).find((l) => !HORA_DE_HOJE.test(l)) || null;
+      // O remetente é a última linha antes do assunto que não é hora: antes dele, a linha mostra as
+      // iniciais do avatar e um ícone (uma ou duas letras).
+      const de =
+        linhas
+          .slice(0, iAssunto)
+          .reverse()
+          .find((l) => !HORA_DE_HOJE.test(l) && l.length > 2) || null;
       const previa = linhas
         .slice(iAssunto + 1)
         .filter((l) => !HORA_DE_HOJE.test(l))
         .join(' ')
         .slice(0, 280);
+      // A conta, do texto inteiro da linha: a prévia pode estar cortada na tela.
+      const conta = (String(item.textContent || '').match(CONTA_CITADA) || [])[1] || null;
       const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhas[iAssunto]}|${hora}`;
-      return { id: 'r' + resumo(chave), de, email, assunto: linhas[iAssunto], previa, hora };
+      return { id: 'r' + resumo(chave), de, email, assunto: linhas[iAssunto], previa, hora, conta, prefixo: PREFIXO_DE_RESPOSTA.test(linhas[iAssunto]) };
     };
 
     const olhar = () => {

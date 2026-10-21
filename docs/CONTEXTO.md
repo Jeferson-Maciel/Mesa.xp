@@ -22,16 +22,16 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.276 testes (`npm test`), o build e 313
+- A última verificação passou inteira (21/10, noite): 1.283 testes (`npm test`), o build e 313
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 36 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
+- **De 20 a 21/10 foram 37 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo: agora a 1.9.0).
+  (os colegas precisam copiar o robô de novo: agora a 1.9.1, e recarregar a aba do Outlook).
 
 ## 21/10 (noite): a Fila em pastas, e o estoque no print
 
@@ -39,6 +39,12 @@ cada sessão.
   acostumei com o e-mail limpo"; "o fluxo é e-mail enviado > aprovação e execução"): à vista só
   **Aprovação e execução** (o que o cliente respondeu ou foi aprovado), e **Enviados**, **Executados**
   e Cancelados em pastas. Sem colunas e sem arrastar. Detalhe em `docs/fila.md`, "A caixa e as pastas".
+- **Robô 1.9.1: as respostas do Outlook de verdade.** A 1.8.0 não via nenhuma resposta: conferida a
+  caixa de entrada do operador (só a forma, com os textos mascarados), o modo conversas mostra o
+  assunto **sem o "RE:"**, que ela exigia. Agora aceita o assunto com ou sem prefixo, e lê da prévia
+  **a conta citada** ("na conta XP 1234567", do e-mail original), que liga a resposta ao pedido certo
+  — mesmo sem o e-mail do cliente. Para o operador: atualizar o robô e **recarregar a aba do Outlook**;
+  e a "Caixa de Entrada Destaques" esconde o que cai em "Outros" (desligar, ou deixar "Outros" aberto).
 - **As cotas na Fila**: cada ordem mostra a quantidade que o e-mail aprovado levou (as cotas da
   conversão na compra em R$, a posição na venda do total), com o valor pedido e o estoque embaixo; a
   ficha de execução também. Lidas do texto do e-mail, que o cartão já guardava.

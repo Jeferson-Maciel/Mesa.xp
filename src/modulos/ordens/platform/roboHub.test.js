@@ -497,3 +497,21 @@ describe('as respostas no Outlook (robô 1.8.0)', () => {
     expect(vigia).not.toMatch(/\.click\(|dispatchEvent|\.focus\(|scroll|execCommand/);
   });
 });
+
+describe('a conta citada na resposta (robô 1.9.1)', () => {
+  it('passa só a conta na forma de conta, e o prefixo como sim ou não', async () => {
+    const { janela } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const leituras = [];
+    robo.aoReceberOutlook((l) => leituras.push(l));
+    const entregar = (r) =>
+      janela.dispatchEvent(Object.assign(new Event('message'), { source: janela, data: { origem: 'robo-hub', tipo: 'outlook', em: 1, lista: true, itens: 3, respostas: [r] } }));
+    entregar({ id: 'r1', assunto: 'Confirmação de ordem', conta: '1234567', prefixo: false });
+    entregar({ id: 'r2', assunto: 'Confirmação de ordem', conta: '12a<b>', prefixo: 'sim' });
+    expect(leituras.map((l) => [l.respostas[0].conta, l.respostas[0].prefixo])).toEqual([
+      ['1234567', false],
+      [null, false]
+    ]);
+  });
+});

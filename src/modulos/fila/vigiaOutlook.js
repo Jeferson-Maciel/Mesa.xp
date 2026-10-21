@@ -78,7 +78,7 @@ export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar 
     for (const r of leitura.respostas) {
       const em = momentoDaHora(r.hora, agora());
       if (em === null || estado.ignoradas[r.id]) continue;
-      const resposta = { id: r.id, de: r.de, email: r.email, assunto: r.assunto, previa: r.previa, em };
+      const resposta = { id: r.id, de: r.de, email: r.email, assunto: r.assunto, previa: r.previa, em, conta: r.conta ?? null };
       // A mesma conversa com uma mensagem nova: a prévia muda, e o cartão fica com a de agora.
       const jaGuardada = doId.get(r.id);
       if (jaGuardada) {
@@ -92,7 +92,9 @@ export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar 
         avisar(`${r.de || 'O cliente'} respondeu (conta ${atualizado.conta}): "${curto(r.previa) || 'sem prévia'}"`, {
           acao: { rotulo: 'Ver na Fila', fazer: () => (location.hash = '#fila') }
         });
-      } else {
+      } else if (casamento.tipo !== 'nenhum' || r.prefixo || r.conta) {
+        // O que não casou com nada só fica "a conferir" se for resposta a e-mail nosso — com "RE:" ou
+        // com a conta citada. Outro e-mail com "Confirmação" no assunto (um aviso de sistema) não é.
         soltas.push({ resposta, motivo: casamento.tipo, candidatos: (casamento.candidatos ?? []).map((p) => p.id) });
       }
     }

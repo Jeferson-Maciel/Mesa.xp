@@ -17,7 +17,7 @@ const pedido = ({ conta = '1234567', nome = 'FULANA DE TAL DA SILVA', email = 'f
     texto: '',
     em: em(hora, 0, dia)
   });
-const resposta = (extra = {}) => ({ id: 'r1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'De acordo, pode seguir.', hora: '10:42', ...extra });
+const resposta = (extra = {}) => ({ id: 'r1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'De acordo, pode seguir.', hora: '10:42', prefixo: true, ...extra });
 
 const montar = async (pedidos, { versao = '1.8.0' } = {}) => {
   const repo = criarRepositorioEmMemoria();
@@ -112,5 +112,26 @@ describe('o vigia das respostas no Outlook', () => {
   it('o robô de outra versão pede a atualização', async () => {
     const { vigia } = await montar([pedido()], { versao: '1.7.1' });
     expect(vigia.situacao()).toMatchObject({ tipo: 'robo-velho' });
+  });
+});
+
+describe('o vigia no modo conversas do Outlook (robô 1.9.1)', () => {
+  it('o assunto sem "RE:" com a conta citada casa com o pedido da conta, mesmo sem o e-mail do cliente', async () => {
+    const p = pedido({ email: null, nome: null });
+    const { repo, ler } = await montar([p]);
+    await ler([resposta({ email: 'outro@exemplo.com', de: 'Outro Nome', assunto: 'Confirmação de ordem', conta: '1234567', prefixo: false })]);
+    expect((await repo.listarTodos())[0]).toMatchObject({ estado: 'respondeu', resposta: { conta: '1234567' } });
+  });
+
+  it('outro e-mail com "Confirmação" no assunto, sem conta nem "RE:", não vai para a conferência', async () => {
+    const { vigia, ler } = await montar([pedido()]);
+    await ler([resposta({ id: 'aviso', email: 'sistema@exemplo.com', de: 'Avisos do Sistema', assunto: 'Confirmação de cadastro', conta: null, prefixo: false })]);
+    expect(vigia.soltas()).toEqual([]);
+  });
+
+  it('a resposta com "RE:" que não casou continua indo para a conferência', async () => {
+    const { vigia, ler } = await montar([pedido()]);
+    await ler([resposta({ id: 'r9', email: 'beltrano@exemplo.com', de: 'Beltrano Souza', prefixo: true })]);
+    expect(vigia.soltas().map((s) => s.resposta.id)).toEqual(['r9']);
   });
 });

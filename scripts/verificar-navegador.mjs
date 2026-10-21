@@ -1296,7 +1296,9 @@ try {
             div.append(span);
             return div;
           };
-          item.append(linha(m.de, m.email), linha(m.hora), linha(m.assunto), linha(m.previa));
+          // Como a linha do Outlook de verdade (vista em 21/10/2026): um ícone e as iniciais do avatar
+          // antes do remetente, e a prévia com o começo do e-mail citado.
+          item.append(linha('!'), linha(m.de.split(' ').map((p) => p[0]).join('').slice(0, 2)), linha(m.de, m.email), linha(m.assunto), linha(m.hora), linha(m.previa));
           lista.prepend(item);
         };
         chegar({ id: 'c0', de: 'Equipe da Mesa', email: 'equipe@exemplo.com', hora: '09:00', assunto: 'Pauta de amanhã', previa: 'TEXTO QUE O ROBO NAO PODE LER' });
@@ -1761,13 +1763,15 @@ try {
     const caixa = await novaAba('https://outlook.cloud.microsoft/mail/inbox');
     await caixa.waitForFunction(() => typeof window.chegar === 'function');
     await caixa.evaluate(() =>
-      chegar({ id: 'c1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', hora: '10:42', assunto: 'RES: Confirmação de ordem', previa: 'De acordo, pode seguir.' })
+      // O modo conversas: o assunto sem o RE:, a resposta de outro endereço do cliente, e a conta na
+      // prévia, do começo do e-mail citado. É a conta que liga a resposta ao pedido (robô 1.9.1).
+      chegar({ id: 'c1', de: 'Fulana Tal', email: 'fulana.pessoal@exemplo.com.br', hora: '10:42', assunto: 'Confirmação de ordem', previa: 'De acordo, pode seguir. Em ter., 21 de out. de 2026 às 10:00, Mesa escreveu: Prezado(a) FULANA DE TAL DA SILVA, Conforme conversado, gostaria de realizar a ordem abaixo na conta XP 1234567:' })
     );
     await mesa.keyboard.press(altDe('fila'));
     const respondeu = await mesa
       .waitForFunction(() => document.querySelector('[data-fl="lista"] .fl-cartao[data-estado="respondeu"]')?.textContent.includes('De acordo, pode seguir.'), null, { timeout: 30_000 })
       .then(() => true, () => false);
-    ok(respondeu, 'a resposta do cliente no Outlook traz o pedido para Aprovação e execução, com a prévia');
+    ok(respondeu, 'a resposta no Outlook, no modo conversas (sem RE: e de outro endereço), casa pela conta citada e traz o pedido para Aprovação e execução, com a prévia');
     ok((await mesa.getAttribute('[data-fl="outlook"]', 'data-tipo')) === 'vigiando', 'a Fila diz que está vendo as respostas no Outlook');
     const todasAsEscritas = escritas.join('\n');
     ok(

@@ -2,12 +2,15 @@
  * As respostas dos clientes, vistas pelo robô na caixa de entrada do Outlook na web (robô 1.8.0), e o
  * cartão da Fila de cada uma. Funções puras, testadas em `respostas.test.js`.
  *
- * O robô só lê a lista de mensagens, e dela só as respostas aos nossos e-mails ("RE:/RES:
- * Confirmação…") de hoje: o remetente, o e-mail dele, o assunto, a prévia e a hora. Aqui:
+ * O robô só lê a lista de mensagens, e dela só os e-mails de confirmação ("Confirmação…", com ou sem
+ * "RE:" — no modo conversas do Outlook, a lista mostra o assunto sem o prefixo) de hoje: o remetente,
+ * o e-mail dele, o assunto, a prévia, a hora e a conta citada. Aqui:
  *
+ * - **a conta citada casa primeiro** (1.9.1): a prévia da resposta traz o começo do e-mail original,
+ *   "na conta XP 1234567" — o que liga a resposta ao pedido mesmo sem o e-mail do cliente;
  * - **o e-mail do cliente casa sozinho**: a resposta do endereço do cliente de um cartão só vai para
- *   ele. Com mais de um cartão do mesmo cliente, vale o que ainda espera a resposta, e depois o do
- *   mesmo assunto; sobrando mais de um, é ambígua — o operador escolhe;
+ *   ele. Com mais de um cartão do mesmo cliente (ou da mesma conta), vale o que ainda espera a
+ *   resposta, e depois o do mesmo assunto; sobrando mais de um, é ambígua — o operador escolhe;
  * - **pelo nome é só sugestão**: o cliente que responde de outro endereço é achado pelo nome, mas o
  *   operador confirma. Nada é adivinhado;
  * - **a resposta não aprova nada**: só passa o cartão para "O cliente respondeu" (`regras.js`).
@@ -59,6 +62,17 @@ export const casarResposta = (resposta, pedidos) => {
     return melhores.length ? melhores : lista;
   };
   const afunilar = (lista) => preferir(preferir(lista, (p) => p.estado === 'enviado'), (p) => normalizar(p.assunto) === assunto);
+
+  // A conta citada na resposta (o "na conta XP 1234567" do e-mail original, que a prévia traz) é o
+  // que liga mais certo (pedido do operador em 21/10/2026): vale mesmo sem o e-mail do cliente.
+  const conta = String(resposta.conta ?? '').trim();
+  if (conta) {
+    const daConta = vivos.filter((p) => p.conta === conta);
+    if (daConta.length) {
+      const lista = afunilar(daConta);
+      return lista.length === 1 ? { tipo: 'casou', pedido: lista[0] } : { tipo: 'ambigua', candidatos: lista };
+    }
+  }
 
   const email = String(resposta.email ?? '').trim().toLowerCase();
   if (email) {

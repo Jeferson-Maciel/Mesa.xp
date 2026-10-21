@@ -74,3 +74,25 @@ describe('o cartão de cada resposta', () => {
     expect(casarResposta(resposta({ email: 'beltrano@exemplo.com', de: 'Beltrano Souza' }), [pedido()])).toEqual({ tipo: 'nenhum' });
   });
 });
+
+// O modo conversas do Outlook (visto na caixa de entrada do operador em 21/10/2026): o assunto sem o
+// "RE:", e a prévia com o começo do e-mail original, "na conta XP 1234567".
+describe('a conta citada na resposta', () => {
+  it('liga a resposta ao pedido da conta, mesmo sem o e-mail do cliente', () => {
+    const semEmail = pedido({ email: null, nome: null });
+    expect(casarResposta(resposta({ email: 'outro@exemplo.com', de: 'Outro Nome', conta: '1234567', assunto: 'Confirmação de ordem' }), [semEmail])).toEqual({
+      tipo: 'casou',
+      pedido: semEmail
+    });
+  });
+
+  it('vem antes do e-mail: a mesma pessoa com duas contas', () => {
+    const [a, b] = [pedido({ conta: '1234567' }), pedido({ conta: '7654321' })];
+    expect(casarResposta(resposta({ conta: '7654321' }), [a, b])).toEqual({ tipo: 'casou', pedido: b });
+  });
+
+  it('dois pedidos esperando da mesma conta, com o mesmo assunto: ambígua', () => {
+    const [a, b] = [pedido({ hora: 10 }), pedido({ grupo: 'fundos-compra', hora: 11 })];
+    expect(casarResposta(resposta({ conta: '1234567', email: null }), [a, b])).toEqual({ tipo: 'ambigua', candidatos: [a, b] });
+  });
+});

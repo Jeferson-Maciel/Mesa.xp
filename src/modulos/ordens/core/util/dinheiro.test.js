@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatarFinanceiro, lerFinanceiro } from './dinheiro.js';
+import { formatarFinanceiro, lerFinanceiro, porExtenso } from './dinheiro.js';
 
 describe('lerFinanceiro', () => {
   it('lê o padrão brasileiro completo', () => {
@@ -52,3 +52,42 @@ describe('formatarFinanceiro', () => {
     expect(formatarFinanceiro(null)).toBe('');
   });
 });
+
+describe('porExtenso', () => {
+  it('escreve valores redondos em reais', () => {
+    expect(porExtenso(50000)).toBe('Cinquenta mil reais');
+    expect(porExtenso(1000)).toBe('Mil reais');
+    expect(porExtenso(100)).toBe('Cem reais');
+    expect(porExtenso(1)).toBe('Um real');
+    expect(porExtenso(1000000)).toBe('Um milhão de reais');
+  });
+
+  it('escreve valores com centavos', () => {
+    expect(porExtenso(45023.17)).toBe('Quarenta e cinco mil e vinte e três reais e dezessete centavos');
+    expect(porExtenso(1234.5)).toBe('Mil duzentos e trinta e quatro reais e cinquenta centavos');
+    expect(porExtenso(0.5)).toBe('Cinquenta centavos');
+  });
+
+  // O "e" entre as casas, como se lê: antes de um grupo menor que 100 ou de uma centena redonda.
+  it('o "e" entre mil, milhão e o resto, como se fala', () => {
+    expect(porExtenso(1100)).toBe('Mil e cem reais');
+    expect(porExtenso(2300)).toBe('Dois mil e trezentos reais');
+    expect(porExtenso(2340)).toBe('Dois mil trezentos e quarenta reais');
+    expect(porExtenso(1200000)).toBe('Um milhão e duzentos mil reais');
+    expect(porExtenso(1250000)).toBe('Um milhão duzentos e cinquenta mil reais');
+    expect(porExtenso(2000050)).toBe('Dois milhões e cinquenta reais');
+    expect(porExtenso(1001000)).toBe('Um milhão e mil reais');
+  });
+
+  it('os centavos pelo valor arredondado: 0,999 é um real, não "cem centavos"', () => {
+    expect(porExtenso(0.999)).toBe('Um real');
+    expect(porExtenso(10.01)).toBe('Dez reais e um centavo');
+  });
+
+  it('devolve vazio para valores nulos ou inválidos', () => {
+    expect(porExtenso(null)).toBe('');
+    expect(porExtenso(0)).toBe('');
+    expect(porExtenso(-50)).toBe('');
+  });
+});
+

@@ -2,7 +2,7 @@ import { analisarTicker, temFormatoDeTicker } from '../core/validate/ticker.js';
 import { fundoPeloTicker, procurarFundo } from '../core/validate/fundo.js';
 import { pedidoDeTesouro } from '../core/tesouro/tesouro.js';
 import { formatarCotas } from '../core/secundario/venda.js';
-import { formatarFinanceiro, lerFinanceiro } from '../core/util/dinheiro.js';
+import { formatarFinanceiro, lerFinanceiro, porExtenso } from '../core/util/dinheiro.js';
 import { renderCliente } from './cliente.js';
 import { esc, renderSaidas } from './saidas.js';
 
@@ -248,7 +248,11 @@ const faixaDeResumo = (solicitacao) => {
     // Quando o financeiro não cobre a cesta inteira, o total diz de quantas ordens ele é —
     // um total parcial apresentado como total seria uma conferência contra o número errado.
     const cobertura = ordensComFinanceiro < ativos ? ` de ${ordensComFinanceiro} ordens` : '';
-    fichas.push(`<span class="ficha valor">${formatarFinanceiro(financeiro)}${cobertura}</span>`);
+    const extenso = porExtenso(financeiro);
+    fichas.push(`<span class="ficha valor" title="${esc(extenso)}">${formatarFinanceiro(financeiro)}${cobertura}</span>`);
+    if (extenso) {
+      fichas.push(`<span class="ficha ficha-extenso" title="Conferência anti-fat finger: valor por extenso">${esc(extenso)}</span>`);
+    }
   }
 
   return `<div class="resumo">${fichas.join('')}</div>`;

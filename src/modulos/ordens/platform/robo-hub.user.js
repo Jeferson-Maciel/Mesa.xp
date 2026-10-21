@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.10.0
+// @version      1.11.0
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
 // @match        https://outlook.cloud.microsoft/*
 // @match        https://outlook.office.com/*
 // @match        https://outlook.office365.com/*
+// @match        https://outlook.live.com/*
 // @match        file:///*/mesa-xp/dist/index.html
 // @match        http://localhost/*
 // @match        http://127.0.0.1/*
@@ -118,7 +119,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.10.0';
+  const VERSAO = '1.11.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -1191,8 +1192,8 @@
 
   /* ── No e-mail novo do Outlook (1.5.0) ─────────────────────────────────────────────── */
 
-  // O Outlook na web: o endereço novo do Microsoft 365 e os dois antigos.
-  const ehOOutlook = () => /^outlook\.(cloud\.microsoft|office\.com|office365\.com)$/.test(location.hostname);
+  // O Outlook na web: o endereço novo do Microsoft 365, os dois antigos e o live.com.
+  const ehOOutlook = () => /^outlook\.(cloud\.microsoft|office\.com|office365\.com|live\.com)$/.test(location.hostname);
 
   /*
    * O corpo do e-mail que a Mesa abriu, trocado pelo HTML. Só age:
@@ -1292,8 +1293,8 @@
   const PREFIXO_DE_RESPOSTA = /^\s*(?:(?:re|res|resp|enc|fw|fwd|tr|aw|wg)\s*:\s*)+/i;
   // A conta do e-mail citado na resposta: "na conta XP 1234567". A prévia da linha traz o começo do
   // e-mail original, e é por ela que a Mesa liga a resposta ao pedido certo (1.9.1).
-  const CONTA_CITADA = /conta\s+XP\s*:?\s*(\d{5,9})/i;
-  const HORA_DE_HOJE = /^\d{1,2}:\d{2}$/;
+  const CONTA_CITADA = /conta\s+XP(?:\s*n[º°o]?)?\s*:?\s*(\d{5,9})/i;
+  const HORA_DE_HOJE = /^(?:(?:[01]?\d|2[0-3]):[0-5]\d|\d{1,2}:[0-5]\d\s*(?:AM|PM))$/i;
   const ENDERECO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // Um resumo curto e estável de um texto, para a identidade de uma resposta: a Mesa guarda os ids
   // das respostas que a pessoa disse não serem de pedido, e o id não pode levar o nome de ninguém.
@@ -1321,45 +1322,102 @@
     let mandouEm = 0;
     let mexeu = true;
 
+    const normalizarHora = (texto) => {
+      const t = String(texto ?? '').replace(/[\u00A0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+      const m24 = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(t);
+      if (m24) return `${m24[1].padStart(2, '0')}:${m24[2]}`;
+      const m12 = /^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i.exec(t);
+      if (m12) {
+        let h = Number(m12[1]);
+        const isPM = m12[3].toUpperCase() === 'PM';
+        if (isPM && h < 12) h += 12;
+        if (!isPM && h === 12) h = 0;
+        return `${String(h).padStart(2, '0')}:${m12[2]}`;
+      }
+      return null;
+    };
+
     const lerLinha = (item) => {
-      const linhas = String(item.innerText || '')
+      const textoLimpo = String(item.innerText || '').replace(/[\u00A0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ');
+      const linhas = textoLimpo
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean);
       const iAssunto = linhas.findIndex((l) => ASSUNTO_DE_PEDIDO.test(l));
-      if (iAssunto < 0) return null;
-      const hora = linhas.find((l) => HORA_DE_HOJE.test(l));
+      const conta = (String(item.textContent || '').match(CONTA_CITADA) || [])[1] || null;
+      if (iAssunto < 0 && !conta) return null;
+
+      let hora = null;
+      for (const l of linhas) {
+        const h = normalizarHora(l);
+        if (h) {
+          hora = h;
+          break;
+        }
+      }
       if (!hora) return null;
-      const email = [...item.querySelectorAll('[title]')].map((el) => el.getAttribute('title').trim()).find((t) => ENDERECO.test(t)) || null;
+
+      const email =
+        [...item.querySelectorAll('[title], [data-hovercard-id], [data-email]')].map((el) => {
+          const val = (el.getAttribute('title') || el.getAttribute('data-hovercard-id') || el.getAttribute('data-email') || '').trim();
+          if (ENDERECO.test(val)) return val;
+          const m = val.match(/[^\s<@]+@[^\s>@]+\.[^\s>@]+/);
+          return m && ENDERECO.test(m[0]) ? m[0] : null;
+        }).find(Boolean) || null;
+
+      const linhaAssunto = iAssunto >= 0 ? linhas[iAssunto] : 'Confirmação de ordem';
+      const indiceFim = iAssunto >= 0 ? iAssunto : 2;
+
       // O remetente é a última linha antes do assunto que não é hora: antes dele, a linha mostra as
       // iniciais do avatar e um ícone (uma ou duas letras).
       const de =
         linhas
-          .slice(0, iAssunto)
+          .slice(0, indiceFim)
           .reverse()
-          .find((l) => !HORA_DE_HOJE.test(l) && l.length > 2) || null;
-      const previa = linhas
-        .slice(iAssunto + 1)
-        .filter((l) => !HORA_DE_HOJE.test(l))
+          .find((l) => !normalizarHora(l) && l.length > 2) || null;
+      const previa = (iAssunto >= 0 ? linhas.slice(iAssunto + 1) : linhas)
+        .filter((l) => !normalizarHora(l))
         .join(' ')
         .slice(0, 280);
-      // A conta, do texto inteiro da linha: a prévia pode estar cortada na tela.
-      const conta = (String(item.textContent || '').match(CONTA_CITADA) || [])[1] || null;
-      const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhas[iAssunto]}|${hora}`;
-      return { id: 'r' + resumo(chave), de, email, assunto: linhas[iAssunto], previa, hora, conta, prefixo: PREFIXO_DE_RESPOSTA.test(linhas[iAssunto]) };
+      const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhaAssunto}|${hora}`;
+      return { id: 'r' + resumo(chave), de, email, assunto: linhaAssunto, previa, hora, conta, prefixo: PREFIXO_DE_RESPOSTA.test(linhaAssunto) };
     };
 
-    const olhar = () => {
+    const acharItens = () => {
+      const porConvid = [...document.querySelectorAll('div[data-convid]')];
+      if (porConvid.length > 0) return porConvid;
+      const listas = [
+        ...document.querySelectorAll(
+          '[role="listbox"], [role="treegrid"], [role="feed"], [role="grid"], [aria-label*="mensagem" i], [aria-label*="message" i]'
+        )
+      ];
+      if (listas.length > 0) {
+        const itens = listas.flatMap((l) => [...l.querySelectorAll('[role="option"], [role="row"], div[data-convid]')]);
+        if (itens.length > 0) return itens;
+      }
+      return [...document.querySelectorAll('[role="option"]')];
+    };
+
+    const temListaDeVerdade = (itens) => {
+      if (itens.length > 0) return true;
+      return (
+        document.querySelectorAll(
+          '[role="listbox"], [role="treegrid"], [role="feed"], [role="grid"], [aria-label*="mensagem" i], [aria-label*="message" i]'
+        ).length > 0
+      );
+    };
+
+    const olhar = (forcado = false) => {
       const vigia = GM_getValue('vigiaOutlook', null);
       if (!vigia || Date.now() > vigia.ate) return;
-      const listas = [...document.querySelectorAll('[role="listbox"]')].filter((l) => l.querySelector('[role="option"]'));
-      const itens = listas.flatMap((l) => [...l.querySelectorAll('[role="option"]')]);
+      const itens = acharItens();
+      const listaPresente = temListaDeVerdade(itens);
       const respostas = itens.map(lerLinha).filter(Boolean);
       const agora = JSON.stringify(respostas);
-      if (agora === ultima && Date.now() - mandouEm < 60 * 1000) return;
+      if (!forcado && agora === ultima && Date.now() - mandouEm < 60 * 1000) return;
       ultima = agora;
       mandouEm = Date.now();
-      GM_setValue('outlookVigia', { em: Date.now(), lista: listas.length > 0, itens: itens.length, respostas });
+      GM_setValue('outlookVigia', { em: Date.now(), lista: listaPresente, itens: itens.length, respostas });
     };
 
     // A lista muda (mensagem nova, a pessoa troca de pasta): olha logo, no máximo uma vez a cada 2 s.
@@ -1372,8 +1430,8 @@
         olhar();
       }
     }, 2000);
-    // A Mesa acabou de pedir (um e-mail acabou de sair): olha já.
-    GM_addValueChangeListener('vigiaOutlook', () => olhar());
+    // A Mesa acabou de pedir (um e-mail acabou de sair, ou a Mesa recarregou): olha e responde já (forcado).
+    GM_addValueChangeListener('vigiaOutlook', () => olhar(true));
     olhar();
   };
 
@@ -1642,9 +1700,15 @@
 
   if (ehOHub()) naAbaDoHub();
   else if (ehAMesa()) naAbaDaMesa();
-  else if (ehOOutlook())
-    document.addEventListener('DOMContentLoaded', () => {
+  else if (ehOOutlook()) {
+    const iniciarOutlook = () => {
       naAbaDoOutlook();
       naCaixaDoOutlook();
-    });
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', iniciarOutlook);
+    } else {
+      iniciarOutlook();
+    }
+  }
 })();

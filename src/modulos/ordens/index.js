@@ -1344,6 +1344,28 @@ export const iniciarOrdens = (secao) => {
     render();
   });
 
+  const painelPresets = $('formatos-presets');
+  if (painelPresets) {
+    painelPresets.addEventListener('click', (e) => {
+      const btn = e.target.closest('.formato-preset-btn');
+      if (!btn) return;
+      const preset = btn.dataset.preset;
+      const caixas = document.querySelectorAll('#formatos input');
+      if (preset === 'padrao') {
+        for (const c of caixas) c.checked = c.value === 'email' || c.value === 'lote';
+      } else if (preset === 'auditoria') {
+        for (const c of caixas) c.checked = c.value === 'auditoria';
+      } else if (preset === 'twap') {
+        for (const c of caixas) c.checked = c.value === 'twap';
+      } else if (preset === 'todos') {
+        for (const c of caixas) c.checked = true;
+      } else if (preset === 'limpar') {
+        for (const c of caixas) c.checked = false;
+      }
+      $('formatos').dispatchEvent(new Event('change'));
+    });
+  }
+
   /* ── Entrada ──────────────────────────────────────────────────────────────────────────── */
 
   entrada.addEventListener('input', () => {

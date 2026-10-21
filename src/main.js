@@ -22,6 +22,7 @@ import { ligarBusca } from './shell/busca.js';
 import { ligarRelogio } from './shell/relogio.js';
 import { esc } from './ui/html.js';
 import { ligarBotaoDeTema } from './ui/tema.js';
+import { ligarBotaoDeSom } from './ui/avisos.js';
 
 /**
  * A casca: tema, abas e o início de cada ferramenta.
@@ -39,6 +40,7 @@ const falhar = (id, secao, erro) => {
 };
 
 ligarBotaoDeTema(document.getElementById('btn-tema'));
+ligarBotaoDeSom(document.getElementById('btn-som'));
 ligarRelogio();
 ligarBusca();
 

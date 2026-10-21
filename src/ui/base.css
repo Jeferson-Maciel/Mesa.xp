@@ -314,8 +314,8 @@ body {
   font-family: var(--fonte);
   font-size: 15px;
   line-height: 1.55;
-  /* Números alinhados em coluna em todo lugar: taxas, quantidades, contagens. */
-  font-variant-numeric: tabular-nums;
+  /* Números alinhados em coluna em todo lugar: taxas, quantidades, contagens e zero cortado anti-ambiguidade. */
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition: background-color var(--t-lento) var(--curva), color var(--t-lento) var(--curva),
@@ -379,8 +379,12 @@ h3 {
   display: none !important;
 }
 
-button {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
 }
 
 /* ── Janelas (<dialog>) ─────────────────────────────────────────────────────────────────
@@ -413,7 +417,8 @@ dialog:not([open]) {
 
 dialog::backdrop {
   background: var(--veu);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   transition: opacity var(--t-lento) var(--curva), overlay var(--t-lento) allow-discrete,
     display var(--t-lento) allow-discrete;
 }
@@ -681,6 +686,58 @@ dialog:not([open])::backdrop {
     background-position: -50% 0;
   }
 }
+
+/* ── Barra de rolagem institucional (fina, discreta e integrada ao tema) ─────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--borda-forte) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--borda-forte);
+  border-radius: var(--r-pilula);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--acento);
+}
+
+/* ── Flash visual de delta (cotações e dados atualizados em tempo real) ──────────────── */
+@keyframes flash-delta-positivo {
+  0% {
+    background-color: color-mix(in srgb, var(--positivo) 32%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes flash-delta-negativo {
+  0% {
+    background-color: color-mix(in srgb, var(--negativo) 32%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.delta-positivo {
+  animation: flash-delta-positivo 1.8s var(--curva-saida) both;
+}
+
+.delta-negativo {
+  animation: flash-delta-negativo 1.8s var(--curva-saida) both;
+}
+
 
 /* ── Movimento reduzido ─────────────────────────────────────────────────────────────────
    Quem pediu menos movimento no sistema recebe a interface sem nenhum. */

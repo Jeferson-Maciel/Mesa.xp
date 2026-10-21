@@ -98,7 +98,13 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     guarda o remetente (a última linha antes do assunto com mais de duas letras: antes dele vêm um
     ícone e as iniciais do avatar), o e-mail (do `title` do remetente), o assunto, a prévia, a hora e
     **a conta citada** (1.9.1: "na conta XP 1234567", do começo do e-mail original que a prévia traz),
-    com um id que é um resumo, sem nome. Não clica, não rola, não abre e-mail nem marca como lido; um teste confere que o
+    com um id que é um resumo, sem nome. **Desde a 1.11.0** (o Antigravity, a pedido do usuário em
+    21/10/2026, depois de o selo ficar âmbar com a caixa aberta), também a linha **sem "Confirmação"
+    no assunto que cita "conta XP <n>"** — o usuário decidiu: a resposta pode vir sem o assunto, e o
+    que vale é o cliente responder; a hora em 24 h ou em AM/PM, sem os espaços invisíveis; a lista
+    achada pelo `data-convid` das conversas, ou por `listbox`, `grid`, `treegrid` e `feed`; o
+    `outlook.live.com`; responde na hora quando a Mesa pede (sem esperar o minuto); e começa mesmo
+    se a página já tinha carregado quando o Tampermonkey a pegou. Não clica, não rola, não abre e-mail nem marca como lido; um teste confere que o
     trecho não tem clique, foco, rolagem nem evento. As respostas passam pelo armazenamento do
     Tampermonkey e saem dele assim que a Mesa as recebe; o `verificar` confere, numa caixa de entrada
     de mentira, que a outra mensagem e a resposta antiga nunca passam por ele;

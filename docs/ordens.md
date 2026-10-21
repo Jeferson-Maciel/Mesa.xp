@@ -308,6 +308,13 @@ literais, e um caractere fora do lugar quebra a colagem no Excel ou o padrão do
   compra ou de venda daquele fundo para a conta, pela rota do próprio Hub (a conta no caminho, nunca
   num parâmetro), numa aba nova da pessoa.
 - **O pedido repetido de hoje e a conta nova**, vindos da Fila do dia: em [`fila.md`](fila.md).
+- **Os atalhos de formato** (o Antigravity, 21/10/2026): acima dos formatos, ⚡ Padrão (Ordem por
+  e-mail + Lote Simples), 📊 Auditoria (E-mail em tabela), ⏱️ TWAP, Todos e Limpar — marcam as
+  caixas, como o clique em cada uma.
+- **O valor por extenso** (o Antigravity, contra o zero a mais): na faixa de resumo, o total em R$
+  escrito por extenso (`porExtenso`, em `core/util/dinheiro.js`), com o "e" entre as casas como se lê
+  ("mil e cem", "dois mil trezentos e quarenta", "um milhão e duzentos mil") e os centavos pelo valor
+  arredondado. Só para ler: não entra em saída nenhuma.
 
 ## Arquitetura
 

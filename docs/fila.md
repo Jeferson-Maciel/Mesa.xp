@@ -165,6 +165,11 @@ src/comum/fila/respostas.js    o que é resposta a pedido, e o cartão de cada r
 src/modulos/fila/vigiaOutlook.js  o vigia, do lado da Mesa: pede ao robô, casa, grava, avisa
 ```
 
+- **O que é resposta** (robô 1.11.0): a linha de hoje com "Confirmação" no assunto, ou que cita
+  "conta XP <n>" — a resposta do cliente pode vir sem o assunto. A Mesa ignora a linha cuja prévia
+  começa pelo "Prezado(a)" de todo modelo do Ordens: é o e-mail da própria mesa (a pasta Itens
+  Enviados aberta), que citaria a conta e casaria como resposta. O preço: a resposta do cliente que
+  não escreve nada acima do e-mail citado também fica de fora; esse cartão se aprova pelo Aprovou.
 - **Quando olha**: o vigia começa com a página. A cada minuto, e a cada mudança na Fila, se há cartão
   aguardando o cliente ou respondido (de hoje, ou aberto dos últimos 7 dias), pede ao robô que olhe a
   caixa de entrada pelos próximos 3 minutos. O robô olha quando a lista muda (no máximo a cada 2 s) e

@@ -117,9 +117,11 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
 - **só clica no que está numa lista fechada** (`clicarSo`, mais dois rótulos fixos que a tarefa
   passa: a aba "Tesouro Direto" e o resultado "Conta XP: <a conta do pedido>"): nunca Próximo, Enviar,
   Confirmar ou Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu e, na
-  caixa de entrada (1.8.0), só lê a lista de mensagens: das outras, o assunto; dos e-mails de
-  confirmação de hoje, o remetente, o e-mail, o assunto, a prévia, a hora e a conta citada (1.9.1). Não clica, não
-  abre e-mail e só olha enquanto a Mesa tem pedido esperando o cliente;
+  caixa de entrada (1.8.0), só lê a lista de mensagens: dos e-mails de hoje com "Confirmação" no
+  assunto **ou que citam "conta XP <n>"** (1.11.0, decidido com o usuário em 21/10/2026: a resposta do
+  cliente pode vir sem o assunto — o que vale é o cliente responder), o remetente, o e-mail, o assunto,
+  a prévia, a hora e a conta citada. Não clica, não abre e-mail e só olha enquanto a Mesa tem pedido
+  esperando o cliente;
 - **a aba que ele abre para a pessoa é dela** (1.10.0, o botão Boleta da Fila): à vista, ele só a leva
   até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche a boleta (só a busca de
   cliente, com a conta do pedido), não clica em Próximo;
@@ -176,7 +178,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.303 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.308 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

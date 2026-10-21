@@ -22,7 +22,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.303 testes (`npm test`), o build e 318
+- A última verificação passou inteira (21/10, noite): 1.308 testes (`npm test`), o build e 318
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -31,7 +31,29 @@ cada sessão.
   a condição.
 - **De 20 a 21/10 foram 38 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo: agora a 1.10.0, e recarregar a aba do Outlook).
+  (os colegas precisam copiar o robô de novo: agora a 1.11.0, e recarregar a aba do Outlook).
+
+## 21/10 (noite): o trabalho do Antigravity, revisado e guardado
+
+O usuário pediu ao Antigravity, a partir das 17h, um relatório de interface e depois três "fases"
+visuais, e por fim o conserto do Outlook ("pesquise bastante sobre o Outlook e o Tampermonkey"). Ele
+não fez commit; revisado aqui e guardado num commit dele, com os consertos:
+
+- **Robô 1.11.0** (o selo âmbar com a caixa aberta): a lista achada pelo `data-convid` e por outros
+  papéis (`grid`, `treegrid`, `feed`); a hora em AM/PM e sem espaços invisíveis; o e-mail também
+  do `data-hovercard-id`; o `outlook.live.com`; a resposta na hora ao pedido da Mesa; o início mesmo
+  com a página já carregada; e **a linha que cita "conta XP <n>" sem "Confirmação" no assunto** —
+  conferido com o usuário, que quis assim ("as respostas acredito que venham sem assunto; o que vale
+  mesmo é o cliente responder"). As regras do robô no `CLAUDE.md` foram atualizadas.
+- **Ordens**: atalhos de formato (⚡ Padrão, 📊 Auditoria, ⏱️ TWAP, Todos, Limpar) e o total em R$ por
+  extenso na faixa de resumo (corrigido: "mil cem reais" → "mil e cem reais", e 0,999 não vira "cem
+  centavos").
+- **Visual**: números tabulares com o zero cortado, barra de rolagem fina, luz no topo dos cartões, a
+  caixa de saída afundada, a borda dos tickers e o degradê do deságio nos Fundos, e o **som** nos
+  avisos, com o botão no topo. Consertado: as sombras `rgba` literais viraram token; o desfoque de 16 px
+  do histórico e o de 20 px da busca saíram (pesam no PC fraco); o som não pode mais impedir a Mesa de
+  abrir quando o armazenamento está bloqueado.
+- A ideia do usuário para o "não" do cliente (avisar o assessor) foi para o `ROADMAP.md` (F22).
 
 ## 21/10 (fim da noite): revisão, bugs e desempenho
 
@@ -218,7 +240,13 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robôs 1.9.0 e 1.10.0)
+### A testar no Hub e no Outlook de verdade (robôs 1.9.0, 1.10.0 e 1.11.0)
+
+**O Outlook (1.11.0)**: copiar o robô novo, **recarregar a aba do Outlook** e a da Mesa. Com um pedido
+esperando o cliente, o selo da Fila deve ficar verde ("vendo as respostas") em segundos. Se ficar âmbar,
+no Console da aba do Outlook (F12): quantos `[data-convid]`, `[role="option"]` e `[role="listbox"]`
+há — só os números, nada de texto de e-mail. Responder a um e-mail de teste sem mudar o assunto, e
+outro mudando o assunto: os dois devem chegar à Fila pela conta citada.
 
 **A boleta pela Fila (1.10.0)**: com um pedido de fundo aprovado na Fila, o botão **Boleta** deve abrir
 o Hub numa aba nova, à vista, ir à Prateleira e, carregada, à boleta do fundo com o cliente da conta —

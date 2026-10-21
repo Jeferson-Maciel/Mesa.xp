@@ -172,6 +172,19 @@
   transform: rotate(0) scale(1);
 }
 
+/* Alternância de ícone do botão de som: ligado vs mudo */
+#btn-som[data-som='desligado'] .icone-som-ligado,
+#btn-som:not([data-som='desligado']) .icone-som-mudo {
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+#btn-som[data-som='desligado'] .icone-som-mudo,
+#btn-som:not([data-som='desligado']) .icone-som-ligado {
+  opacity: 1;
+  transform: scale(1);
+}
+
 /* ── Abas ───────────────────────────────────────────────────────────────────────────── */
 
 .abas {

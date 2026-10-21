@@ -89,6 +89,18 @@
           <span id="contador-historico" class="counter-badge">0</span>
         </button>
 
+        <button id="btn-som" class="header-btn icone" type="button" aria-label="Alternar som">
+          <svg class="icone-som-ligado" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+          <svg class="icone-som-mudo" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <line x1="22" y1="9" x2="16" y2="15" />
+            <line x1="16" y1="9" x2="22" y2="15" />
+          </svg>
+        </button>
+
         <button id="btn-tema" class="header-btn icone" type="button" aria-label="Alternar tema">
           <svg class="icone-sol" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4.2" />
@@ -170,6 +182,14 @@
             <div class="panel-header-row">
               <h2 class="panel-title">Formatos de saída</h2>
               <span id="deteccao" class="meta-counter"></span>
+            </div>
+
+            <div class="formatos-presets" id="formatos-presets" role="group" aria-label="Presets rápidos">
+              <button type="button" class="formato-preset-btn" data-preset="padrao" title="Ordem por e-mail + Lote Simples">⚡ Padrão</button>
+              <button type="button" class="formato-preset-btn" data-preset="auditoria" title="E-mail em tabela">📊 Auditoria</button>
+              <button type="button" class="formato-preset-btn" data-preset="twap" title="Lote TWAP">⏱️ TWAP</button>
+              <button type="button" class="formato-preset-btn" data-preset="todos" title="Selecionar todos os formatos">Todos</button>
+              <button type="button" class="formato-preset-btn" data-preset="limpar" title="Limpar formatos">Limpar</button>
             </div>
 
             <div class="formatos" id="formatos">

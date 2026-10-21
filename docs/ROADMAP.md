@@ -71,6 +71,7 @@ Ideias, com o custo grosseiro:
 | F16 | Cestas favoritas, depois de o uso mostrar quais se repetem | médio |
 | F20 | Atalhos visíveis (`Ctrl+Enter`, `Alt+H` só estão no `title`) | baixo |
 | F21 | Segmentados como `radiogroup`: duas paradas de tabulação por linha em vez de seis | baixo |
+| F22 | Fila: o cliente respondeu "não" → abrir no Outlook o e-mail ao assessor, preenchido, para a pessoa enviar (o usuário, 21/10/2026: "se o cliente responder não, aí notificamos o assessor"). Quem lê "sim" ou "não" é o operador | médio |
 
 ## Robô do Hub e secundário
 

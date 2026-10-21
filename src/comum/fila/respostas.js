@@ -41,10 +41,22 @@ const partesDoNome = (nome) => normalizar(nome).split(' ').filter((p) => p.lengt
  * (data, dia da semana) não é de hoje: `null`.
  */
 export const momentoDaHora = (hora, agora = Date.now()) => {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hora ?? '').trim());
-  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  const t = String(hora ?? '').trim();
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM))?$/i.exec(t);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  if (min > 59) return null;
+  if (m[3]) {
+    const isPM = m[3].toUpperCase() === 'PM';
+    if (h < 1 || h > 12) return null;
+    if (isPM && h < 12) h += 12;
+    if (!isPM && h === 12) h = 0;
+  } else if (h > 23) {
+    return null;
+  }
   const d = new Date(agora);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), Number(m[1]), Number(m[2])).getTime();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, min).getTime();
 };
 
 /**

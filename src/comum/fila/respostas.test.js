@@ -34,6 +34,9 @@ describe('o que é resposta a um pedido', () => {
 
   it('a hora do Outlook vira o momento de hoje; data ou dia da semana não é de hoje', () => {
     expect(momentoDaHora('10:42', em(15))).toBe(em(10, 42));
+    expect(momentoDaHora(' 10:42 ', em(15))).toBe(em(10, 42));
+    expect(momentoDaHora('2:42 PM', em(15))).toBe(em(14, 42));
+    expect(momentoDaHora('11:15 AM', em(15))).toBe(em(11, 15));
     expect(momentoDaHora('ter 20/10', em(15))).toBeNull();
     expect(momentoDaHora('25:00', em(15))).toBeNull();
   });

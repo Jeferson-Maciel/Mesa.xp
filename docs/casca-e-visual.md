@@ -173,6 +173,15 @@ Operacional, e na Fila (dia, pasta e os pedidos dela) e nos Fundos (a Prateleira
 redesenham a cada 30 s e a cada letra da busca, e `entrando` (`encenar` no `index.js` do Ordens) numa análise nova. Animação nova de
 entrada vai atrás dessas classes, nunca solta no elemento que é redesenhado.
 
+**Som** (o Antigravity, 21/10/2026): cada aviso toca um bipe curto, sintetizado (Web Audio, sem
+arquivo de som) — dois tons subindo no comum, um grave no erro. O botão de alto-falante no topo
+liga e desliga; a preferência fica no `localStorage` (`xp_som`), e o armazenamento bloqueado não
+impede a Mesa de abrir. O navegador só deixa tocar depois de a pessoa ter clicado na página.
+
+**Desfoque e sombra** pesam no PC de escritório: o `backdrop-filter` refaz a página inteira por trás a
+cada quadro. Fica no véu das janelas (6 px); o painel do histórico e a busca têm fundo sólido. Sombra
+sempre por token (`--sombra`, `--sombra-media`, `--sombra-alta`), nunca `rgba` literal.
+
 **Ícones** são SVG de traço em máscara (`--i-*` em `base.css`), pintados por `currentColor` ou pelo
 token, e vão em pseudo-elementos. Nos botões isso não é detalhe: o texto deles é conferido
 (`"Copiar mensagem"`, `"Copiada"`, `"Copiado"`), e um `<svg>` dentro mudaria o `textContent`.

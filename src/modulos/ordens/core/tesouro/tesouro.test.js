@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { acharTitulo, especieDoNome, lerPosicoesDoHub, lerTitulosDoHub, noHorarioDoTesouro, pedidoDeTesouro, resgateDaOrdem, semOTitulo, tesouroDaOrdem } from './tesouro.js';
-import { ehDiaUtil } from '../util/diasUteis.js';
+import { ehDiaUtil } from '../../../../comum/diasUteis.js';
 
 // A lista como o Hub a mandou em 20/10/2026 (dados de título, públicos), um de cada espécie.
 const DO_HUB = [

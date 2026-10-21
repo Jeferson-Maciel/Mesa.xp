@@ -261,7 +261,7 @@ Ele cola no Outlook na web, que dá ao que chega sem fonte a fonte da mensagem; 
 declarava Aptos e pintava o cabeçalho de cinza, e foi recusada por destoar do resto do e-mail.
 
 **Abrir no Outlook** (07/10/2026, pedido do operador) fica ao lado do Copiar nos dois e-mails e abre
-um e-mail novo no Outlook na web, com o assunto **Confirmação de ordem** (`platform/outlook.js`) e,
+um e-mail novo no Outlook na web, com o assunto **Confirmação de ordem** (`src/comum/outlook.js`) e,
 com o robô e a planilha dos assessores, o cliente no Para e o assessor em cópia (ver "O cliente e o
 assessor"). É o endereço de compor do Outlook na web, não um `mailto:` solto: este abriria o programa
 de e-mail padrão do Windows, e o operador usa o Outlook na web. Conferido no Outlook da mesa em 07/10:

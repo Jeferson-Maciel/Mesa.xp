@@ -38,19 +38,26 @@
       <nav class="abas" aria-label="Ferramentas">
         <span class="abas-indicador" aria-hidden="true"></span>
         <a class="aba" href="#ordens" data-aba="ordens" title="Ordens (Alt + 1)"
-          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5" /></svg>Ordens</a
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5" /></svg><span class="aba-nome">Ordens</span></a
         >
-        <a class="aba" href="#rendafixa" data-aba="rendafixa" title="Renda Fixa (Alt + 2)"
-          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5 9 11.5l4 4 8-8M15 7.5h6v6" /></svg>Renda Fixa</a
+        <a class="aba" href="#fila" data-aba="fila" title="Fila do dia: o que espera o cliente e o que falta executar (Alt + 2)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="4.5" height="16" rx="1.5" /><rect x="9.75" y="4" width="4.5" height="11" rx="1.5" /><rect x="16" y="4" width="4.5" height="7" rx="1.5" /></svg><span class="aba-nome">Fila</span><span
+            class="aba-contador"
+            data-contador="fila"
+            hidden
+          ></span></a
         >
-        <a class="aba" href="#calendario" data-aba="calendario" title="Calendário (Alt + 3)"
-          ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>Calendário</a
+        <a class="aba" href="#rendafixa" data-aba="rendafixa" title="Renda Fixa (Alt + 3)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5 9 11.5l4 4 8-8M15 7.5h6v6" /></svg><span class="aba-nome">Renda Fixa</span></a
         >
-        <a class="aba" href="#operacional" data-aba="operacional" title="Operacional: base de conhecimento da mesa (Alt + 4)"
-          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2.5zm0 0A2 2 0 0 0 7 21h12M9 7.5h6" /></svg>Operacional</a
+        <a class="aba" href="#calendario" data-aba="calendario" title="Calendário (Alt + 4)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg><span class="aba-nome">Calendário</span></a
         >
-        <a class="aba" href="#anotacoes" data-aba="anotacoes" title="Anotações: o seu bloco de notas, com lembretes (Alt + 5)"
-          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3H6.5A2 2 0 0 0 4.5 5v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8zM14.5 3v5h5M8.5 13h7M8.5 17h4" /></svg>Anotações<span
+        <a class="aba" href="#operacional" data-aba="operacional" title="Operacional: base de conhecimento da mesa (Alt + 5)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2.5zm0 0A2 2 0 0 0 7 21h12M9 7.5h6" /></svg><span class="aba-nome">Operacional</span></a
+        >
+        <a class="aba" href="#anotacoes" data-aba="anotacoes" title="Anotações: o seu bloco de notas, com lembretes (Alt + 6)"
+          ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3H6.5A2 2 0 0 0 4.5 5v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8zM14.5 3v5h5M8.5 13h7M8.5 17h4" /></svg><span class="aba-nome">Anotações</span><span
             class="aba-contador"
             data-contador="anotacoes"
             hidden
@@ -181,6 +188,7 @@
           </div>
         </aside>
       </section>
+      <section id="modulo-fila" class="modulo" aria-label="Fila do dia" hidden></section>
       <section id="modulo-rendafixa" class="modulo" aria-label="Renda Fixa" hidden></section>
       <section id="modulo-calendario" class="modulo" aria-label="Calendário" hidden></section>
       <section id="modulo-operacional" class="modulo" aria-label="Operacional" hidden></section>

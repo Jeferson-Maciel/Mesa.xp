@@ -7,12 +7,15 @@ adivinhado", as regras do robô, a verificação — e o mapa dos outros documen
 ## A casca
 
 ```
-index.html            a casca: topo com as abas e as cinco seções (a marcação do Ordens é estática)
+index.html            a casca: topo com as abas e uma seção por aba (a marcação do Ordens é estática)
 src/main.js           liga tema, abas e o início de cada ferramenta
-src/shell/abas.js     rota por hash e atalhos Alt+1 a Alt+5
-src/ui/               o que as abas dividem: tema, avisos de tela, escape de HTML, tokens e componentes
+src/shell/abas.js     rota por hash e atalhos Alt+1 em diante, na ordem de ABAS
+src/ui/               o que as abas dividem na tela: tema, avisos, escape de HTML, tokens e componentes
+src/comum/            o que dois módulos dividem fora da tela: dias úteis, horários de mercado, o Outlook,
+                      a Fila do dia (regras e IndexedDB), os serviços (a ponte do robô) e o "Anotar"
 src/dados/            a conexão única com o Supabase, a configuração e os erros dos repositórios
 src/modulos/ordens/       Assistente de Ordens
+src/modulos/fila/         Fila do dia: o pedido depois que o e-mail sai (no navegador)
 src/modulos/rendafixa/    RendaFixa Pro
 src/modulos/calendario/   Calendário de presença
 src/modulos/operacional/  base de conhecimento (a cópia do Slab)
@@ -24,15 +27,22 @@ docs/                 formatos de saída do Ordens, o roadmap e o contexto da ú
 scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda Fixa), verificar no navegador
 ```
 
-- **Rota por hash**: `#ordens`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
+- **Rota por hash**: `#ordens`, `#fila`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
   desconhecido abre o Ordens. A aba é o primeiro trecho do hash, e o resto é do módulo:
   `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no site (Vercel) e aberto do disco (`file://`).
-- **Alt+1 a Alt+5** troca a aba na hora, sem esperar o `hashchange` — senão a tecla seguinte vai para a
-  aba anterior. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
-- **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras quatro só na primeira
+- **Alt+1, Alt+2…**, na ordem da barra (`ABAS`), troca a aba na hora, sem esperar o `hashchange` —
+  senão a tecla seguinte vai para a aba anterior. Ctrl+Alt fica de fora: é assim que o AltGr chega no
+  Windows. Um teste lê o `index.html` e confere que a barra segue `ABAS` e que o `title` de cada aba
+  diz o Alt certo; o `verificar` calcula os atalhos de `ABAS` (`altDe`), e não os escreve à mão.
+- **A barra compacta** (21/10/2026, com a Fila): sete abas com nome não cabem numa linha abaixo de
+  ~1280px. Daí para baixo só a aba ativa mostra o nome, e as outras ficam no ícone — o nome segue no
+  leitor de tela e no `title`. A pílula desliza e muda de largura junto, e o topo continua com uma
+  linha só acima de 720px (o painel do Ordens gruda a 59px; o `verificar` confere a 1000px). No
+  celular as abas descem para a segunda linha, do mesmo jeito: a ativa com o nome, as outras no ícone.
+- **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras só na primeira
   vez que a aba abre. O código já está no arquivo (não há `import()` dinâmico) — o que espera é a
   inicialização, e é nela que Calendário e Operacional conectam ao banco. A exceção é o vigia dos
-  lembretes das Anotações, que começa com a página (ver Anotações).
+  lembretes das Anotações, que começa com a página (ver Anotações), e o contador da Fila do dia.
 - **Cada módulo sabe se está à vista pelo `hidden` da própria seção.** Os atalhos de teclado e o
   arrastar-e-soltar de um módulo só valem com a aba dele aberta: Ctrl+Enter na aba Renda Fixa não
   analisa o Ordens, e "m" na aba Ordens não troca o mercado do Renda Fixa. Ao trocar de aba, um
@@ -100,9 +110,13 @@ A ferramenta fica aberta o dia inteiro, e isso governa a paleta:
   4.5:1. Ao mexer nas cores, meça de novo — é fácil derrubar o secundário abaixo do mínimo.
 - **Saturação baixa no escuro.** Cor saturada sobre fundo escuro vibra na retina. Os tons do modo
   escuro são suavizados, não os do claro reaproveitados.
-- **Uma cor por aba — a pedra dela.** Safira no Ordens, água-marinha no Renda Fixa, ametista no
-  Calendário, turmalina no Operacional, prata nas Anotações (Argentum; neutra de propósito, para o
-  amarelo e o vermelho dos lembretes falarem); o ouro é a marca (o selo XP). A pedra fica em `--acento`
+- **Uma cor por aba — a pedra dela.** Safira no Ordens, kunzita na Fila do dia, peridoto na Prateleira
+  de fundos, água-marinha no Renda Fixa, ametista no Calendário, turmalina no Operacional, prata nas
+  Anotações (Argentum; neutra de propósito, para o amarelo e o vermelho dos lembretes falarem); o ouro
+  é a marca (o selo XP). As duas de 21/10/2026, medidas: a kunzita (289°) mora no único vão limpo do
+  círculo, entre a ametista (252°) e a turmalina (327°), e é da Fila, onde o âmbar e o vermelho dos
+  prazos têm de falar sozinhos; o peridoto (73°) é o ponto mais longe do âmbar (36°) e do verde (151°)
+  que sobrou. As quatro passam de 6:1 sobre o cartão e de 7:1 com o texto sobre elas, nos dois temas. A pedra fica em `--acento`
   (com `--acento-fundo`, `--acento-borda`, `--acento-sombra` e `--foco` derivados no mesmo
   elemento) e aparece na aba ativa, na ação principal (`.btn-primario`), no foco, no traço dos
   títulos de painel e no brilho do fundo. É ela que tira a tela do monocromático sem virar enfeite:

@@ -1,11 +1,11 @@
 /**
- * As cinco abas da Mesa XP: rota por hash, atalhos Alt+1 a Alt+5 e início preguiçoso.
+ * As abas da Mesa XP: rota por hash, atalhos Alt+1 em diante, na ordem da barra, e início preguiçoso.
  *
  * A rota vive no hash (`#ordens`, `#rendafixa`, `#calendario`) porque o mesmo arquivo roda de dois
  * jeitos: no site (Vercel) e aberto do disco (`file://`). Hash funciona igual nos dois, sem servidor, e
  * dá a cada ferramenta um link próprio para favoritar.
  *
- * Renda Fixa, Calendário, Operacional e Anotações só iniciam quando a aba abre pela primeira vez. O código já
+ * Fila, Renda Fixa, Calendário, Operacional e Anotações só iniciam quando a aba abre pela primeira vez. O código já
  * está no arquivo — o build é um arquivo só, sem `import()` dinâmico —, mas Calendário e
  * Operacional abrem conexão com o banco ao iniciar, e quem só gera ordens não tem por que conectar
  * a nada.
@@ -17,7 +17,7 @@
  * atalhos de teclado de uma ferramenta só valem com a aba dela aberta.
  */
 
-export const ABAS = ['ordens', 'rendafixa', 'calendario', 'operacional', 'anotacoes'];
+export const ABAS = ['ordens', 'fila', 'rendafixa', 'calendario', 'operacional', 'anotacoes'];
 
 export const ABA_PADRAO = 'ordens';
 
@@ -31,7 +31,7 @@ export const abaDoHash = (hash) => {
 };
 
 /**
- * Alt+1 a Alt+5, na ordem da barra. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
+ * Alt+1, Alt+2…, na ordem da barra. Ctrl+Alt fica de fora: é assim que o AltGr chega no Windows.
  *
  * @param {{ altKey: boolean, ctrlKey: boolean, metaKey: boolean, shiftKey: boolean, code?: string }} tecla
  * @returns {string|null}

@@ -750,6 +750,26 @@ export const validar = (solicitacao, formato) => {
     });
   }
 
+  // A Fila do dia (21/10/2026): o mesmo pedido colado duas vezes é um erro fácil num grupo corrido.
+  // O index.js anota em cada ordem o pedido igual de hoje que já saiu (mesma conta, ativo e
+  // operação); confirmar libera, porque pode ser um pedido novo de verdade.
+  const ESTADOS_NA_FILA = { enviado: 'aguardando o cliente', respondeu: 'o cliente respondeu', aprovado: 'aprovado', executado: 'executado' };
+  ordens.forEach((o, i) => {
+    if (!o.repetidoHoje) return;
+    const hora = new Date(o.repetidoHoje.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const lado = o.operacao === 'V' ? 'venda' : 'compra';
+    const situacao = ESTADOS_NA_FILA[o.repetidoHoje.estado] ?? o.repetidoHoje.estado;
+    diagnosticos.push(
+      bloqueio('repetido-hoje', `${o.ativo} (${lado}) já saiu hoje para esta conta, às ${hora} (${situacao}, na Fila do dia). Confirme se é um pedido novo.`, i)
+    );
+  });
+
+  // A conta que nunca passou por este navegador — nem no histórico, nem na Fila: um dígito trocado
+  // vira a conta de outro cliente. Só um aviso; o index.js só anota quando já conhece contas bastantes.
+  if (solicitacao.contaNova && conta) {
+    diagnosticos.push(aviso('conta-nova', `A conta ${conta} nunca apareceu neste navegador. Confira o número antes de enviar.`));
+  }
+
   if (formato === 'twap' && !horario) {
     diagnosticos.push(
       aviso('twap-sem-horario', 'TWAP sem horário informado: as colunas de hora saem vazias.')

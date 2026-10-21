@@ -2,8 +2,8 @@
  * Verificação no navegador: o que os testes do core não veem.
  *
  * Abre o `dist/index.html` via file:// no Chromium (Playwright) e confere:
- *   - as cinco abas, pelo clique, pelo hash e por Alt+1 a Alt+5, e os atalhos do Ordens presos à aba;
- *   - as cinco abas nos dois temas, a 1400px e a ~360px, sem rolagem horizontal e sem erro no console;
+ *   - as abas, pelo clique, pelo hash e por Alt+1 em diante, e os atalhos do Ordens presos à aba;
+ *   - as abas nos dois temas, a 1400px, 1000px e ~360px, sem rolagem horizontal e sem erro no console;
  *   - que nenhum seletor do CSS do Ordens pega elemento das outras abas;
  *   - Operacional em modo local: o texto de um post copiado e colado igual ao do Slab, editar,
  *     criar e excluir post (título com <img onerror> como texto), criar tópico, busca, link direto
@@ -35,6 +35,7 @@ import { basename, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { build } from 'vite';
+import { ABAS } from '../src/shell/abas.js';
 
 process.env.TZ = 'America/Sao_Paulo';
 
@@ -51,6 +52,8 @@ const ok = (condicao, mensagem) => {
   console.log(`${condicao ? 'ok ' : 'FALHOU'} ${mensagem}`);
 };
 const titulo = (texto) => console.log(`\n── ${texto}`);
+// O atalho de cada aba, na ordem da barra: uma aba nova no meio não desalinha o resto.
+const altDe = (aba) => `Alt+${ABAS.indexOf(aba) + 1}`;
 
 /* ── Preparação: build em modo local e a planilha sintética em .xlsx ─────────────────── */
 
@@ -121,14 +124,10 @@ try {
     const { pagina, contexto, erros } = await abrir();
     const visivel = () => pagina.evaluate(() => [...document.querySelectorAll('.modulo')].find((s) => !s.hidden)?.id);
     ok((await visivel()) === 'modulo-ordens', 'sem hash, abre no Ordens');
-    await pagina.keyboard.press('Alt+2');
-    ok((await visivel()) === 'modulo-rendafixa' && (await pagina.evaluate(() => location.hash)) === '#rendafixa', 'Alt+2 abre a Renda Fixa e muda o hash');
-    await pagina.keyboard.press('Alt+3');
-    ok((await visivel()) === 'modulo-calendario', 'Alt+3 abre o Calendário');
-    await pagina.keyboard.press('Alt+4');
-    ok((await visivel()) === 'modulo-operacional', 'Alt+4 abre o Operacional');
-    await pagina.keyboard.press('Alt+5');
-    ok((await visivel()) === 'modulo-anotacoes', 'Alt+5 abre as Anotações');
+    for (const aba of ABAS.slice(1)) {
+      await pagina.keyboard.press(altDe(aba));
+      ok((await visivel()) === `modulo-${aba}` && (await pagina.evaluate(() => location.hash)) === `#${aba}`, `${altDe(aba)} abre a aba ${aba} e muda o hash`);
+    }
     await pagina.click('.aba[data-aba="ordens"]');
     // O clique troca pelo hashchange, que chega logo depois.
     await pagina.waitForFunction(() => !document.getElementById('modulo-ordens').hidden, null, { timeout: 2000 }).catch(() => {});
@@ -149,20 +148,20 @@ try {
   {
     const { pagina, contexto } = await abrir();
     await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
-    await pagina.keyboard.press('Alt+2');
+    await pagina.keyboard.press(altDe('rendafixa'));
     await pagina.keyboard.press('Control+Enter');
     await pagina.keyboard.press('Alt+h');
-    await pagina.keyboard.press('Alt+1');
+    await pagina.keyboard.press(altDe('ordens'));
     ok((await pagina.$eval('#solicitacoes', (e) => e.children.length)) === 0, 'Ctrl+Enter na aba Renda Fixa não analisa o Ordens');
     ok(!(await pagina.$eval('#drawer-historico', (e) => e.classList.contains('open'))), 'Alt+H na aba Renda Fixa não abre o histórico do Ordens');
     await pagina.focus('#entrada');
     await pagina.keyboard.press('Control+Enter');
     ok((await pagina.$eval('#solicitacoes', (e) => e.children.length)) === 1, 'Ctrl+Enter na aba Ordens analisa');
     await pagina.keyboard.press('m');
-    await pagina.keyboard.press('Alt+2');
+    await pagina.keyboard.press(altDe('rendafixa'));
     ok(await pagina.$eval('[data-mercado="primario"]', (b) => b.classList.contains('ativo')), '"m" na aba Ordens não troca o mercado do Renda Fixa');
     await pagina.keyboard.press('m');
-    ok(await pagina.$eval('[data-mercado="secundario"]', (b) => b.classList.contains('ativo')), '"m" logo depois de Alt+2 já vale na Renda Fixa');
+    ok(await pagina.$eval('[data-mercado="secundario"]', (b) => b.classList.contains('ativo')), '"m" logo depois do atalho da Renda Fixa já vale nela');
     await contexto.close();
   }
 
@@ -208,8 +207,8 @@ try {
     await contexto.close();
   }
 
-  /* ── Três abas, dois temas, duas larguras ───────────────────────────────────────── */
-  titulo('Cinco abas × dois temas × 1400px e 360px (build em modo local)');
+  /* ── As abas, dois temas, três larguras ─────────────────────────────────────────── */
+  titulo('As abas × dois temas × 1400px, 1000px e 360px (build em modo local)');
   const ordensCss = readFileSync(join(raiz, 'src/modulos/ordens/ordens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const seletoresDoOrdens = [...new Set(
     ordensCss
@@ -222,7 +221,7 @@ try {
   )];
 
   for (const tema of ['escuro', 'claro']) {
-    for (const largura of [1400, 360]) {
+    for (const largura of [1400, 1000, 360]) {
       const { pagina, contexto, erros } = await abrir({ tema, largura });
       ok((await pagina.evaluate(() => document.documentElement.dataset.tema)) === tema, `${tema} ${largura}px: tema aplicado`);
 
@@ -244,15 +243,26 @@ try {
           .filter(Boolean)
       );
       ok(desalinhadas.length === 0, `${tema} ${largura}px: Ordens, controles de cada linha alinhados e borda inteira ${desalinhadas.length ? 'linhas ' + desalinhadas : ''}`);
+      // Acima de 720px o topo é uma linha só: o painel de entrada do Ordens gruda a 59px.
+      if (largura > 720) {
+        const alturaDoTopo = await pagina.$eval('.casca-topo', (t) => t.getBoundingClientRect().height);
+        ok(alturaDoTopo <= 60, `${tema} ${largura}px: o topo, com todas as abas, fica numa linha só (${Math.round(alturaDoTopo)}px)`);
+      }
 
-      await pagina.keyboard.press('Alt+2');
+      // O e-mail copiado entra na Fila do dia.
+      await pagina.locator('[data-copiar="email"]').first().click();
+      await pagina.keyboard.press(altDe('fila'));
+      await pagina.waitForSelector('.fl-cartao');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Fila do dia, com um cartão, sem rolagem lateral`);
+
+      await pagina.keyboard.press(altDe('rendafixa'));
       await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
       await pagina.waitForSelector('.rf-secao');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Renda Fixa, cartões, sem rolagem lateral`);
       await pagina.keyboard.press('v');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Renda Fixa, mensagem, sem rolagem lateral`);
 
-      await pagina.keyboard.press('Alt+3');
+      await pagina.keyboard.press(altDe('calendario'));
       await adicionarColaborador(pagina, 'Colaborador de Nome Bem Comprido Teste');
       await pagina.locator('.cal-dia').first().click();
       await pagina.check('[data-cal="presencial"]');
@@ -262,7 +272,7 @@ try {
       await pagina.click('[data-visao="historico"]');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Calendário, histórico, sem rolagem lateral`);
 
-      await pagina.keyboard.press('Alt+4');
+      await pagina.keyboard.press(altDe('operacional'));
       await pagina.waitForSelector('.op-grupo');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, início, sem rolagem lateral`);
       await pagina.click('.op-linha >> nth=0');
@@ -272,7 +282,7 @@ try {
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Operacional, editor, sem rolagem lateral`);
       await pagina.click('[data-acao="cancelar"]');
 
-      await pagina.keyboard.press('Alt+5');
+      await pagina.keyboard.press(altDe('anotacoes'));
       await pagina.waitForSelector('.an-lateral', { state: 'visible' });
       await pagina.click('[data-an="nova"]');
       await pagina.waitForSelector('[data-campo="titulo"]', { state: 'visible' });
@@ -281,14 +291,14 @@ try {
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Anotações, anotação aberta com lembrete, sem rolagem lateral`);
 
       const abas = await pagina.$$eval('.aba', (as) => as.map((a) => a.getBoundingClientRect().right));
-      ok(Math.max(...abas) <= (largura <= 720 ? largura - 15 : largura), `${tema} ${largura}px: as cinco abas cabem dentro da margem`);
+      ok(Math.max(...abas) <= (largura <= 720 ? largura - 15 : largura), `${tema} ${largura}px: as abas cabem dentro da margem`);
 
       if (tema === 'escuro' && largura === 1400) {
-        await pagina.keyboard.press('Alt+3');
+        await pagina.keyboard.press(altDe('calendario'));
         await pagina.click('[data-visao="semana"]');
         const vazamentos = await pagina.evaluate((seletores) => {
           const achados = [];
-          for (const raizModulo of ['#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional', '#modulo-anotacoes']) {
+          for (const raizModulo of ['#modulo-fila', '#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional', '#modulo-anotacoes']) {
             const alvo = document.querySelector(raizModulo);
             for (const s of seletores) {
               let n = 0;
@@ -323,13 +333,13 @@ try {
       await pagina.waitForFunction(() => document.querySelector('[data-rf="copiar"]').textContent === 'Copiar mensagem');
       await pagina.click('[data-rf="copiar"]');
       await pagina.waitForFunction(() => document.querySelector('[data-rf="copiar"]').textContent === 'Copiada');
-      await pagina.keyboard.press('Alt+1');
+      await pagina.keyboard.press(altDe('ordens'));
       await pagina.fill('#entrada', '');
       await pagina.focus('#entrada');
       await pagina.keyboard.press('Control+V');
       const colado = await pagina.inputValue('#entrada');
       await pagina.fill('#entrada', '');
-      await pagina.keyboard.press('Alt+2');
+      await pagina.keyboard.press(altDe('rendafixa'));
       ok(colado === golden(nome, modo).texto, `${nome} (${modo}): texto colado = golden`);
     }
     ok(erros.length === 0, `${nome}: console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
@@ -347,13 +357,13 @@ try {
     const secao = await pagina.$eval('.rf-secao', (s) => s.dataset.sec);
     await pagina.click(`.rf-secao[data-sec="${secao}"] .rf-copiar-secao`);
     await pagina.waitForSelector(`.rf-secao[data-sec="${secao}"] .rf-copiar-secao.copiado`);
-    await pagina.keyboard.press('Alt+1');
+    await pagina.keyboard.press(altDe('ordens'));
     await pagina.fill('#entrada', '');
     await pagina.focus('#entrada');
     await pagina.keyboard.press('Control+V');
     const trecho = await pagina.inputValue('#entrada');
     await pagina.fill('#entrada', '');
-    await pagina.keyboard.press('Alt+2');
+    await pagina.keyboard.press(altDe('rendafixa'));
     ok(trecho === `${tituloDaMensagem}\n\n${primeiroBloco.trimEnd()}`, '"Copiar" de uma seção leva o título e só o bloco dela, como na mensagem');
 
     if (await pagina.$('.rf-secao .rf-curva circle[data-i="1"]')) {
@@ -366,6 +376,66 @@ try {
     const contas = await pagina.$$eval('.rf-conta', (selos) => selos.map((s) => s.textContent));
     const esperadas = ['primario', 'secundario'].map((modo) => String(golden('sintetica', modo).resultado.totais.exibidos));
     ok(JSON.stringify(contas) === JSON.stringify(esperadas), `cada mercado mostra quantas oportunidades tem (${contas.join(' e ')})`);
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
+  /* ── Fila do dia ────────────────────────────────────────────────────────────────── */
+  // O caminho de um pedido (21/10/2026): o e-mail copiado no Ordens vira cartão, o mesmo pedido
+  // colado de novo bloqueia como repetido, o prazo perto acende o contador da aba, aprovar dá a
+  // ficha de execução, executar fecha, o resumo do dia sai copiado, recarregar não perde nada e o
+  // "Anotar" leva às Anotações com o pedido escrito. Uma quarta-feira, às 16h10: o leilão da B3, às
+  // 16h55, está a menos de uma hora.
+  titulo('Fila do dia: do e-mail copiado ao executado');
+  {
+    const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T16:10:00-03:00' });
+    const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+    await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
+    await pagina.locator('[data-copiar="email"]').first().click();
+    await pagina.waitForFunction(() => !document.querySelector('[data-contador="fila"]').hidden, null, { timeout: 5000 }).catch(() => {});
+    ok(
+      (await pagina.$eval('[data-contador="fila"]', (c) => !c.hidden && c.textContent)) === '1',
+      'copiar o e-mail cria o cartão, e o prazo perto (leilão em 45 min) acende o contador da aba Fila, mesmo no Ordens'
+    );
+
+    await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
+    await pagina.waitForSelector('.alert-danger');
+    ok(
+      (await pagina.textContent('#solicitacoes')).includes('já saiu hoje para esta conta'),
+      'o mesmo pedido colado de novo bloqueia como repetido de hoje, com o confirmar à vista'
+    );
+
+    await pagina.keyboard.press(altDe('fila'));
+    await pagina.waitForSelector('.fl-coluna[data-estado="enviado"] .fl-cartao');
+    const cartao = '.fl-cartao';
+    ok((await pagina.textContent('.fl-coluna[data-estado="enviado"] ' + cartao)).includes('KLBN11'), 'o cartão está em "Aguardando o cliente", com os ativos do e-mail');
+    ok(await pagina.$eval(cartao + ' .fl-prazo', (p) => p.dataset.situacao === 'perto'), 'o prazo do leilão aparece âmbar, perto');
+
+    await pagina.click(cartao + ' [data-estado="aprovado"]');
+    await pagina.waitForSelector(`.fl-coluna[data-estado="aprovado"] ${cartao}`);
+    await pagina.click(`${cartao} [data-acao="ficha"]`);
+    await pagina.waitForSelector('.fl-janela[open]');
+    ok((await pagina.textContent('.fl-ficha-texto')).startsWith('EXECUTAR · conta 1234567'), 'aprovado, a ficha de execução abre com a conta');
+    await pagina.click('[data-acao="copiar-ficha"]');
+    ok((await areaDeTransferencia()).includes('- KLBN11: vender 674'), 'copiar a ficha leva cada ativo com o que fazer');
+    await pagina.click('.fl-janela [data-fechar]');
+
+    await pagina.click(`${cartao} [data-estado="executado"]`);
+    await pagina.waitForSelector(`.fl-coluna[data-estado="executado"] ${cartao}`);
+    await pagina.click('[data-fl="resumo"]');
+    ok((await areaDeTransferencia()).startsWith('21/10/2026: 1 pedido — 1 executado.'), 'o resumo do dia sai copiado');
+
+    await pagina.reload();
+    await pagina.keyboard.press(altDe('fila'));
+    await pagina.waitForSelector(`.fl-coluna[data-estado="executado"] ${cartao}`);
+    ok(true, 'recarregar a página não perde o cartão (IndexedDB)');
+
+    await pagina.click(`${cartao} [data-acao="anotar"]`);
+    await pagina.waitForSelector('[data-campo="titulo"]', { state: 'visible' });
+    ok(
+      (await pagina.evaluate(() => location.hash)) === '#anotacoes/nova' && (await pagina.inputValue('[data-campo="titulo"]')).startsWith('Conta 1234567'),
+      '"Anotar" abre uma anotação nova com o pedido escrito, sem a conta no endereço'
+    );
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }
@@ -434,13 +504,13 @@ try {
     await pagina.waitForSelector('[data-acao="copiar"]');
     await pagina.click('[data-acao="copiar"]');
     await pagina.waitForFunction(() => document.querySelector('[data-acao="copiar"]').textContent === 'Copiado');
-    await pagina.keyboard.press('Alt+1');
+    await pagina.keyboard.press(altDe('ordens'));
     await pagina.fill('#entrada', '');
     await pagina.focus('#entrada');
     await pagina.keyboard.press('Control+V');
     ok((await pagina.inputValue('#entrada')) === compra.conteudo, '"Copiar texto" copia exatamente o texto do Slab (colado com Ctrl+V)');
     await pagina.fill('#entrada', '');
-    await pagina.keyboard.press('Alt+4');
+    await pagina.keyboard.press(altDe('operacional'));
 
     // Editar um post pendente e ver que ficou gravado.
     await pagina.goto(pathToFileURL(distLocal).href + '#operacional/post/rubi');
@@ -586,13 +656,13 @@ try {
       .waitForFunction(() => location.hash === '#anotacoes/nova' && document.querySelector('[data-an="editor"]')?.classList.contains('an-editor-nova'), null, { timeout: 5000 })
       .then(() => true, () => false);
     ok(abriuNova && (await pagina.inputValue('[data-campo="titulo"]')) === '', 'Salvar grava e abre uma anotação nova, em branco');
-    const contadorHoje = await pagina.waitForFunction(() => document.querySelector('.aba-contador')?.textContent === '1', null, { timeout: 5000 }).then(() => true, () => false);
-    ok(contadorHoje && !(await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'lembrete para hoje: contador âmbar na aba');
-    await pagina.keyboard.press('Alt+1');
+    const contadorHoje = await pagina.waitForFunction(() => document.querySelector('[data-contador="anotacoes"]')?.textContent === '1', null, { timeout: 5000 }).then(() => true, () => false);
+    ok(contadorHoje && !(await pagina.$eval('[data-contador="anotacoes"]', (c) => c.classList.contains('vencidas'))), 'lembrete para hoje: contador âmbar na aba');
+    await pagina.keyboard.press(altDe('ordens'));
     await contexto.clock.fastForward('26:00');
     await pagina.waitForSelector('.an-alerta', { timeout: 5000 }).catch(() => null);
     ok(Boolean(await pagina.$('.an-alerta')), 'no Ordens, quando a hora chega, o alerta do lembrete aparece');
-    ok((await pagina.title()).startsWith('(1) ') && (await pagina.$eval('.aba-contador', (c) => c.classList.contains('vencidas'))), 'o título da página e o contador da aba ficam em alerta');
+    ok((await pagina.title()).startsWith('(1) ') && (await pagina.$eval('[data-contador="anotacoes"]', (c) => c.classList.contains('vencidas'))), 'o título da página e o contador da aba ficam em alerta');
     await pagina.click('.an-alerta [data-alerta="abrir"]');
     await pagina.waitForSelector('.an-editor:not(.an-editor-nova)');
     ok(await pagina.$eval('.an-cartao:has([aria-current="true"])', (c) => c.classList.contains('an-vencida')), 'Abrir leva à anotação, vermelha');
@@ -614,7 +684,7 @@ try {
 
     await pagina.click('[data-acao="resolver"]');
     // O contador é do vigia, que relê depois que a gravação termina: espera por ele.
-    const contadorSumiu = await pagina.waitForFunction(() => document.querySelector('.aba-contador').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+    const contadorSumiu = await pagina.waitForFunction(() => document.querySelector('[data-contador="anotacoes"]').hidden, null, { timeout: 5000 }).then(() => true, () => false);
     ok((await pagina.textContent('[data-filtro="resolvidas"] span')) === '1' && contadorSumiu, 'Resolvido: vai para "Resolvidas" e o contador some');
 
     const [download] = await Promise.all([pagina.waitForEvent('download'), pagina.click('[data-an="exportar"]')]);
@@ -1056,7 +1126,28 @@ try {
     // O cliente chega da aba de clientes do robô ao mesmo tempo que os preços.
     const esperarCliente = (trecho) =>
       mesa.waitForFunction((t) => document.querySelector('.linha-cliente .cliente-nome')?.textContent === t, trecho, { timeout: 40_000 });
+    // O mesmo pedido colado de novo bloquearia como repetido de hoje (a Fila do dia): este bloco testa
+    // o robô, então a Fila é esvaziada antes de cada colagem. Sem criar o banco, se ele não existe.
+    const esquecerFila = () =>
+      mesa.evaluate(
+        () =>
+          new Promise((pronto) => {
+            const req = indexedDB.open('mesa_fila');
+            req.onupgradeneeded = () => req.transaction.abort();
+            req.onerror = () => pronto();
+            req.onsuccess = () => {
+              const db = req.result;
+              const tx = db.transaction('pedidos', 'readwrite');
+              tx.objectStore('pedidos').clear();
+              tx.oncomplete = tx.onerror = () => {
+                db.close();
+                pronto();
+              };
+            };
+          })
+      );
     const colar = async () => {
+      await esquecerFila();
       await mesa.fill('#entrada', PEDIDO);
       await mesa.focus('#entrada');
       await mesa.keyboard.press('Control+Enter');
@@ -1238,6 +1329,7 @@ try {
     const rotasAntes = await antiga.evaluate(() => window.__rotas.length);
     await mesa.fill('#entrada', '1234567\nvia email\nVendas | Quantidade Total\nIMOV11\nRiza Terrax Vintage FIAgro RL\nCompras\nVGPR11 R$ 10.000,00 (Estoque cliente)');
     await mesa.focus('#entrada');
+    await esquecerFila();
     await mesa.keyboard.press('Control+Enter');
     await mesa.waitForFunction(() => document.querySelectorAll('.secundario-fundo[data-venda="pronto"]').length === 2, null, { timeout: 40_000 });
     await terminarBusca();
@@ -1307,6 +1399,7 @@ try {
     // recebe; a Mesa acha o título e monta o e-mail do modelo, com a taxa e o vencimento.
     await mesa.fill('#entrada', '1234567\nvia email\nCompra\nTesouro Selic 2031 R$ 2.000,00\nComprar 1k\nLFT');
     await mesa.focus('#entrada');
+    await esquecerFila();
     await mesa.keyboard.press('Control+Enter');
     const tesouroPronto = await mesa
       .waitForFunction(() => document.querySelectorAll('.tesouro [data-tesouro="pronto"]').length === 2, null, { timeout: 45_000 })
@@ -1342,6 +1435,7 @@ try {
     // escolhido ali), escolhe o cliente, volta e traz a posição; o total é o valor disponível.
     await mesa.fill('#entrada', '1234567\nvia email\nResgate\nTesouro Selic 2031 R$ 5.000,00\nTesouro Selic 2029 total');
     await mesa.focus('#entrada');
+    await esquecerFila();
     await mesa.keyboard.press('Control+Enter');
     const resgatePronto = await mesa
       .waitForFunction(() => document.querySelectorAll('.tesouro-resgate [data-resgate="pronto"]').length === 2, null, { timeout: 45_000 })
@@ -1366,6 +1460,7 @@ try {
     // Acima do valor disponível bloqueia, com "Resgatar o total".
     await mesa.fill('#entrada', '1234567\nvia email\nResgate Tesouro Selic 2031 R$ 90.000,00');
     await mesa.focus('#entrada');
+    await esquecerFila();
     await mesa.keyboard.press('Control+Enter');
     const acima = await mesa
       .waitForFunction(() => document.querySelector('.grupo-saidas[data-grupo="tesouro-resgate"]')?.textContent.includes('passa do valor disponível'), null, { timeout: 45_000 })
@@ -1413,6 +1508,7 @@ try {
     // bloqueia sem confirmar, e "Separar" devolve a quebra de linha e faz dois cartões.
     await mesa.fill('#entrada', '1234567\n\nCompra\nLFT - R$ 81.708,17   7654321 \nComprar 2k\nTesouro Selic 2031\nEmail');
     await mesa.focus('#entrada');
+    await esquecerFila();
     await mesa.keyboard.press('Control+Enter');
     await mesa.waitForSelector('[data-campo="separar-conta"]');
     ok(

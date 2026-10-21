@@ -10,20 +10,24 @@ import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } fro
 import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
 import { vendaDaOrdem } from './core/secundario/venda.js';
-import { ehDiaUtil, umDiaUtilDepois } from './core/util/diasUteis.js';
+import { ehDiaUtil, umDiaUtilDepois } from '../../comum/diasUteis.js';
 import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
 import { copiar, colar } from './platform/clipboard.js';
 import { enderecoDoFavorito } from './platform/favoritoDoHub.js';
 import { ErroDoRobo, VERSAO_DO_ROBO, criarRoboHub, scriptDoRobo } from './platform/roboHub.js';
 import * as historico from './platform/historico.js';
-import { abrirNoOutlook, enderecoDoEmail } from './platform/outlook.js';
+import { abrirNoOutlook, enderecoDoEmail } from '../../comum/outlook.js';
 import * as guardado from './platform/secundario.js';
 import { renderCliente } from './ui/cliente.js';
 import { aplicarEdicao, renderCartao } from './ui/preview.js';
 import { formatarTempos } from './ui/tempos.js';
 import { ROTULOS, chaveDaConfirmacao, esc, gerar, renderSaidas } from './ui/saidas.js';
 import { aviso } from '../../ui/avisos.js';
+import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
+import { contasConhecidas, diaDe, registrarEnvio, repetidosHoje } from '../../comum/fila/regras.js';
+import { filaDaPagina } from '../../comum/fila/repositorio.js';
+import { registrarServico } from '../../comum/servicos.js';
 import './ordens.css';
 
 /**
@@ -85,7 +89,11 @@ export const iniciarOrdens = (secao) => {
     // do dia. Só na memória da página.
     tesouro: new Map(),
     // A posição de cada conta no Tesouro, para o resgate (robô 1.7.0). Também só na memória.
-    posicoesTesouro: new Map()
+    posicoesTesouro: new Map(),
+    // A Fila do dia (src/comum/fila): os pedidos de hoje, para o aviso de pedido repetido, e as contas
+    // que já passaram por ela ou pelo histórico, para o de conta nova.
+    fila: { hoje: [], contas: new Set() },
+    contasDoHistorico: new Set(historico.listar().map((e) => String(e.conta)))
   };
 
   // Os fundos da prateleira guardada entram no catálogo dos nomes, junto com a lista gerada: fundo
@@ -146,6 +154,8 @@ export const iniciarOrdens = (secao) => {
     aplicarDeteccao(solicitacoes);
     render();
     encenar();
+    // A Fila de hoje relida: a página pode ter virado o dia aberta. Refaz o cartão quando chega.
+    carregarFila();
 
     if (ignoradas.length > 0) {
       aviso(`${ignoradas.length} linha(s) do WhatsApp descartadas (carimbo, menção ou confirmação).`);
@@ -220,8 +230,101 @@ export const iniciarOrdens = (secao) => {
         ordem.resgateDoHub = resgateDaOrdem(ordem, { lista: estado.posicoesTesouro.get(String(s.conta ?? '')), hoje, ehDiaUtil });
       }
       s.prints = printsDa(s);
+      anotarFila(s);
     }
   }
+
+  /* ── A Fila do dia ──────────────────────────────────────────────────────────────────── */
+
+  // Quantas contas o navegador precisa conhecer para o aviso de conta nova valer: antes disso toda
+  // conta seria "nova", e o aviso que aparece sempre é o aviso que ninguém lê.
+  const CONTAS_PARA_AVISAR = 15;
+  const filaRepo = filaDaPagina();
+
+  async function carregarFila() {
+    try {
+      const todos = await filaRepo.listarTodos();
+      const hoje = diaDe(Date.now());
+      estado.fila = { hoje: todos.filter((p) => p.dia === hoje), contas: contasConhecidas(todos) };
+      if (estado.solicitacoes.length > 0) render();
+    } catch {
+      // Sem IndexedDB o Ordens segue sem a Fila; o motivo aparece na aba Fila.
+    }
+  }
+
+  /**
+   * O que a Fila diz de cada ordem: o pedido igual de hoje que já saiu (fora os que nasceram desta
+   * solicitação), e se a conta nunca passou por este navegador. O validador lê `ordem.repetidoHoje` e
+   * `solicitacao.contaNova`.
+   */
+  function anotarFila(s) {
+    const proprios = s.naFila ?? new Set();
+    const outros = estado.fila.hoje.filter((p) => !proprios.has(p.id));
+    for (const ordem of s.ordens) {
+      const pronta = s.conta && ordem.ativo?.trim() && ordem.operacao;
+      ordem.repetidoHoje = (pronta && repetidosHoje(s.conta, [ordem], outros)[0]) || null;
+    }
+    const conhecidas = new Set([...estado.fila.contas, ...estado.contasDoHistorico]);
+    s.contaNova = Boolean(s.conta) && conhecidas.size >= CONTAS_PARA_AVISAR && !conhecidas.has(String(s.conta));
+  }
+
+  // A ordem como o cartão da Fila a guarda: o que o e-mail pediu, e o id do fundo para a boleta.
+  const ordemNaFila = (o) => ({
+    ativo: o.ativo,
+    operacao: o.operacao,
+    quantidade: o.quantidade ?? null,
+    financeiro: o.financeiro ?? null,
+    total: o.total === true,
+    preco: o.preco ?? null,
+    estoque: o.estoque ?? null,
+    fundoId: o.venda?.fundoId ?? o.secundario?.fundo?.id ?? null
+  });
+
+  /**
+   * O e-mail saiu (copiado ou aberto no Outlook): o pedido entra na Fila do dia, aguardando o cliente.
+   * Só os e-mails, que vão para o cliente; os lotes são do back office.
+   */
+  async function registrarNaFila(solicitacao, iSolicitacao, formato, grupo, texto) {
+    if (formato !== 'email' && formato !== 'auditoria') return;
+    if (!/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return;
+    const doGrupo = grupo ?? 'bolsa';
+    const parte = recorte(solicitacao, doGrupo, formato);
+    if (parte.ordens.length === 0) return;
+    const cliente = solicitacao.cliente?.situacao === 'achado' ? solicitacao.cliente : null;
+    const validades = parte.ordens.map((o) => o.print?.validaAte?.getTime?.()).filter(Number.isFinite);
+    const confirmados = estado.confirmados[iSolicitacao] ?? new Set();
+    try {
+      const pedido = registrarEnvio(
+        estado.fila.hoje,
+        {
+          conta: solicitacao.conta,
+          cliente: cliente ? { nome: cliente.nome ?? null, email: cliente.email ?? null } : null,
+          assessor: cliente?.assessor?.email ? { nome: cliente.assessor.nome ?? null, email: cliente.assessor.email } : null,
+          grupo: doGrupo,
+          formato,
+          assunto: (formato === 'email' && ASSUNTOS_DOS_GRUPOS[grupo]) || 'Confirmação de ordem',
+          ordens: parte.ordens.map(ordemNaFila),
+          texto,
+          em: Date.now(),
+          validadeDaCotacao: validades.length ? Math.min(...validades) : null
+        },
+        {
+          novo: confirmados.has(chaveDaConfirmacao(doGrupo, 'repetido-hoje')) || confirmados.has('repetido-hoje'),
+          proprios: solicitacao.naFila ?? new Set()
+        }
+      );
+      await filaRepo.salvar(pedido);
+      (solicitacao.naFila ??= new Set()).add(pedido.id);
+      estado.fila.hoje = [...estado.fila.hoje.filter((p) => p.id !== pedido.id), pedido];
+      estado.fila.contas.add(pedido.conta);
+      avisarMudancaNaFila('ordens');
+    } catch (erro) {
+      aviso(`O e-mail saiu, mas não entrou na Fila do dia: ${erro.message}`, { tipo: 'erro' });
+    }
+  }
+
+  aoMudarAFila((origem) => origem !== 'ordens' && carregarFila());
+  carregarFila();
 
   /* ── Os prints da cotação de venda ──────────────────────────────────────────────────── */
 
@@ -522,6 +625,8 @@ export const iniciarOrdens = (secao) => {
         formato: rotuloNoHistorico(solicitacao, formato, grupo),
         textoOriginal: estado.textoOriginal
       });
+      estado.contasDoHistorico.add(String(solicitacao.conta));
+      registrarNaFila(solicitacao, iSolicitacao, formato, grupo, saida.texto);
       return atualizarContadorHistorico();
     }
 
@@ -560,6 +665,8 @@ export const iniciarOrdens = (secao) => {
           formato: rotuloNoHistorico(solicitacao, formato, grupo),
           textoOriginal: estado.textoOriginal
         });
+        estado.contasDoHistorico.add(String(solicitacao.conta));
+        registrarNaFila(solicitacao, iSolicitacao, formato, grupo, saida.texto);
         atualizarContadorHistorico();
       }
     }
@@ -671,6 +778,8 @@ export const iniciarOrdens = (secao) => {
   // O robô roda no Tampermonkey: quando a Mesa pede, ele atualiza a Prateleira na aba do Hub e
   // devolve a resposta do próprio Hub. Sem ele, a Mesa segue com o 📥 e a planilha.
   const robo = criarRoboHub();
+  // A ponte é uma só na página: a Fila (as respostas no Outlook) e a Prateleira de fundos a pegam daqui.
+  registrarServico('robo', robo);
   // O que o robô está buscando agora, para o painel dizer; vazio quando não está.
   let buscando = '';
   const statusDoRobo = $('robo-status');

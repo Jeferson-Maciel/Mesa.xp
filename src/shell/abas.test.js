@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ABAS, ABA_PADRAO, abaDoAtalho, abaDoHash } from './abas.js';
 
 describe('abaDoHash', () => {
-  it('reconhece as cinco rotas', () => {
+  it('reconhece as rotas de todas as abas', () => {
     expect(abaDoHash('#ordens')).toBe('ordens');
+    expect(abaDoHash('#fila')).toBe('fila');
     expect(abaDoHash('#rendafixa')).toBe('rendafixa');
     expect(abaDoHash('#calendario')).toBe('calendario');
     expect(abaDoHash('#operacional')).toBe('operacional');
@@ -39,17 +41,27 @@ describe('abaDoHash', () => {
 describe('abaDoAtalho', () => {
   const tecla = (code, extra = {}) => ({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, code, ...extra });
 
-  it('Alt+1 a Alt+5 levam às abas na ordem da barra', () => {
-    expect(abaDoAtalho(tecla('Digit1'))).toBe(ABAS[0]);
-    expect(abaDoAtalho(tecla('Digit2'))).toBe(ABAS[1]);
-    expect(abaDoAtalho(tecla('Digit3'))).toBe(ABAS[2]);
-    expect(abaDoAtalho(tecla('Digit4'))).toBe(ABAS[3]);
-    expect(abaDoAtalho(tecla('Digit5'))).toBe(ABAS[4]);
-    expect(ABAS).toEqual(['ordens', 'rendafixa', 'calendario', 'operacional', 'anotacoes']);
+  it('Alt+1 em diante levam às abas na ordem da barra', () => {
+    expect(ABAS).toEqual(['ordens', 'fila', 'rendafixa', 'calendario', 'operacional', 'anotacoes']);
+    ABAS.forEach((aba, i) => expect(abaDoAtalho(tecla(`Digit${i + 1}`))).toBe(aba));
+    expect(abaDoAtalho(tecla(`Digit${ABAS.length + 1}`))).toBeNull();
   });
 
   it('aceita o teclado numérico', () => {
-    expect(abaDoAtalho(tecla('Numpad2'))).toBe('rendafixa');
+    expect(abaDoAtalho(tecla('Numpad2'))).toBe('fila');
+  });
+
+  // O atalho escrito no title de cada aba é o que a tecla faz: uma aba nova no meio da barra não
+  // deixa um "Alt + 3" errado para trás.
+  it('a barra do index.html segue ABAS, com o Alt certo no title de cada aba, e cada aba tem a sua seção', () => {
+    const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    const abas = [...html.matchAll(/<a class="aba" href="#(\w+)" data-aba="(\w+)" title="([^"]+)"/g)];
+    expect(abas.map(([, href]) => href)).toEqual(ABAS);
+    abas.forEach(([, href, dataAba, title], i) => {
+      expect(dataAba).toBe(href);
+      expect(title).toContain(`(Alt + ${i + 1})`);
+      expect(html).toContain(`<section id="modulo-${href}"`);
+    });
   });
 
   it('ignora o número sem Alt: o operador está digitando', () => {
@@ -64,7 +76,7 @@ describe('abaDoAtalho', () => {
   });
 
   it('ignora números sem aba e outras teclas', () => {
-    expect(abaDoAtalho(tecla('Digit6'))).toBeNull();
+    expect(abaDoAtalho(tecla('Digit9'))).toBeNull();
     expect(abaDoAtalho(tecla('KeyH'))).toBeNull();
     expect(abaDoAtalho(tecla(undefined))).toBeNull();
   });

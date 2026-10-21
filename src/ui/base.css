@@ -6,8 +6,9 @@
 
    • Nenhum extremo. O claro não usa branco puro no fundo nem preto puro no texto; o escuro não
      usa preto puro. Os extremos cansam a vista ao longo do dia.
-   • Uma cor por ferramenta. Cada aba tem a sua pedra — safira no Ordens, água-marinha no Renda
-     Fixa, ametista no Calendário, turmalina no Operacional, prata nas Anotações — e ela aparece na aba ativa, na ação
+   • Uma cor por ferramenta. Cada aba tem a sua pedra — safira no Ordens, kunzita na Fila do dia,
+     peridoto na Prateleira de fundos, água-marinha no Renda Fixa, ametista no Calendário, turmalina
+     no Operacional, prata nas Anotações — e ela aparece na aba ativa, na ação
      principal, no foco e no brilho do fundo. O ouro é a marca (XP). Assim a tela deixa de ser
      monocromática sem que a cor vire enfeite: ela diz em que ferramenta você está.
    • Cor que informa não decora. Verde é compra e alta, vermelho é venda e queda, âmbar é atenção.
@@ -117,6 +118,11 @@
   --ametista: #ad9cf4;
   --turmalina: #ef8fc4;
   --prata: #b4c0d6; /* Argentum: a pedra das Anotações, neutra para o amarelo e o vermelho falarem */
+  /* A kunzita (289°) mora no único vão limpo do círculo, entre a ametista e a turmalina: é da Fila,
+     onde o âmbar e o vermelho dos prazos têm de falar sozinhos. O peridoto (73°) é o ponto mais longe
+     do âmbar (36°) e do verde (151°) que sobrou; é da Prateleira de fundos. Medidas em 21/10/2026. */
+  --kunzita: #dc98ec;
+  --peridoto: #bdd36c;
   --texto-no-acento: #101624;
 
   --marca: #e3b664; /* ouro XP */
@@ -185,6 +191,8 @@
   --ametista: #523ca8;
   --turmalina: #8e2b60;
   --prata: #465571;
+  --kunzita: #772b88;
+  --peridoto: #4f5c12;
   --texto-no-acento: #ffffff;
 
   --marca: #74500b;
@@ -244,6 +252,18 @@ body[data-aba='ordens'],
 body[data-aba='ordens'] .casca-topo,
 #modulo-ordens {
   --acento: var(--safira);
+}
+
+body[data-aba='fila'],
+body[data-aba='fila'] .casca-topo,
+#modulo-fila {
+  --acento: var(--kunzita);
+}
+
+body[data-aba='fundos'],
+body[data-aba='fundos'] .casca-topo,
+#modulo-fundos {
+  --acento: var(--peridoto);
 }
 
 body[data-aba='rendafixa'],

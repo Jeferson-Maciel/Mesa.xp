@@ -500,7 +500,7 @@ npm install
 npm run dev      # servidor local de desenvolvimento
 npm test         # testes
 npm run build    # gera dist/index.html, um arquivo só
-npm run verificar  # abre o dist/index.html no Chromium e confere as cinco abas (Playwright)
+npm run verificar  # abre o dist/index.html no Chromium e confere as abas (Playwright)
 ```
 
 Requer Node 22+.
@@ -547,7 +547,7 @@ nova.
 ## Estrutura
 
 ```
-index.html                 a casca: topo, abas e as cinco seções
+index.html                 a casca: topo, abas e uma seção por aba
 src/main.js                liga tema, abas e o início de cada ferramenta
 src/shell/                 rotas e atalhos das abas
 src/ui/                    tema, avisos, escape de HTML, tokens e componentes compartilhados
@@ -568,7 +568,7 @@ AGENTS.md, CLAUDE.md       o que vale sempre, para quem (ou o que) for mexer no 
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 1.152 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 1.197 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

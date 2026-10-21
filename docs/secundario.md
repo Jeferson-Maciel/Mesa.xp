@@ -234,7 +234,7 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   total bloqueia sem confirmar (`venda-sem-disponivel`); até 20/10 o e-mail saía com 0 cotas. A conta do valor (`contaDaVenda`) é a do painel "Visualizar mais
   detalhes da operação" da boleta, conferida centavo por centavo (posição = cotas × PU; deságio = %
   da posição; o cliente recebe a posição com deságio, menos a corretagem).
-- **A cotação de venda vale um dia útil** (`core/util/diasUteis.js`, com a Páscoa calculada e os dias
+- **A cotação de venda vale um dia útil** (`src/comum/diasUteis.js`, com a Páscoa calculada e os dias
   sem pregão de 24/12 e 31/12): até o mesmo horário do próximo dia útil. O print dela também.
 - **O print da cotação** (robô 1.5.0, decidido com o operador em 20/10: "o máximo automatizado"). É
   o painel do fim da **etapa 1** da boleta de venda — a caixa "Valor total da operação" e

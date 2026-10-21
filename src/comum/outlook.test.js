@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatarEmail } from '../core/format/formatadores.js';
+import { formatarEmail } from '../modulos/ordens/core/format/formatadores.js';
 import { TAMANHO_MAXIMO, enderecoDoEmail } from './outlook.js';
 
 /**

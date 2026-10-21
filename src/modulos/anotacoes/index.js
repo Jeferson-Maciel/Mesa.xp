@@ -1,3 +1,4 @@
+import { pegarAnotacaoPedida } from '../../comum/anotarDeFora.js';
 import { aviso } from '../../ui/avisos.js';
 import { criarCena } from '../../ui/cena.js';
 import { esc } from '../../ui/html.js';
@@ -307,6 +308,24 @@ export const iniciarAnotacoes = (secao) => {
   async function seguirRota() {
     const rota = rotaAtual();
     raiz.classList.toggle('com-nota', rota.tipo !== 'raiz');
+
+    // Uma anotação pedida por outra aba (o "Anotar" de um cartão da Fila do dia): abre uma nova, já
+    // com o título e o texto do pedido (src/comum/anotarDeFora.js).
+    const pedida = rota.tipo === 'nova' ? pegarAnotacaoPedida() : null;
+    if (pedida) {
+      if (sujo() && !confirm('Esta anotação tem alterações não salvas. Sair sem salvar?')) {
+        voltarHash();
+        raiz.classList.toggle('com-nota', rotaAtual().tipo !== 'raiz');
+        return;
+      }
+      if (sujo()) apagarRascunho();
+      hashAnterior = location.hash;
+      abrir(novoRascunho());
+      mudarCampos((c) => Object.assign(c, { titulo: pedida.titulo ?? '', texto: pedida.texto ?? '', etiquetas: [...(pedida.etiquetas ?? [])] }));
+      renderEditor();
+      requestAnimationFrame(() => principal.querySelector('[data-campo="texto"]')?.focus());
+      return;
+    }
 
     // A raiz da aba (Alt+5, o clique na aba) mostra o que já estava aberto: nada se perde.
     if (rota.tipo === 'raiz') {

@@ -754,3 +754,29 @@ describe('a conta de outro pedido colada no fim da linha', () => {
   });
 });
 
+
+// A Fila do dia (21/10/2026): o Ordens anota em cada ordem o pedido igual de hoje que já saiu — mesma
+// conta, mesmo ativo, mesma operação — e na solicitação a conta que nunca passou por este navegador.
+describe('o que a Fila do dia já viu', () => {
+  it('a ordem repetida de hoje bloqueia, e confirmar libera: pode ser um pedido novo de verdade', () => {
+    const s = solicitacao({ ordens: [ordem({ repetidoHoje: { em: new Date(2026, 9, 21, 10, 2).getTime(), estado: 'enviado' } })] });
+    const [b] = validar(s, 'email').filter((d) => d.nivel === 'bloqueio');
+    expect(b).toMatchObject({ codigo: 'repetido-hoje', indiceOrdem: 0, confirmavel: true });
+    expect(b.mensagem).toContain('PETR4');
+    expect(b.mensagem).toContain('10:02');
+    expect(b.mensagem).toContain('aguardando o cliente');
+  });
+
+  it('a conta nunca vista é só um aviso, para conferir o número', () => {
+    const s = solicitacao({ contaNova: true });
+    expect(bloqueios(s)).toEqual([]);
+    const d = validar(s, 'email').find((x) => x.codigo === 'conta-nova');
+    expect(d).toMatchObject({ nivel: 'aviso', indiceOrdem: null });
+    expect(d.mensagem).toContain('7000001');
+  });
+
+  it('sem nada anotado, nada muda', () => {
+    expect(codigos(solicitacao())).not.toContain('repetido-hoje');
+    expect(codigos(solicitacao())).not.toContain('conta-nova');
+  });
+});

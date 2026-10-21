@@ -1,6 +1,6 @@
 import { chaveDaBoleta } from './boletaDoHub.js';
 import { procurarNoEstoque } from './estoque.js';
-import { umDiaUtilDepois } from '../util/diasUteis.js';
+import { umDiaUtilDepois } from '../../../../comum/diasUteis.js';
 
 /**
  * A venda de fundo do secundário: o que a boleta de venda do Hub diz de uma ordem.

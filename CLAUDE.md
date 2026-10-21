@@ -7,6 +7,8 @@ XP usarem o dia inteiro:
   do back office (e-mail por grupo — bolsa, fundos comprados, fundos vendidos, Tesouro aplicação e
   resgate —, e-mail em tabela, Lote Simples e Lote TWAP), com o robô do Hub trazendo a cotação, o
   cliente, a posição e o print.
+- **Fila do dia** — o pedido depois que o e-mail sai: aguardando o cliente, o cliente respondeu,
+  aprovado, executado; os prazos de cada um, a ficha de execução e a boleta do Hub. Fica no navegador.
 - **Renda Fixa** — o RendaFixa Pro: lê a planilha de renda fixa exportada pela XP e monta o texto
   de WhatsApp com a maior taxa por prazo e categoria.
 - **Calendário** — o calendário semanal de presença da equipe, gravado no Supabase.
@@ -44,6 +46,7 @@ a tela e para o código. No ar em **https://mesa-xp.vercel.app** (Vercel, ligada
 | Os literais das saídas (e-mails, tabela, lotes) | [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md) |
 | Fundos no secundário: a cotação, o preço exato, **as regras do robô do Hub**, a venda, o Estoque clientes, os grupos de e-mail e o print (SnapDOM) | [`docs/secundario.md`](docs/secundario.md) |
 | Tesouro Direto: a aplicação, o resgate e o que o Hub de verdade faz | [`docs/tesouro.md`](docs/tesouro.md) |
+| Fila do dia: o cartão, os estados, os prazos, o pedido repetido e a conta nova | [`docs/fila.md`](docs/fila.md) |
 | Renda Fixa | [`docs/rendafixa.md`](docs/rendafixa.md) |
 | Calendário | [`docs/calendario.md`](docs/calendario.md) |
 | Operacional | [`docs/operacional.md`](docs/operacional.md) |
@@ -125,15 +128,16 @@ site e o que os colegas abrem com dois cliques, do disco. **Proibido**: recurso 
 ### O código
 
 - JS puro com módulos ES, sem framework. Um módulo exporta `iniciarX(secao)` e não conhece os
-  outros; o que dois usam mora em `src/ui/`.
+  outros; o que dois usam mora em `src/ui/` (a tela) ou em `src/comum/` (regras e dados: a Fila, os
+  horários, o Outlook; a ponte do robô passa por `comum/servicos.js`).
 - Texto vindo de fora (planilha, banco, usuário, Hub) vai para `innerHTML` só por `esc`.
 - Datas pela chave local `AAAA-MM-DD` (`chaveDoDia`), **nunca `toISOString()`**: às 21h de Brasília,
   o dia viraria o seguinte.
 - O visual é por token (`--fundo`, `--texto`, `--acento`…), **nunca valor literal**: um `#fff`
   quebra um dos dois temas. Cada aba tem a cor dela em `--acento`. Contrastes medidos (detalhe em
   [`docs/casca-e-visual.md`](docs/casca-e-visual.md)).
-- Todo seletor do Renda Fixa começa por `.rf`, do Calendário por `.cal` e do Operacional por `.op`;
-  um teste recusa o que escapa.
+- Todo seletor da Fila começa por `.fl`, do Renda Fixa por `.rf`, do Calendário por `.cal`, do
+  Operacional por `.op` e das Anotações por `.an`; um teste recusa o que escapa.
 
 ## Pendência de segurança — fase 2
 
@@ -156,7 +160,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.152 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.197 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).
@@ -192,8 +196,9 @@ Não declare pronto sem:
 
 1. `npm test` e `npm run build` passando.
 2. `npm run verificar` (`scripts/verificar-navegador.mjs`; na primeira vez,
-   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as cinco
-   abas, os dois temas, a largura de ~360px sem rolagem horizontal, o console, o CSS que vaza entre
+   `npx playwright install chromium`). Abre `dist/index.html` via `file://` e confere as
+   abas, os dois temas, as larguras de 1000px e ~360px sem rolagem horizontal, a Fila do dia (do e-mail
+   copiado ao executado), o console, o CSS que vaza entre
    abas, o robô do Hub (o script de verdade, com o Tampermonkey simulado e um Hub falso), o texto
    do Renda Fixa colado e comparado com o golden, o Calendário em modo local (nome com
    `<img onerror>` como texto) e o Operacional em modo local (copiar e colar igual ao Slab, editar,

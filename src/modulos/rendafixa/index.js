@@ -4,6 +4,9 @@ import { buscarReferencia, excluir, lerHistorico, novoRegistro, salvar } from '.
 import { montarTexto, processRows } from './motor.js';
 import { lerPlanilha } from './planilha.js';
 import { trechosDaMensagem } from './analise.js';
+import { desenharImagem, layoutDaImagem } from './imagem.js';
+import { diasUteisAte, simularPre } from './simulador.js';
+import { ehDiaUtil } from '../../comum/diasUteis.js';
 import {
   DICAS_MERCADO,
   formatBytes,
@@ -18,7 +21,9 @@ import {
   htmlMensagem,
   htmlSemResultado,
   htmlVazio,
-  numero
+  numero,
+  htmlResultadoDaSimulacao,
+  opcoesDoSimulador
 } from './render.js';
 import { abrirJanela } from '../../ui/janela.js';
 import './rendafixa.css';
@@ -61,6 +66,7 @@ export const iniciarRendaFixa = (secao) => {
     visao: el('visao'),
     salvar: el('salvar'),
     copiar: el('copiar'),
+    imagem: el('imagem'),
     contaPrimario: el('conta-primario'),
     contaSecundario: el('conta-secundario'),
     corpo: el('corpo'),
@@ -205,6 +211,7 @@ export const iniciarRendaFixa = (secao) => {
   function atualizarAcoes() {
     const temMensagem = Boolean(estado.texto);
     ui.copiar.disabled = !temMensagem;
+    ui.imagem.disabled = !temMensagem;
     ui.salvar.disabled = !temMensagem || estado.salvo;
     ui.salvar.textContent = temMensagem && estado.salvo ? 'Salvo' : 'Salvar';
   }
@@ -418,6 +425,7 @@ export const iniciarRendaFixa = (secao) => {
       m: () => aplicarMercado(!estado.secundario),
       v: () => aplicarVisao(estado.visao === 'cartoes' ? 'mensagem' : 'cartoes'),
       c: () => !ui.copiar.disabled && copiarMensagem(),
+      i: () => !ui.imagem.disabled && baixarImagem(),
       s: () => !ui.salvar.disabled && salvarAnalise(),
       t: () => document.getElementById('btn-tema')?.click(),
       '?': () => abrirJanela(ui.atalhos, el('abrir-atalhos'))
@@ -505,6 +513,57 @@ export const iniciarRendaFixa = (secao) => {
   ui.corpo.addEventListener('pointerover', acenderPar);
   ui.corpo.addEventListener('pointerleave', acenderPar);
   ui.copiar.addEventListener('click', copiarMensagem);
+  ui.imagem.addEventListener('click', () => baixarImagem());
+
+  /*
+   * "Baixar imagem" (21/10/2026): as oportunidades num PNG, desenhado num canvas (imagem.js), com o
+   * nome do dia e do mercado. Sai do navegador só para a pasta de downloads de quem clicou.
+   */
+  function baixarImagem() {
+    const r = estado.resultado;
+    if (!r || !r.totais.exibidos) return;
+    const hoje = new Date();
+    const data = hoje.toLocaleDateString('pt-BR');
+    const canvas = desenharImagem(document.createElement('canvas'), layoutDaImagem(r, { data }));
+    canvas.toBlob((blob) => {
+      if (!blob) return aviso('Não foi possível gerar a imagem.', { tipo: 'erro' });
+      const link = document.createElement('a');
+      const dia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+      link.href = URL.createObjectURL(blob);
+      link.download = `renda-fixa-${dia}${r.secundario ? '-secundario' : ''}.png`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+      aviso('Imagem baixada: anexe no WhatsApp.');
+    }, 'image/png');
+  }
+
+  // O simulador de pré-fixado, embaixo dos cartões: refaz a conta a cada tecla.
+  const lerValor = (texto) => {
+    const limpo = String(texto ?? '').replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.');
+    const n = Number(limpo);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  function simular() {
+    const caixa = ui.corpo.querySelector('[data-rf-simulador]');
+    const r = estado.resultado;
+    if (!caixa || !r) return;
+    const opcao = opcoesDoSimulador(r)[Number(caixa.querySelector('[data-sim="titulo"]').value)];
+    const valor = lerValor(caixa.querySelector('[data-sim="valor"]').value);
+    const saida = caixa.querySelector('[data-sim="resultado"]');
+    if (!opcao || !valor) {
+      saida.innerHTML = htmlResultadoDaSimulacao(null, {});
+      return;
+    }
+    const hoje = new Date();
+    const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + opcao.item.dias);
+    const diasUteis = diasUteisAte(hoje, vencimento, ehDiaUtil);
+    const sim = simularPre({ valor, taxa: opcao.item.taxa, diasUteis, diasCorridos: opcao.item.dias, isento: opcao.isento });
+    saida.innerHTML = htmlResultadoDaSimulacao(sim, { diasUteis, diasCorridos: opcao.item.dias });
+  }
+  ui.corpo.addEventListener('input', (e) => e.target.closest?.('[data-rf-simulador]') && simular());
+  ui.corpo.addEventListener('change', (e) => e.target.closest?.('[data-rf-simulador]') && simular());
   ui.salvar.addEventListener('click', salvarAnalise);
   ui.historico.addEventListener('click', acaoHistorico);
 
@@ -588,6 +647,7 @@ const MARCACAO = `
             <button type="button" class="seg" role="tab" data-visao="cartoes">Cartões</button>
             <button type="button" class="seg" role="tab" data-visao="mensagem">Mensagem</button>
           </div>
+          <button type="button" class="copy-btn" data-rf="imagem" title="Baixar as oportunidades como imagem, para o WhatsApp (I)">Baixar imagem</button>
           <button type="button" class="copy-btn" data-rf="salvar" title="Salvar no histórico (S)">Salvar</button>
           <button type="button" class="copy-btn btn-primario" data-rf="copiar" title="Copiar mensagem (C)">Copiar mensagem</button>
         </div>
@@ -616,6 +676,7 @@ const MARCACAO = `
       <div><dt><kbd>M</kbd></dt><dd>Alternar mercado primário / secundário</dd></div>
       <div><dt><kbd>V</kbd></dt><dd>Alternar cartões / mensagem</dd></div>
       <div><dt><kbd>C</kbd></dt><dd>Copiar mensagem</dd></div>
+      <div><dt><kbd>I</kbd></dt><dd>Baixar as oportunidades como imagem</dd></div>
       <div><dt><kbd>S</kbd></dt><dd>Salvar no histórico</dd></div>
       <div><dt><kbd>T</kbd></dt><dd>Alternar tema claro / escuro</dd></div>
       <div><dt><kbd>?</kbd></dt><dd>Mostrar esta lista</dd></div>

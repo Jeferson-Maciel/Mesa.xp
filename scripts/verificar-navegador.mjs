@@ -400,6 +400,20 @@ try {
     await pagina.click(`.rf-destaque[data-sec="${secao}"]`);
     ok(await pagina.$eval(`.rf-secao[data-sec="${secao}"]`, (s) => s.classList.contains('rf-acesa')), 'o destaque leva à seção, que acende');
 
+    // A imagem para o WhatsApp e o simulador de pré-fixado (21/10/2026).
+    const [download] = await Promise.all([pagina.waitForEvent('download', { timeout: 10_000 }), pagina.click('[data-rf="imagem"]')]);
+    const caminhoDaImagem = await download.path();
+    const png = readFileSync(caminhoDaImagem);
+    ok(
+      /^renda-fixa-\d{4}-\d{2}-\d{2}\.png$/.test(download.suggestedFilename()) && png.subarray(1, 4).toString() === 'PNG' && png.length > 10_000,
+      `"Baixar imagem" baixa um PNG das oportunidades (${download.suggestedFilename()}, ${Math.round(png.length / 1024)} KB)`
+    );
+    if (await pagina.$('[data-rf-simulador]')) {
+      await pagina.click('[data-rf-simulador] summary');
+      await pagina.fill('[data-sim="valor"]', '10.000,00');
+      ok((await pagina.textContent('[data-sim="resultado"]')).includes('Líquido'), 'o simulador de pré-fixado mostra o bruto, o IR e o líquido do valor digitado');
+    } else ok(false, 'a planilha sintética tem pré-fixado com vencimento, para o simulador');
+
     const contas = await pagina.$$eval('.rf-conta', (selos) => selos.map((s) => s.textContent));
     const esperadas = ['primario', 'secundario'].map((modo) => String(golden('sintetica', modo).resultado.totais.exibidos));
     ok(JSON.stringify(contas) === JSON.stringify(esperadas), `cada mercado mostra quantas oportunidades tem (${contas.join(' e ')})`);

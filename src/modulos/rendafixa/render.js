@@ -136,7 +136,9 @@ export const htmlSemResultado = (r) => {
  * @param {{trechos?: Record<string, string>}} [opcoes] os trechos da mensagem (`analise.js`): com
  *   eles, cada seção ganha o botão de copiar só ela
  */
-export const htmlCartoes = (r, referencia, { trechos = {} } = {}) => {
+export const htmlCartoes = (r, referencia, { trechos = {} } = {}) => htmlCartoesSemSimulador(r, referencia, { trechos }) + htmlSimulador(r);
+
+const htmlCartoesSemSimulador = (r, referencia, { trechos = {} } = {}) => {
   const secoes = r.secoes.filter((s) => s.itens.length);
   return `
   <div class="rf-destaques">${secoes.map((secao) => htmlDestaque(secao, r)).join('')}</div>
@@ -429,3 +431,47 @@ export const htmlHistorico = (lista, agora = new Date()) =>
   lista.length
     ? lista.map((registro) => htmlRegistro(registro, agora)).join('')
     : '<div class="empty-state pequeno"><p>Nenhuma análise salva ainda.</p><span>Depois de analisar, clique em Salvar.</span></div>';
+
+/* ── O simulador de pré-fixado (21/10/2026, simulador.js) ─────────────────────────────── */
+
+/** Os títulos que dá para simular: os pré, e os isentos pré, com os dias até o vencimento. */
+export const opcoesDoSimulador = (r) =>
+  r.secoes
+    .flatMap((s) => s.itens.map((item) => ({ item, isento: s.id === 'isentos' })))
+    .filter(({ item }) => item.indexador === 'PRE' && item.dias > 0);
+
+const rotuloDaOpcao = ({ item, isento }) =>
+  `${item.prazo === 1 ? '1 ano' : `${item.prazo} anos`} · ${item.tipo} ${fmtTaxa(item.taxa)}% a.a.${isento ? ' (isento)' : ''}`;
+
+export const htmlSimulador = (r) => {
+  const opcoes = opcoesDoSimulador(r);
+  if (!opcoes.length) return '';
+  return `
+  <details class="rf-simulador" data-rf-simulador>
+    <summary><span class="rf-simulador-titulo">Simular um pré-fixado</span><span class="rf-nota">quanto vira no vencimento, antes e depois do IR</span></summary>
+    <div class="rf-simulador-corpo">
+      <label class="rf-simulador-campo"><span>Título</span>
+        <select data-sim="titulo">${opcoes.map((opcao, i) => `<option value="${i}">${esc(rotuloDaOpcao(opcao))}</option>`).join('')}</select>
+      </label>
+      <label class="rf-simulador-campo"><span>Valor aplicado (R$)</span><input data-sim="valor" inputmode="decimal" placeholder="10.000,00" autocomplete="off" /></label>
+      <div class="rf-simulador-resultado" data-sim="resultado"><p class="rf-nota">Digite o valor.</p></div>
+    </div>
+    <p class="rf-nota">Estimativa: taxa ao ano em 252 dias úteis, IR pela tabela regressiva sobre o rendimento. Não entram IOF (até 30 dias), custódia nem o PU do dia no secundário.</p>
+  </details>`;
+};
+
+const reais = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtTaxa = (t) => t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** O resultado da simulação, ou o que falta para ela. */
+export const htmlResultadoDaSimulacao = (sim, { diasUteis, diasCorridos }) =>
+  sim
+    ? `<dl class="rf-simulador-numeros">
+        <div><dt>No vencimento, bruto</dt><dd>${reais(sim.bruto)}</dd></div>
+        <div><dt>Rendimento</dt><dd>${reais(sim.rendimento)}</dd></div>
+        <div><dt>IR (${String(sim.aliquota).replace('.', ',')}%)</dt><dd>${sim.ir ? `− ${reais(sim.ir)}` : 'isento'}</dd></div>
+        <div class="rf-simulador-liquido"><dt>Líquido</dt><dd>${reais(sim.liquido)}</dd></div>
+        <div><dt>Taxa líquida</dt><dd>≈ ${fmtTaxa(sim.taxaLiquida)}% a.a.</dd></div>
+      </dl>
+      <p class="rf-nota">${diasCorridos} dias corridos, ${diasUteis} dias úteis até o vencimento.</p>`
+    : '<p class="rf-nota">Digite o valor.</p>';

@@ -1848,3 +1848,105 @@
   font-size: 0.78rem;
   font-weight: 700;
 }
+
+/* ── O simulador de pré-fixado (21/10/2026) ─────────────────────────────────────────────
+   Embaixo dos cartões, fechado: o título, o valor, e o que ele vira no vencimento. */
+
+.rf .rf-simulador {
+  margin-top: var(--esp-5);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+}
+
+.rf .rf-simulador summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--esp-2) var(--esp-3);
+  cursor: pointer;
+}
+
+.rf .rf-simulador-titulo {
+  color: var(--texto-forte);
+  font-weight: 700;
+}
+
+.rf .rf-simulador-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: var(--esp-3) var(--esp-4);
+  margin: var(--esp-4) 0 var(--esp-3);
+}
+
+.rf .rf-simulador-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  color: var(--texto-fraco);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.rf .rf-simulador-campo select,
+.rf .rf-simulador-campo input {
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font: inherit;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf .rf-simulador-campo select:focus,
+.rf .rf-simulador-campo input:focus {
+  border-color: var(--acento-borda);
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.rf .rf-simulador-resultado {
+  grid-column: 1 / -1;
+}
+
+.rf .rf-simulador-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--esp-2);
+  margin: 0 0 var(--esp-2);
+}
+
+.rf .rf-simulador-numeros div {
+  padding: var(--esp-2) var(--esp-3);
+  background: var(--superficie-afundada);
+  border-radius: var(--r-md);
+}
+
+.rf .rf-simulador-numeros dt {
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+.rf .rf-simulador-numeros dd {
+  margin: 2px 0 0;
+  color: var(--texto-forte);
+  font-size: 1.02rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf .rf-simulador-numeros .rf-simulador-liquido {
+  box-shadow: inset 0 0 0 1px var(--acento-borda);
+  background: var(--acento-fundo);
+}
+
+@media (max-width: 620px) {
+  .rf .rf-simulador-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

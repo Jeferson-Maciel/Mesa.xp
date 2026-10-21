@@ -123,3 +123,16 @@ for útil"):
 Todo movimento roda uma vez, ao chegar; o único laço é o ícone que salta enquanto se arrasta um
 arquivo. O `verificar` confere o Copiar de uma seção, o realce da linha no gráfico, o destaque que
 leva à seção e a contagem de cada mercado.
+
+## A imagem e o simulador (21/10/2026)
+
+- **Baixar imagem** (tecla I): as oportunidades num PNG de 1080 px de largura, para anexar no
+  WhatsApp — as categorias com a cor delas, o prazo, o tipo e a taxa como na mensagem, e o emissor
+  no secundário. `imagem.js`: o layout é puro e testado; o desenho é um canvas. A imagem é sempre
+  clara, nos dois temas: vai para o celular do cliente (as cores são as das pedras no tema claro,
+  escritas no arquivo porque o canvas não lê os tokens). Sai só para a pasta de downloads.
+- **Simular um pré-fixado**, embaixo dos cartões: o título (os pré e os isentos pré com vencimento) e
+  o valor dão o bruto no vencimento, o rendimento, o IR pela tabela regressiva (isento: zero), o
+  líquido e a taxa líquida ao ano. A conta é a do mercado para título pré — 252 dias úteis, contados
+  com os feriados da B3 (`src/comum/diasUteis.js`) — e é uma estimativa, dita na tela: não entram
+  IOF, custódia nem o PU do dia no secundário (`simulador.js`).

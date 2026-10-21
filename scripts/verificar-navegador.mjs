@@ -336,6 +336,40 @@ try {
     await contexto.close();
   }
 
+  // A repaginação de 21/10/2026: copiar uma seção só, a linha que acende o ponto do gráfico, o
+  // destaque que leva à seção e a contagem de cada mercado no seletor.
+  titulo('Renda Fixa: os destaques, copiar uma seção e o gráfico ligado às linhas');
+  {
+    const { pagina, contexto, erros } = await abrir({ hash: '#rendafixa', relogio: DATA_GOLDEN });
+    await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
+    await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
+    const [tituloDaMensagem, primeiroBloco] = golden('sintetica', 'primario').texto.split('\n\n');
+    const secao = await pagina.$eval('.rf-secao', (s) => s.dataset.sec);
+    await pagina.click(`.rf-secao[data-sec="${secao}"] .rf-copiar-secao`);
+    await pagina.waitForSelector(`.rf-secao[data-sec="${secao}"] .rf-copiar-secao.copiado`);
+    await pagina.keyboard.press('Alt+1');
+    await pagina.fill('#entrada', '');
+    await pagina.focus('#entrada');
+    await pagina.keyboard.press('Control+V');
+    const trecho = await pagina.inputValue('#entrada');
+    await pagina.fill('#entrada', '');
+    await pagina.keyboard.press('Alt+2');
+    ok(trecho === `${tituloDaMensagem}\n\n${primeiroBloco.trimEnd()}`, '"Copiar" de uma seção leva o título e só o bloco dela, como na mensagem');
+
+    if (await pagina.$('.rf-secao .rf-curva circle[data-i="1"]')) {
+      await pagina.hover('.rf-secao .rf-linha[data-i="1"]');
+      ok(await pagina.$eval('.rf-secao .rf-curva circle[data-i="1"]', (c) => c.classList.contains('rf-par')), 'passar o mouse na linha acende o ponto dela no gráfico');
+    }
+    await pagina.click(`.rf-destaque[data-sec="${secao}"]`);
+    ok(await pagina.$eval(`.rf-secao[data-sec="${secao}"]`, (s) => s.classList.contains('rf-acesa')), 'o destaque leva à seção, que acende');
+
+    const contas = await pagina.$$eval('.rf-conta', (selos) => selos.map((s) => s.textContent));
+    const esperadas = ['primario', 'secundario'].map((modo) => String(golden('sintetica', modo).resultado.totais.exibidos));
+    ok(JSON.stringify(contas) === JSON.stringify(esperadas), `cada mercado mostra quantas oportunidades tem (${contas.join(' e ')})`);
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   /* ── Calendário em modo local ───────────────────────────────────────────────────── */
   titulo('Calendário em modo local: escape, janela do dia, histórico, cascata');
   {

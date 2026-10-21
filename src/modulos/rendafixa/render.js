@@ -5,20 +5,32 @@
  * arquivo, mensagem gravada) passa por `esc` antes de virar marcação. A mensagem ganha o negrito do
  * WhatsApp só depois de escapada.
  *
- * O visual é o do Ordens: painel, segmentado, selo e botão de copiar vêm de src/ui/componentes.css;
- * o que é só daqui está em rendafixa.css, escopado em `.rf`. Sem animação de contagem, sem aurora:
- * número aparece pronto.
+ * O visual é o da Mesa: painel, segmentado, selo e botão de copiar vêm de src/ui/componentes.css; o
+ * que é só daqui está em rendafixa.css, escopado em `.rf`. Desde 21/10/2026 (a repaginação pedida
+ * pelo usuário): os destaques de cada categoria no alto, o gráfico de taxa × prazo largo e ligado às
+ * linhas, a força de cada taxa, a equivalência dos isentos (`analise.js`), copiar uma categoria só e
+ * a prévia num celular. Os números que chegam contam até o valor (index.js); o HTML já traz o valor
+ * final, para quem não tem movimento.
  */
 
 import { esc } from '../../ui/html.js';
 import { MOTIVOS_DESCARTE, fmtP, fmtT, partesDaTaxa } from './motor.js';
 import { registroSecundario, variacao } from './historico.js';
+import { destaqueDaSecao, equivalenteBruto, forcaDaTaxa, tributadoDoMesmoPrazo } from './analise.js';
 
 export const UNIDADES = {
   pre: '% ao ano',
   pos: '% do CDI',
   ipca: 'spread sobre o IPCA',
   isentos: 'LCA · LCI · LCD, sem IR'
+};
+
+// O nome de cada categoria no destaque e nos botões de copiar.
+const NOMES = {
+  pre: { um: 'Pré-fixado', varios: 'as pré-fixadas' },
+  pos: { um: 'Pós-fixado', varios: 'as pós-fixadas' },
+  ipca: { um: 'IPCA+', varios: 'os IPCA+' },
+  isentos: { um: 'Isento de IR', varios: 'os isentos de IR' }
 };
 
 export const DICAS_MERCADO = {
@@ -61,14 +73,40 @@ export const mensagemEmHTML = (mensagem) => esc(mensagem).replace(/\*([^*\n]+)\*
 
 /* ── Estados da área de resultado ─────────────────────────────────────────────────────── */
 
+// A ilustração da tela vazia: uma planilha cujas linhas viram uma curva de taxas. Desenha-se uma vez,
+// ao chegar (rendafixa.css); não fica em laço.
+const ILUSTRACAO = `
+  <svg class="rf-ilustra" viewBox="0 0 220 132" aria-hidden="true">
+    <rect class="rf-ilustra-folha" x="14" y="10" width="112" height="112" rx="10"/>
+    <rect class="rf-ilustra-cabeca" x="14" y="10" width="112" height="22" rx="10"/>
+    <g class="rf-ilustra-linhas">
+      <rect x="26" y="44" width="58" height="7" rx="3.5"/><rect x="92" y="44" width="22" height="7" rx="3.5"/>
+      <rect x="26" y="62" width="46" height="7" rx="3.5"/><rect x="92" y="62" width="22" height="7" rx="3.5"/>
+      <rect x="26" y="80" width="64" height="7" rx="3.5"/><rect x="92" y="80" width="22" height="7" rx="3.5"/>
+      <rect x="26" y="98" width="38" height="7" rx="3.5"/><rect x="92" y="98" width="22" height="7" rx="3.5"/>
+    </g>
+    <path class="rf-ilustra-seta" d="M134 66 h22" pathLength="1"/>
+    <path class="rf-ilustra-seta-ponta" d="M150 60 l7 6 -7 6"/>
+    <path class="rf-ilustra-area" d="M164 104 L174 88 L186 80 L198 66 L208 58 L208 112 L164 112 Z"/>
+    <path class="rf-ilustra-curva" d="M164 104 L174 88 L186 80 L198 66 L208 58" pathLength="1"/>
+    <circle class="rf-ilustra-ponto" cx="208" cy="58" r="4"/>
+  </svg>`;
+
 export const htmlVazio = () => `
-  <div class="empty-state">
-    <p>Nenhuma planilha carregada.</p>
-    <span>Solte a planilha de renda fixa da XP em qualquer lugar desta aba, ou clique em “Arraste a planilha aqui”.</span>
+  <div class="rf-boasvindas">
+    ${ILUSTRACAO}
+    <h3>Solte aqui a planilha de renda fixa da XP</h3>
+    <p>Em qualquer lugar desta aba. Em segundos, a maior taxa de cada prazo e categoria, e a mensagem pronta para o WhatsApp.</p>
+    <ol class="rf-passos">
+      <li><b>1</b><span>Exporte da XP<small>a planilha de produtos de renda fixa</small></span></li>
+      <li><b>2</b><span>Solte nesta aba<small>lida aqui, sem sair do navegador</small></span></li>
+      <li><b>3</b><span>Copie a mensagem<small>e cole no WhatsApp do cliente</small></span></li>
+    </ol>
+    <button type="button" class="copy-btn btn-primario rf-escolher" data-acao="abrir">Escolher a planilha</button>
   </div>`;
 
 export const htmlLendo = (nome) => `
-  <div class="empty-state">
+  <div class="empty-state rf-lendo">
     <p>Lendo ${esc(nome)}…</p>
   </div>`;
 
@@ -92,67 +130,136 @@ export const htmlSemResultado = (r) => {
 
 /* ── Cartões ──────────────────────────────────────────────────────────────────────────── */
 
-export const htmlCartoes = (r, referencia) => {
+/**
+ * @param {object} r o resultado do motor
+ * @param {object|null} referencia a última análise salva antes de hoje, para as variações
+ * @param {{trechos?: Record<string, string>}} [opcoes] os trechos da mensagem (`analise.js`): com
+ *   eles, cada seção ganha o botão de copiar só ela
+ */
+export const htmlCartoes = (r, referencia, { trechos = {} } = {}) => {
   const secoes = r.secoes.filter((s) => s.itens.length);
-  return `<div class="rf-secoes">${secoes.map((secao) => htmlSecao(secao, r.secundario, referencia)).join('')}</div>`;
+  return `
+  <div class="rf-destaques">${secoes.map((secao) => htmlDestaque(secao, r)).join('')}</div>
+  <div class="rf-secoes">${secoes.map((secao) => htmlSecao(secao, r, referencia, trechos)).join('')}</div>`;
 };
 
-const htmlSecao = (secao, secundario, referencia) => `
+// O alto do painel: a maior taxa de cada categoria, grande, com o prazo e o tipo. Leva à seção.
+const htmlDestaque = (secao, r) => {
+  const d = destaqueDaSecao(secao);
+  const { prefixo, valor, sufixo } = partesDaTaxa(d);
+  const emissor = r.secundario && d.emissor ? ` · ${esc(d.emissor)}` : '';
+  const equivalente = secao.id === 'isentos' ? equivalenteBruto(d) : null;
+  const rodape = equivalente
+    ? `<span class="rf-destaque-equiv">≈ ${fmtT(equivalente.taxa)}${sufixo} num título com IR</span>`
+    : htmlCurva(secao, d, { mini: true });
+  return `
+    <button type="button" class="rf-destaque" data-sec="${secao.id}" data-acao="ir-para" title="Ver ${NOMES[secao.id].varios}">
+      <span class="rf-destaque-rotulo">${NOMES[secao.id].um}</span>
+      <span class="rf-destaque-taxa">${prefixo ? `<small>${prefixo.trim()}</small>` : ''}<span class="rf-num" data-contar="${d.taxa}">${valor}</span><small>${sufixo}</small></span>
+      <span class="rf-destaque-sub">${fmtP(d.prazo)} · ${esc(d.tipo)}${emissor}</span>
+      ${rodape}
+    </button>`;
+};
+
+const htmlSecao = (secao, r, referencia, trechos) => {
+  const destaque = destaqueDaSecao(secao);
+  const n = secao.itens.length;
+  const copiar = trechos[secao.id]
+    ? `<button type="button" class="rf-copiar-secao" data-acao="copiar-secao" data-sec="${secao.id}" title="Copiar só ${NOMES[secao.id].varios}, com o mesmo texto da mensagem">Copiar</button>`
+    : '';
+  return `
   <section class="rf-secao" data-sec="${secao.id}">
     <header class="rf-secao-topo">
-      <div class="rf-secao-titulo"><strong>${esc(secao.titulo)}</strong><span>${UNIDADES[secao.id]}</span></div>
-      ${htmlCurva(secao)}
+      <div class="rf-secao-titulo"><strong>${esc(secao.titulo)}</strong><span>${UNIDADES[secao.id]} · ${n} na mensagem</span></div>
+      ${copiar}
     </header>
-    <ol class="rf-linhas">${secao.itens.map((item) => htmlLinha(item, secao.id, secundario, referencia)).join('')}</ol>
+    ${htmlCurva(secao, destaque)}
+    <ol class="rf-linhas">${secao.itens.map((item, i) => htmlLinha(item, i, secao, r, referencia, destaque)).join('')}</ol>
   </section>`;
+};
 
-const htmlLinha = (item, secaoId, secundario, referencia) => {
+const htmlLinha = (item, i, secao, r, referencia, destaque) => {
   const { prefixo, valor, sufixo } = partesDaTaxa(item);
-  const emissor = secundario && item.emissor ? `<span class="rf-emissor">${esc(item.emissor)}</span>` : '';
+  const emissor = r.secundario && item.emissor ? `<span class="rf-emissor">${esc(item.emissor)}</span>` : '';
+  const melhor = item === destaque;
   return `
-    <li class="rf-linha">
+    <li class="rf-linha${melhor ? ' rf-melhor' : ''}" data-i="${i}" style="--forca:${forcaDaTaxa(item, secao).toFixed(3)}"${melhor ? ' title="A maior taxa desta categoria"' : ''}>
       <span class="rf-prazo">${item.prazo}<small>${item.prazo === 1 ? 'ano' : 'anos'}</small></span>
       <span class="badge">${esc(item.tipo)}</span>
       <span class="rf-ativo">${emissor}<span title="${esc(item.ativo)}">${esc(item.ativo)}</span></span>
       <span class="rf-taxa">
         <span class="rf-taxa-valor">${prefixo ? `<span class="rf-taxa-pre">${prefixo.trim()}</span> ` : ''}<span class="rf-taxa-num">${valor}</span><span class="rf-taxa-suf">${sufixo}</span></span>
-        ${htmlDelta(item, secaoId, referencia)}
+        ${htmlDelta(item, secao.id, referencia)}
       </span>
+      ${secao.id === 'isentos' ? htmlEquivalencia(item, r.secoes) : ''}
+      <span class="rf-forca" aria-hidden="true"></span>
     </li>`;
 };
 
-// Curva de taxa × prazo da seção. Só quando todos os itens usam a mesma unidade.
-const htmlCurva = (secao) => {
+// O isento comparado com um título com IR: a taxa equivalente e, havendo, o da mensagem no mesmo prazo.
+// A alíquota sai como se fala: 22,5%, 20%, 17,5%, 15%.
+const fmtIR = (ir) => String(ir).replace('.', ',');
+const htmlEquivalencia = (item, secoes) => {
+  const eq = equivalenteBruto(item);
+  if (!eq) return '';
+  const { sufixo } = partesDaTaxa(item);
+  const tributado = tributadoDoMesmoPrazo(item, secoes);
+  const comparacao = !tributado
+    ? ''
+    : eq.taxa > tributado.taxa
+      ? ` <b class="rf-supera">rende mais que o ${esc(tributado.tipo)} de ${fmtP(item.prazo)} (${fmtT(tributado.taxa)}${sufixo})</b>`
+      : ` <span class="rf-perde">o ${esc(tributado.tipo)} de ${fmtP(item.prazo)} paga ${fmtT(tributado.taxa)}${sufixo}</span>`;
+  const conta = `${fmtT(item.taxa)} ÷ (1 − ${fmtIR(eq.ir)}%), com ${item.dias} dias até o vencimento`;
+  return `<span class="rf-equivale" title="A taxa que um título com IR precisaria pagar para render o mesmo: ${conta}.">≈ ${fmtT(eq.taxa)}${sufixo} num título com IR <small>(IR de ${fmtIR(eq.ir)}%)</small>${comparacao}</span>`;
+};
+
+/**
+ * A curva de taxa × prazo da seção. Só quando todos os itens usam a mesma unidade. A grande leva os
+ * prazos embaixo e a maior taxa escrita; cada ponto tem o `data-i` da linha dele, e passar o mouse
+ * numa acende a outra (index.js). A mini vai no destaque.
+ */
+const htmlCurva = (secao, destaque, { mini = false } = {}) => {
   const itens = secao.itens;
   if (secao.id === 'isentos' || itens.length < 2) return '';
   if (new Set(itens.map((it) => it.indexador)).size > 1) return '';
 
-  const L = 112;
-  const A = 36;
-  const M = 5;
+  const [L, A] = mini ? [120, 30] : [360, 92];
+  const [mx, mt, mb] = mini ? [4, 4, 4] : [18, 20, 24];
   const prazos = itens.map((it) => it.prazo);
   const taxas = itens.map((it) => it.taxa);
   const [pMin, pMax, tMin, tMax] = [Math.min(...prazos), Math.max(...prazos), Math.min(...taxas), Math.max(...taxas)];
-  const x = (p) => M + ((p - pMin) / (pMax - pMin)) * (L - 2 * M);
-  const y = (t) => (tMax === tMin ? A / 2 : M + (1 - (t - tMin) / (tMax - tMin)) * (A - 2 * M));
+  const base = A - mb;
+  const x = (p) => mx + ((p - pMin) / (pMax - pMin)) * (L - 2 * mx);
+  const y = (t) => (tMax === tMin ? (mt + base) / 2 : mt + (1 - (t - tMin) / (tMax - tMin)) * (base - mt));
   const pontos = itens.map((it) => [x(it.prazo).toFixed(1), y(it.taxa).toFixed(1)]);
   const linha = pontos.map(([px, py], k) => `${k ? 'L' : 'M'}${px} ${py}`).join(' ');
+  const [primeiro, ultimo] = [pontos[0], pontos[pontos.length - 1]];
+  const area = `${linha} L${ultimo[0]} ${base} L${primeiro[0]} ${base} Z`;
+  const descricao = itens.map((it) => `${fmtP(it.prazo)}: ${fmtT(it.taxa)}`).join(', ');
+  const gradiente = `rf-degrade-${secao.id}${mini ? '-mini' : ''}`;
+
   const marcas = itens
     .map((it, j) => {
       const { prefixo, valor, sufixo } = partesDaTaxa(it);
       const [px, py] = pontos[j];
-      return `<circle cx="${px}" cy="${py}" r="3"><title>${fmtP(it.prazo)}: ${prefixo}${valor}${sufixo}</title></circle>`;
+      const maior = it === destaque ? ' class="rf-ponto-maior"' : '';
+      return `<circle cx="${px}" cy="${py}" r="${mini ? 2.2 : 3.4}" data-i="${j}"${maior}><title>${fmtP(it.prazo)}: ${prefixo}${valor}${sufixo}</title></circle>`;
     })
     .join('');
-  const descricao = itens.map((it) => `${fmtP(it.prazo)}: ${fmtT(it.taxa)}`).join(', ');
 
-  // A área sob a curva, fechada até a base, pintada por um degradê na cor da seção (rendafixa.css).
-  // pathLength="1" deixa a linha se desenhar com o mesmo tempo, qualquer que seja o comprimento.
-  const [ultimo, primeiro] = [pontos[pontos.length - 1], pontos[0]];
-  const area = `${linha} L${ultimo[0]} ${A} L${primeiro[0]} ${A} Z`;
-  const gradiente = `rf-degrade-${secao.id}`;
+  // Na grande: a linha de base, os prazos embaixo e a maior taxa escrita sobre o ponto dela.
+  let extras = '';
+  if (!mini) {
+    const iMaior = itens.indexOf(destaque);
+    const [qx, qy] = pontos[iMaior] ?? pontos[0];
+    const ancora = Number(qx) > L - 40 ? 'end' : Number(qx) < 40 ? 'start' : 'middle';
+    extras =
+      `<line class="rf-eixo-linha" x1="${mx}" y1="${base}" x2="${L - mx}" y2="${base}"/>` +
+      itens.map((it, j) => `<text class="rf-eixo" x="${pontos[j][0]}" y="${A - 6}" text-anchor="middle">${it.prazo}a</text>`).join('') +
+      `<text class="rf-rotulo-maior" x="${qx}" y="${Number(qy) - 9}" text-anchor="${ancora}">${fmtT(destaque.taxa)}${partesDaTaxa(destaque).sufixo.trim()}</text>`;
+  }
 
-  return `<svg class="rf-curva" viewBox="0 0 ${L} ${A}" role="img" aria-label="Curva por prazo — ${descricao}"><defs><linearGradient id="${gradiente}" x1="0" y1="0" x2="0" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs><path class="rf-area" d="${area}" fill="url(#${gradiente})"/><path class="rf-traco" d="${linha}" pathLength="1"/>${marcas}</svg>`;
+  return `<svg class="rf-curva${mini ? ' rf-curva-mini' : ''}" viewBox="0 0 ${L} ${A}" role="img" aria-label="Curva por prazo — ${descricao}"><defs><linearGradient id="${gradiente}" x1="0" y1="0" x2="0" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs><path class="rf-area" d="${area}" fill="url(#${gradiente})"/>${extras}<path class="rf-traco" d="${linha}" pathLength="1"/>${marcas}</svg>`;
 };
 
 // Variação contra a última análise salva antes de hoje, no mesmo mercado
@@ -167,9 +274,38 @@ const htmlDelta = (item, secaoId, referencia) => {
 
 /* ── Mensagem ─────────────────────────────────────────────────────────────────────────── */
 
-export const htmlMensagem = (texto) => `
-  <div class="rf-bolha">${mensagemEmHTML(texto.trimEnd())}</div>
-  <p class="rf-nota">É exatamente este texto que o botão Copiar coloca na área de transferência.</p>`;
+/**
+ * A mensagem como chega no WhatsApp do cliente: um celular com a conversa, e ao lado os números dela e
+ * os botões de copiar uma categoria só.
+ *
+ * @param {string} texto a mensagem, como o Copiar a leva
+ * @param {{trechos?: Record<string, string>}} [opcoes]
+ */
+export const htmlMensagem = (texto, { trechos = {} } = {}) => {
+  const limpo = texto.trimEnd();
+  const ids = Object.keys(trechos);
+  const chips = ids
+    .map((id) => `<button type="button" class="rf-chip" data-acao="copiar-secao" data-sec="${id}" title="Copiar só ${NOMES[id].varios}">${NOMES[id].um}</button>`)
+    .join('');
+  return `
+  <div class="rf-zap">
+    <div class="rf-celular">
+      <div class="rf-celular-topo"><span class="rf-avatar" aria-hidden="true"></span><span><strong>Cliente</strong><small>WhatsApp</small></span></div>
+      <div class="rf-conversa">
+        <div class="rf-bolha"><div class="rf-bolha-texto">${mensagemEmHTML(limpo)}</div><span class="rf-bolha-hora" aria-hidden="true">agora <i>✓✓</i></span></div>
+      </div>
+    </div>
+    <aside class="rf-zap-lado">
+      <p class="rf-nota">É exatamente este texto que o botão Copiar coloca na área de transferência.</p>
+      <dl class="rf-zap-numeros">
+        <div><dt>linhas</dt><dd>${limpo.split('\n').length}</dd></div>
+        <div><dt>caracteres</dt><dd>${limpo.length}</dd></div>
+        <div><dt>categorias</dt><dd>${ids.length}</dd></div>
+      </dl>
+      ${chips ? `<div class="rf-zap-trechos"><span>Copiar uma categoria só</span><div>${chips}</div></div>` : ''}
+    </aside>
+  </div>`;
+};
 
 /* ── Bloqueados ───────────────────────────────────────────────────────────────────────── */
 
@@ -213,7 +349,7 @@ export const htmlFunil = (r) => {
       const pct = (valor / base) * 100;
       return `
     <div class="rf-funil-etapa${i === etapas.length - 1 ? ' rf-funil-final' : ''}" title="${descricao}: ${numero(valor)} de ${numero(t.lidos)} linhas (${fmtPct(pct)})">
-      <div class="rf-funil-rotulo"><span>${rotulo}</span><span class="rf-funil-pct">${fmtPct(pct)}</span><b>${numero(valor)}</b></div>
+      <div class="rf-funil-rotulo"><span>${rotulo}</span><span class="rf-funil-pct">${fmtPct(pct)}</span><b class="rf-num" data-contar="${valor}" data-inteiro>${numero(valor)}</b></div>
       <div class="rf-funil-trilho"><div class="rf-funil-barra" style="width:${pct.toFixed(2)}%"></div></div>
     </div>`;
     })

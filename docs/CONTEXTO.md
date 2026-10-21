@@ -22,7 +22,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10): 1.128 testes (`npm test`), o build e 216
+- A última verificação passou inteira (21/10): 1.152 testes (`npm test`), o build e 221
   conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -31,6 +31,16 @@ cada sessão.
   a condição.
 - **De 20 a 21/10 foram 23 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entra também o workflow semanal dos tickers da B3.
+
+## 21/10: o Renda Fixa repaginado
+
+A pedido do usuário ("mais bonito, criativo, mais animações, e o que for útil"): os destaques de cada
+categoria no alto, o gráfico largo ligado às linhas, a força de cada taxa, a **equivalência dos
+isentos** (quanto um título com IR precisaria pagar, e se o isento rende mais que o CDB do mesmo
+prazo), **copiar uma categoria só**, a contagem de cada mercado no seletor, a mensagem num celular,
+as boas-vindas e o véu de soltar a planilha. A mensagem do WhatsApp não mudou: os goldens do motor
+original continuam iguais (o motor ganhou só o campo `dias`, que eles ignoram). Detalhes em
+`docs/rendafixa.md`, "Tela".
 
 ## 21/10: a revisão, a lista da B3 e a documentação por módulo
 

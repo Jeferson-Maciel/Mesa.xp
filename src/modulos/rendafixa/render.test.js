@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LINHAS_SINTETICAS } from './fixtures/sintetica.js';
 import { DATA_GOLDEN } from './golden/referencia.js';
+import { trechosDaMensagem } from './analise.js';
 import { montarTexto, processRows } from './motor.js';
 import {
   htmlBloqueados,
@@ -33,7 +34,7 @@ describe('prévia da mensagem', () => {
   it('é o mesmo texto que o Copiar leva, só com o negrito à vista', () => {
     const texto = montarTexto(primario);
     const html = htmlMensagem(texto);
-    const semMarcacao = html.match(/<div class="rf-bolha">([\s\S]*?)<\/div>/)[1]
+    const semMarcacao = html.match(/<div class="rf-bolha-texto">([\s\S]*?)<\/div>/)[1]
       .replace(/<\/?strong>/g, '*')
       .replace(/&gt;/g, '>')
       .replace(/&lt;/g, '<')
@@ -71,6 +72,54 @@ describe('cartões', () => {
     expect(html).toContain('rf-delta rf-sobe');
     expect(html).toContain('▲ 0,15');
     expect(html).toContain('title="Em 22/09: 14,05% a.a."');
+  });
+});
+
+describe('a repaginação de 21/10/2026', () => {
+  const texto = montarTexto(primario);
+  const trechos = trechosDaMensagem(texto, primario.secoes);
+
+  it('um destaque por categoria com a maior taxa, que leva à seção', () => {
+    const html = htmlCartoes(primario, null, { trechos });
+    const ids = primario.secoes.filter((s) => s.itens.length).map((s) => s.id);
+    for (const id of ids) expect(html).toContain(`class="rf-destaque" data-sec="${id}" data-acao="ir-para"`);
+    expect(html).toMatch(/class="rf-num" data-contar="[\d.]+">[\d,]+<\/span>/);
+  });
+
+  it('cada seção copia só o trecho dela, e sem trechos não oferece o botão', () => {
+    expect(htmlCartoes(primario, null, { trechos })).toContain('data-acao="copiar-secao" data-sec="pre"');
+    expect(htmlCartoes(primario, null)).not.toContain('copiar-secao');
+  });
+
+  it('a linha de maior taxa é marcada, e o gráfico tem um ponto por linha, com o mesmo índice', () => {
+    const html = htmlCartoes(primario, null, { trechos });
+    expect(html).toContain('rf-linha rf-melhor');
+    expect(html).toMatch(/<circle [^>]*data-i="0"/);
+    expect(html).toMatch(/<li class="rf-linha[^"]*" data-i="0"/);
+  });
+
+  it('o isento mostra a taxa equivalente num título com IR, com a alíquota pelos dias', () => {
+    const r = {
+      secundario: false,
+      secoes: [
+        { id: 'pre', titulo: 'Pré-fixadas', itens: [{ prazo: 1, tipo: 'CDB', taxa: 12, indexador: 'PRE', ativo: 'CDB X', dias: 400 }] },
+        { id: 'isentos', titulo: 'Isentos de IR', itens: [{ prazo: 1, tipo: 'LCA', taxa: 10.5, indexador: 'PRE', sub: 'PRE', ativo: 'LCA Y', dias: 400 }] }
+      ]
+    };
+    const html = htmlCartoes(r, null);
+    expect(html).toContain('≈ 12,73% a.a. num título com IR <small>(IR de 17,5%)</small>');
+    expect(html).toContain('rende mais que o CDB de 1 ano (12% a.a.)');
+  });
+
+  it('a mensagem no celular: o mesmo texto, os números dela e os botões de cada categoria', () => {
+    const html = htmlMensagem(texto, { trechos });
+    expect(html).toContain('class="rf-celular"');
+    expect(html).toContain(`<dd>${texto.trimEnd().split('\n').length}</dd>`);
+    expect(html).toContain('class="rf-chip" data-acao="copiar-secao" data-sec="pre"');
+  });
+
+  it('o funil conta até os números, que já vêm escritos no HTML', () => {
+    expect(htmlFunil(primario)).toContain(`data-contar="${primario.totais.lidos}" data-inteiro>${primario.totais.lidos}<`);
   });
 });
 

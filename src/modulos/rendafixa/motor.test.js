@@ -11,10 +11,11 @@ import * as motor from './motor.js';
 const caminho = (relativo) => fileURLToPath(new URL(relativo, import.meta.url));
 
 describe('motor do Renda Fixa', () => {
-  it('expõe a mesma API do motor original', () => {
+  // Mais o diasAteOVencimento, acrescentado na Mesa XP em 21/10/2026 (a equivalência dos isentos).
+  it('expõe a mesma API do motor original, mais os dias até o vencimento', () => {
     expect(Object.keys(motor).sort()).toEqual(
       [
-        'processRows', 'montarTexto', 'partesDaTaxa', 'parseTaxaLocal', 'parsePULocal', 'parsePrazoLocal',
+        'processRows', 'montarTexto', 'partesDaTaxa', 'parseTaxaLocal', 'parsePULocal', 'parsePrazoLocal', 'diasAteOVencimento',
         'classificarDiasEmAnos', 'normalizeTipoLocal', 'detectarIndexador', 'extrairEmissor', 'parseNumero',
         'fmtT', 'fmtP', 'MOTIVOS_DESCARTE', 'PRAZOS_EXIBIDOS'
       ].sort()
@@ -43,5 +44,18 @@ describe('a planilha não sai do navegador', () => {
       const fonte = readFileSync(caminho(`./${nome}`), 'utf8');
       expect(fonte, nome).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|navigator\.sendBeacon/);
     }
+  });
+});
+
+describe('diasAteOVencimento', () => {
+  const hoje = new Date(2026, 9, 21, 12);
+  it('lê os mesmos jeitos de escrever o vencimento que o prazo', () => {
+    expect(motor.diasAteOVencimento(new Date(2027, 9, 21, 12), hoje)).toBe(365);
+    expect(motor.diasAteOVencimento('720 dias', hoje)).toBe(720);
+    expect(motor.diasAteOVencimento('24 meses', hoje)).toBe(720);
+    expect(motor.diasAteOVencimento('2 anos', hoje)).toBe(730);
+    expect(motor.diasAteOVencimento('21/10/2028', hoje)).toBe(731);
+    expect(motor.diasAteOVencimento(500, hoje)).toBe(500);
+    expect(motor.diasAteOVencimento('', hoje)).toBeNull();
   });
 });

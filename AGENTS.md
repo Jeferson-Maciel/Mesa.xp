@@ -23,7 +23,7 @@ Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 
 ```bash
 npm install
-npm test            # Vitest — 1.117 testes
+npm test            # Vitest — 1.152 testes
 npm run build       # dist/index.html, um arquivo só
 npm run verificar   # Playwright: abre o dist/ e confere as cinco abas e o robô do Hub
 npm run verificar:supabase   # grava no banco da mesa — só fora do expediente e com o OK do usuário

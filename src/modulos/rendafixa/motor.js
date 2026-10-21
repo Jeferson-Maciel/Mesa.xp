@@ -182,6 +182,34 @@ function calcularAnos(dataAlvo, hoje = new Date()) {
 }
 
 /**
+ * Os dias corridos até o vencimento, para a alíquota do IR na equivalência dos isentos
+ * (`equivalencia.js`). Lê o vencimento como `parsePrazoLocal`: "N meses" vale 30 dias por mês, e o
+ * texto só em anos ("2 anos"), 365 por ano. Acrescentado na Mesa XP em 21/10/2026 — o motor original
+ * não tinha —, e os goldens conferem o resto do resultado sem ele.
+ */
+function diasAteOVencimento(raw, hoje = new Date()) {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const ate = (data) => Math.ceil((data - hoje) / (1000 * 60 * 60 * 24));
+    if (ehData(raw)) return ate(raw);
+    if (typeof raw === 'number') return raw < 20000 ? Math.round(raw) : ate(new Date(Math.round((raw - 25569) * 86400 * 1000)));
+
+    const txt = removeAccents(String(raw)).trim();
+    const dias = txt.match(/(\d+)\s*dias?/);
+    if (dias) return parseInt(dias[1], 10);
+    const meses = txt.match(/(\d+)\s*mes(es)?/);
+    if (meses) return parseInt(meses[1], 10) * 30;
+    const anos = txt.match(/(\d+)\s*anos?/);
+    if (anos) return parseInt(anos[1], 10) * 365 || null;
+
+    const br = txt.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    if (br) return ate(new Date(`${br[3]}-${br[2]}-${br[1]}T12:00:00Z`));
+    const iso = txt.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return ate(new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00Z`));
+
+    return null;
+}
+
+/**
  * Identifica o tipo do título. Aceita o nome por extenso ("Letra de Crédito do
  * Agronegócio"), a sigla solta ("LCA", "LCD BNDES - SET/2036") ou o prefixo de
  * um ticker ("CDB6258GLVF"). Tickers sem prefixo ("26I1LCD8XR3") → null.
@@ -389,7 +417,7 @@ function processRows(rows, secundario, hoje = new Date()) {
             // Célula numérica em formato de porcentagem: 105% do CDI chega como 1,05
             if (typeof taxaRaw === 'number' && indexador === 'CDI' && taxa >= 1 && taxa < 3) taxa *= 100;
 
-            const entrada = { prazo, tipo, taxa, indexador, emissor: extrairEmissor(getV('emissor'), row[0]), ativo };
+            const entrada = { prazo, tipo, taxa, indexador, emissor: extrairEmissor(getV('emissor'), row[0]), ativo, dias: diasAteOVencimento(getV('vencimento'), hoje) };
 
             if (TIPOS_ISENTOS.includes(tipo) || isentoPorColuna(getV('isento'))) {
                 const sub = indexador === 'IPCA' ? 'IPCA' : indexador === 'PRE' ? 'PRE' : 'CDI';
@@ -488,7 +516,7 @@ function montarTexto(resultado) {
 }
 
 export {
-    processRows, montarTexto, partesDaTaxa, parseTaxaLocal, parsePULocal, parsePrazoLocal,
+    processRows, montarTexto, partesDaTaxa, parseTaxaLocal, parsePULocal, parsePrazoLocal, diasAteOVencimento,
     classificarDiasEmAnos, normalizeTipoLocal, detectarIndexador, extrairEmissor, parseNumero,
     fmtT, fmtP, MOTIVOS_DESCARTE, PRAZOS_EXIBIDOS,
 };

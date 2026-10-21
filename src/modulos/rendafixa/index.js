@@ -3,6 +3,7 @@ import { aviso } from '../../ui/avisos.js';
 import { buscarReferencia, excluir, lerHistorico, novoRegistro, salvar } from './historico.js';
 import { montarTexto, processRows } from './motor.js';
 import { lerPlanilha } from './planilha.js';
+import { trechosDaMensagem } from './analise.js';
 import {
   DICAS_MERCADO,
   formatBytes,
@@ -26,9 +27,11 @@ import './rendafixa.css';
  * O RendaFixa Pro dentro da Mesa XP.
  *
  * Mesmo fluxo do app original — planilha → mercado → funil → cartões ou mensagem → copiar e
- * salvar —, com o visual do Ordens e sem os enfeites (aurora, vidro, contagem animada, holofote,
- * ondinha, voo até o histórico). A espera artificial da leitura também saiu: a planilha é lida em
- * milissegundos, e o resultado aparece assim que fica pronto.
+ * salvar —, no visual da Mesa. A espera artificial da leitura saiu: a planilha é lida em
+ * milissegundos, e o resultado aparece assim que fica pronto. Desde 21/10/2026 (a repaginação): os
+ * dois mercados calculados de uma vez, com a contagem de cada um no seletor; os números que chegam
+ * contam até o valor; os destaques levam à seção; cada seção copia só o trecho dela; e a linha e o
+ * ponto do gráfico se acendem juntos.
  *
  * Inicia só quando a aba abre pela primeira vez. Atalhos de teclado e o arrastar-e-soltar valem só
  * com a aba à vista: soltar uma planilha na aba Ordens não a analisa escondido.
@@ -58,6 +61,8 @@ export const iniciarRendaFixa = (secao) => {
     visao: el('visao'),
     salvar: el('salvar'),
     copiar: el('copiar'),
+    contaPrimario: el('conta-primario'),
+    contaSecundario: el('conta-secundario'),
     corpo: el('corpo'),
     bloqueados: el('bloqueados'),
     historico: el('historico'),
@@ -72,6 +77,8 @@ export const iniciarRendaFixa = (secao) => {
     arquivo: null, // { nome, tamanho, aba }
     secundario: false,
     resultado: null, // saída de processRows
+    porMercado: null, // os dois resultados, calculados juntos: { false: primário, true: secundário }
+    trechos: {}, // um trecho da mensagem por seção, para copiar só ela (analise.js)
     texto: '', // mensagem final: é o que Copiar e Salvar usam
     salvo: false,
     visao: 'cartoes',
@@ -89,7 +96,7 @@ export const iniciarRendaFixa = (secao) => {
     }
 
     const leitura = ++estado.leitura;
-    Object.assign(estado, { rows: null, resultado: null, texto: '', salvo: false, arquivo: { nome: file.name, tamanho: file.size, aba: '' } });
+    Object.assign(estado, { rows: null, porMercado: null, resultado: null, texto: '', trechos: {}, salvo: false, arquivo: { nome: file.name, tamanho: file.size, aba: '' } });
     mostrarArquivo();
     atualizarAcoes();
     ui.subtitulo.textContent = 'Lendo a planilha…';
@@ -117,9 +124,13 @@ export const iniciarRendaFixa = (secao) => {
 
   function analisar() {
     if (!estado.rows) return;
-    const resultado = processRows(estado.rows, estado.secundario);
+    // Os dois mercados de uma vez: a contagem de cada um vai no seletor, e trocar não relê a planilha.
+    estado.porMercado ??= { false: processRows(estado.rows, false), true: processRows(estado.rows, true) };
+    const resultado = estado.porMercado[estado.secundario];
     estado.resultado = resultado;
     estado.texto = montarTexto(resultado);
+    estado.trechos = trechosDaMensagem(estado.texto, resultado.secoes);
+    mostrarContagens();
     estado.salvo = false;
     renderResultado();
     renderFunil();
@@ -143,9 +154,22 @@ export const iniciarRendaFixa = (secao) => {
     ui.arquivoDetalhes.textContent = partes.join(' · ');
   }
 
+  // Quantas oportunidades cada mercado tem: para saber, antes de trocar, se o outro vale a pena.
+  function mostrarContagens() {
+    const mostrar = (selo, secundario) => {
+      const total = estado.porMercado?.[secundario]?.totais.exibidos;
+      selo.hidden = total === undefined;
+      selo.textContent = total ?? '';
+      selo.title = total === undefined ? '' : `${total} ${total === 1 ? 'oportunidade' : 'oportunidades'}`;
+    };
+    mostrar(ui.contaPrimario, false);
+    mostrar(ui.contaSecundario, true);
+  }
+
   function removerArquivo() {
     estado.leitura++;
-    Object.assign(estado, { rows: null, arquivo: null, resultado: null, texto: '', salvo: false });
+    Object.assign(estado, { rows: null, porMercado: null, arquivo: null, resultado: null, texto: '', trechos: {}, salvo: false });
+    mostrarContagens();
     ui.entradaArquivo.value = '';
     ui.arquivo.hidden = true;
     ui.soltar.hidden = false;
@@ -203,8 +227,68 @@ export const iniciarRendaFixa = (secao) => {
       : `Nenhuma oportunidade · ${mercado}`;
 
     if (!total) ui.corpo.innerHTML = htmlSemResultado(r);
-    else if (estado.visao === 'mensagem') ui.corpo.innerHTML = htmlMensagem(estado.texto);
-    else ui.corpo.innerHTML = htmlCartoes(r, buscarReferencia(lerHistorico(), r.secundario));
+    else if (estado.visao === 'mensagem') ui.corpo.innerHTML = htmlMensagem(estado.texto, { trechos: estado.trechos });
+    else ui.corpo.innerHTML = htmlCartoes(r, buscarReferencia(lerHistorico(), r.secundario), { trechos: estado.trechos });
+    contar(ui.corpo);
+  }
+
+  /*
+   * Os números que chegam contam até o valor, em 700 ms, desacelerando: a taxa nova "assenta" no
+   * lugar. O HTML já traz o valor final — sem movimento (prefers-reduced-motion), ele só aparece —, e
+   * a contagem termina escrevendo exatamente esse texto.
+   */
+  function contar(raiz) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (const numeroNaTela of raiz.querySelectorAll('[data-contar]')) {
+      const alvo = Number(numeroNaTela.dataset.contar);
+      if (!Number.isFinite(alvo) || alvo <= 0) continue;
+      const final = numeroNaTela.textContent;
+      const inteiro = 'inteiro' in numeroNaTela.dataset;
+      const de = inteiro ? 0 : alvo * 0.6;
+      const inicio = performance.now();
+      const formato = inteiro ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+      const passo = (agora) => {
+        const t = Math.min(1, (agora - inicio) / 700);
+        const valor = de + (alvo - de) * (1 - (1 - t) ** 3);
+        numeroNaTela.textContent = t < 1 ? valor.toLocaleString('pt-BR', formato) : final;
+        if (t < 1 && numeroNaTela.isConnected) requestAnimationFrame(passo);
+      };
+      requestAnimationFrame(passo);
+    }
+  }
+
+  // Um destaque leva à seção dele, que acende uma vez para o olho achar.
+  function irPara(id) {
+    const secaoAlvo = ui.corpo.querySelector(`.rf-secao[data-sec="${id}"]`);
+    if (!secaoAlvo) return;
+    const suave = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    secaoAlvo.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'center' });
+    secaoAlvo.classList.remove('rf-acesa');
+    void secaoAlvo.offsetWidth;
+    secaoAlvo.classList.add('rf-acesa');
+  }
+
+  // Copiar só uma categoria: o título e o bloco dela, como estão na mensagem.
+  async function copiarSecao(id, botao) {
+    const trecho = estado.trechos[id];
+    if (!trecho) return;
+    if (!(await copiarTexto(trecho))) {
+      aviso('Não foi possível copiar. Abra a visão Mensagem e selecione o texto.', { tipo: 'erro' });
+      return;
+    }
+    botao.classList.add('copiado');
+    setTimeout(() => botao.classList.remove('copiado'), 1600);
+    aviso('Copiada só esta categoria, com o mesmo texto da mensagem.');
+  }
+
+  // A linha e o ponto do gráfico se acendem juntos: passar o mouse numa acende o outro.
+  function acenderPar(e) {
+    const alvo = e.target.closest?.('.rf-linha, .rf-curva:not(.rf-curva-mini) circle');
+    const secaoDoAlvo = e.target.closest?.('.rf-secao');
+    for (const acesa of ui.corpo.querySelectorAll('.rf-par')) acesa.classList.remove('rf-par');
+    if (!alvo || !secaoDoAlvo) return;
+    const i = alvo.dataset.i;
+    for (const par of secaoDoAlvo.querySelectorAll(`.rf-linha[data-i="${i}"], .rf-curva circle[data-i="${i}"]`)) par.classList.add('rf-par');
   }
 
   function renderFunilVazio() {
@@ -216,6 +300,7 @@ export const iniciarRendaFixa = (secao) => {
     const abertos = [...ui.funilDetalhes.querySelectorAll('details')].map((d) => d.open);
     ui.funil.innerHTML = htmlFunil(estado.resultado);
     ui.funilDetalhes.innerHTML = htmlDetalhesFunil(estado.resultado, abertos);
+    contar(ui.funil);
   }
 
   /* ── Copiar e salvar ──────────────────────────────────────────────────────────────── */
@@ -414,7 +499,11 @@ export const iniciarRendaFixa = (secao) => {
     if (!botao) return;
     if (botao.dataset.acao === 'trocar-mercado') aplicarMercado(!estado.secundario);
     if (botao.dataset.acao === 'abrir') abrirSeletor();
+    if (botao.dataset.acao === 'ir-para') irPara(botao.dataset.sec);
+    if (botao.dataset.acao === 'copiar-secao') copiarSecao(botao.dataset.sec, botao);
   });
+  ui.corpo.addEventListener('pointerover', acenderPar);
+  ui.corpo.addEventListener('pointerleave', acenderPar);
   ui.copiar.addEventListener('click', copiarMensagem);
   ui.salvar.addEventListener('click', salvarAnalise);
   ui.historico.addEventListener('click', acaoHistorico);
@@ -438,6 +527,9 @@ export const iniciarRendaFixa = (secao) => {
 
 const MARCACAO = `
 <div class="rf">
+  <div class="rf-soltura" aria-hidden="true">
+    <div><strong>Solte para analisar</strong><span>a planilha é lida aqui, sem sair do navegador</span></div>
+  </div>
   <div class="rf-grade">
     <div class="rf-lateral">
       <section class="panel">
@@ -470,8 +562,8 @@ const MARCACAO = `
           <span class="meta-counter">M alterna</span>
         </div>
         <div class="segmentado" role="radiogroup" aria-label="Mercado" data-rf="mercado">
-          <button type="button" class="seg" role="radio" data-mercado="primario">Emissão primária</button>
-          <button type="button" class="seg" role="radio" data-mercado="secundario">Mercado secundário</button>
+          <button type="button" class="seg" role="radio" data-mercado="primario">Emissão primária <span class="rf-conta" data-rf="conta-primario" hidden></span></button>
+          <button type="button" class="seg" role="radio" data-mercado="secundario">Mercado secundário <span class="rf-conta" data-rf="conta-secundario" hidden></span></button>
         </div>
         <p class="rf-nota" data-rf="dica-mercado"></p>
       </section>

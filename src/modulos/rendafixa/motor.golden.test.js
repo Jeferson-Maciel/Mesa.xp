@@ -68,8 +68,11 @@ for (const nome of nomes) {
         expect(montarTexto(processRows(rows, modo.secundario, hoje))).toBe(golden.texto);
       });
 
+      // `dias` entrou em 21/10/2026, para a equivalência dos isentos, e não existe no motor original:
+      // o resto do resultado continua idêntico ao dele.
       it(`${modo.nome}: funil, descartes, bloqueados e seções idênticos`, () => {
-        const resultado = JSON.parse(JSON.stringify(processRows(rows, modo.secundario, hoje)));
+        const semDias = (chave, valor) => (chave === 'dias' ? undefined : valor);
+        const resultado = JSON.parse(JSON.stringify(processRows(rows, modo.secundario, hoje)), semDias);
         expect(resultado).toEqual(golden.resultado);
       });
 

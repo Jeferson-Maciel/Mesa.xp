@@ -26,9 +26,15 @@ atualize o README junto.
 ## Mapa
 
 - `motor.js` — portado do RendaFixaDisparo sem mudar uma regra: o corpo é o mesmo, só o
-  `module.exports` virou `export`. `processRows(rows, secundario, hoje)` devolve
+  `module.exports` virou `export`. Desde 21/10/2026 cada item leva também `dias` (os dias corridos até
+  o vencimento, `diasAteOVencimento`), para a equivalência dos isentos; os goldens conferem o resto
+  do resultado sem ele. `processRows(rows, secundario, hoje)` devolve
   `{ totais, descartes, bloqueados, colunas, secoes }`; `montarTexto(resultado)` gera a mensagem, ou
   `''` sem oportunidade.
+- `analise.js` — o que a tela mostra além do motor (21/10/2026), sem mudar a mensagem: o destaque de
+  cada categoria (a maior taxa na unidade que mais aparece), a força de cada taxa, a equivalência do
+  isento (a taxa ÷ (1 − alíquota do IR pelos dias), só para pré e % do CDI, e o tributado do mesmo
+  prazo para comparar) e os trechos da mensagem, um por categoria, para copiar só ela.
 - `planilha.js` — `lerPlanilha(dados, XLSX)`: primeira aba, datas como `Date`, linhas como matriz.
 - `historico.js` — histórico e variações do dia (▲/▼ contra a última análise salva antes de hoje, no
   mesmo mercado).
@@ -89,7 +95,31 @@ texto, caractere por caractere, e o mesmo resultado.
 ## Tela
 
 Mesmo fluxo do original — planilha → mercado → funil → cartões ou mensagem → copiar e salvar — no
-visual do Ordens. Saíram a aurora, o vidro, a contagem animada, o holofote, a ondinha, o voo até o
-histórico e a espera artificial da leitura. Ficaram o funil (com os motivos de descarte e as
-colunas usadas), as variações do dia, a prévia da mensagem com o negrito, o histórico e os atalhos
-(A, M, V, C, S, T, ?).
+visual da Mesa. Na fusão saíram a aurora, o vidro, o holofote, a ondinha, o voo até o histórico e a
+espera artificial da leitura. Ficaram o funil (com os motivos de descarte e as colunas usadas), as
+variações do dia, o histórico e os atalhos (A, M, V, C, S, T, ?).
+
+**Repaginada em 21/10/2026**, a pedido do usuário ("mais bonito, criativo, mais animações, e o que
+for útil"):
+
+- **As boas-vindas**: sem planilha, uma ilustração (a planilha que vira curva, desenhada uma vez) e
+  os três passos. Arrastando um arquivo, um véu cobre a aba com o alvo no meio.
+- **Os destaques**: no alto dos cartões, a maior taxa de cada categoria, grande, com o prazo, o tipo
+  e a mini curva (nos isentos, a equivalência). Clicar leva à seção, que acende uma vez.
+- **As seções**: o gráfico de taxa × prazo largo, com os prazos embaixo e a maior taxa escrita; a
+  linha e o ponto dela se acendem juntos ao passar o mouse; embaixo de cada linha, a força da taxa
+  na categoria; a maior taxa com um fio aceso e o número na cor da categoria; e um **Copiar** que
+  leva só aquela categoria, com o mesmo texto da mensagem.
+- **Os isentos** mostram a taxa equivalente num título com IR (com a alíquota pelos dias) e se ela
+  rende mais que o CDB da mensagem no mesmo prazo, em verde.
+- **O seletor de mercado** diz quantas oportunidades cada um tem: os dois são calculados juntos, ao
+  ler a planilha, e trocar não relê nada.
+- **A mensagem** num celular, com a conversa do WhatsApp, a hora e os dois vistos; ao lado, as linhas,
+  os caracteres, as categorias e os botões de copiar uma só.
+- **Os números contam até o valor** (700 ms) ao chegar: taxas dos destaques e o funil. O HTML já traz
+  o valor final, e sem movimento (`prefers-reduced-motion`) ele só aparece.
+- A barra do alto (visão, Salvar, Copiar) gruda abaixo do topo ao rolar; no celular, não.
+
+Todo movimento roda uma vez, ao chegar; o único laço é o ícone que salta enquanto se arrasta um
+arquivo. O `verificar` confere o Copiar de uma seção, o realce da linha no gráfico, o destaque que
+leva à seção e a contagem de cada mercado.

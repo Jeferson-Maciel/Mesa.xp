@@ -4,9 +4,15 @@
    Tudo escopado em `.rf`: o CSS do Ordens tem seletores de elemento e classes genéricas, e o
    daqui não pode vazar para lá nem receber de lá.
 
-   Cada categoria de título tem um matiz próprio (`--cor`), para achar o IPCA+ na grade sem ler:
-   pré-fixado em safira, pós em água-marinha, IPCA+ em ametista, isentos em ouro. Variação para
-   cima continua verde, para baixo vermelha — nenhuma categoria usa esses dois.
+   Cada categoria de título tem um matiz próprio (`--cor`, pelo `data-sec`), para achar o IPCA+ sem
+   ler: pré-fixado em safira, pós em água-marinha, IPCA+ em ametista, isentos em ouro. Variação para
+   cima, e o isento que rende mais que o tributado, em verde; para baixo, vermelho — nenhuma
+   categoria usa esses dois.
+
+   Repaginado em 21/10/2026, a pedido do usuário ("mais bonito, criativo, mais animações"): os
+   destaques no alto, o gráfico largo ligado às linhas, a força de cada taxa, o celular da mensagem,
+   as boas-vindas e o véu de soltar. Todo movimento roda uma vez, ao chegar; o único laço é o ícone
+   que salta enquanto se arrasta um arquivo.
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 .rf {
@@ -265,6 +271,41 @@
   flex: 1 1 auto;
 }
 
+/* Quantas oportunidades cada mercado tem, ao lado do nome: para saber antes de trocar. */
+.rf .rf-conta {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  margin-left: 0.3rem;
+  padding: 0 0.35rem;
+  background: var(--acento-fundo);
+  border-radius: var(--r-pilula);
+  color: var(--acento);
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+}
+
+.rf .rf-conta[hidden] {
+  display: none;
+}
+
+/* Com o selo, o nome não cabe inteiro numa tela estreita: o botão encolhe e o espaço aperta. */
+.rf [data-rf='mercado'] .seg {
+  min-width: 0;
+}
+
+@media (max-width: 420px) {
+  .rf [data-rf='mercado'] .seg {
+    padding-inline: 0.45rem;
+  }
+
+  .rf .rf-conta {
+    margin-left: 0.2rem;
+  }
+}
+
 /* ── Funil ──────────────────────────────────────────────────────────────────────────────
    As barras crescem da esquerda, uma depois da outra — o funil se lê de cima para baixo. A última
    etapa, a que vai para o cliente, é a única cheia e com brilho. */
@@ -439,15 +480,23 @@
   white-space: nowrap;
 }
 
-/* ── Resultado ──────────────────────────────────────────────────────────────────────── */
+/* ── Resultado ──────────────────────────────────────────────────────────────────────────
+   A barra do alto (título, visão, Salvar e Copiar) gruda logo abaixo do topo ao rolar: o Copiar fica
+   à mão mesmo no fim da lista. */
 
 .rf .rf-resultado-topo {
+  position: sticky;
+  top: 59px;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--esp-3);
-  margin-bottom: var(--esp-4);
+  margin: calc(-1 * var(--esp-5)) calc(-1 * var(--esp-5)) var(--esp-4);
+  padding: var(--esp-5) var(--esp-5) var(--esp-3);
+  background: var(--superficie);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
 }
 
 .rf .rf-resultado-titulo {
@@ -477,20 +526,211 @@
   min-height: 12rem;
 }
 
+/* No celular o topo da Mesa é mais alto, e a barra não gruda: rola com o painel. Os destaques
+   ficam em duas colunas, com o número menor. */
+@media (max-width: 700px) {
+  .rf .rf-resultado-topo {
+    position: static;
+  }
+
+  .rf .rf-destaque {
+    padding: var(--esp-3);
+  }
+
+  .rf .rf-destaque-taxa {
+    font-size: 1.3rem;
+  }
+
+  .rf .rf-destaque-taxa small {
+    font-size: 0.7rem;
+  }
+}
+
 .rf .rf-corpo .empty-state button {
   margin-top: var(--esp-3);
 }
 
+/* A cor de cada categoria, em tudo que leva o `data-sec` dela: o destaque, a seção, os botões de
+   copiar. Pré em safira, pós em água-marinha, IPCA+ em ametista, isentos em ouro. */
+.rf [data-sec] {
+  --cor: var(--acento);
+}
+
+.rf [data-sec='pre'] {
+  --cor: var(--safira);
+}
+
+.rf [data-sec='pos'] {
+  --cor: var(--agua);
+}
+
+.rf [data-sec='ipca'] {
+  --cor: var(--ametista);
+}
+
+.rf [data-sec='isentos'] {
+  --cor: var(--marca);
+}
+
+.rf .rf-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Os destaques: a maior taxa de cada categoria ─────────────────────────────────────────
+   Chegam estalando um depois do outro, e uma faixa de luz da cor deles os atravessa uma vez. */
+
+.rf .rf-destaques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.25rem), 1fr));
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-4);
+}
+
+.rf .rf-destaque {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--esp-3) var(--esp-4);
+  background:
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--cor) 15%, transparent), transparent 62%),
+    var(--superficie-afundada);
+  border: 1px solid color-mix(in srgb, var(--cor) 26%, var(--borda));
+  border-radius: var(--r-md);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cor) 18%, transparent);
+  color: var(--texto);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: estalar var(--t-cena) var(--curva-mola) both;
+  transition: transform var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva),
+    border-color var(--t-medio) var(--curva);
+}
+
+.rf .rf-destaque::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--cor) 20%, transparent) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: varrer 1100ms var(--curva-saida) 520ms both;
+  pointer-events: none;
+}
+
+.rf .rf-destaque:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.rf .rf-destaque:nth-child(2)::after {
+  animation-delay: 600ms;
+}
+
+.rf .rf-destaque:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.rf .rf-destaque:nth-child(3)::after {
+  animation-delay: 680ms;
+}
+
+.rf .rf-destaque:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.rf .rf-destaque:nth-child(4)::after {
+  animation-delay: 760ms;
+}
+
+.rf .rf-destaque:hover {
+  border-color: var(--cor);
+  box-shadow: 0 14px 30px -18px color-mix(in srgb, var(--cor) 75%, transparent);
+  transform: translateY(-3px);
+}
+
+.rf .rf-destaque:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.rf .rf-destaque-rotulo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  color: var(--cor);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rf .rf-destaque-rotulo::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cor);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 22%, transparent);
+}
+
+.rf .rf-destaque-taxa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.25rem;
+  margin-top: var(--esp-1);
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.rf .rf-destaque-taxa small {
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  font-family: var(--fonte);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.rf .rf-destaque-sub {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rf .rf-destaque-equiv {
+  margin-top: var(--esp-2);
+  color: var(--cor);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.rf .rf-destaque .rf-curva-mini {
+  display: block;
+  width: 100%;
+  height: 30px;
+  margin-top: var(--esp-2);
+}
+
+/* ── As seções ──────────────────────────────────────────────────────────────────────────── */
+
 .rf .rf-secoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
   gap: var(--esp-4);
 }
 
-/* O cartão de cada categoria: um fio de cor no alto, o título com o ponto da categoria e a curva
-   de taxa × prazo na mesma cor. Os cartões chegam em sequência e as linhas logo depois. */
+/* O cartão de cada categoria: um fio de cor no alto, o título com o ponto da categoria, o gráfico
+   largo e as linhas. Os cartões chegam em sequência e as linhas logo depois. */
 .rf .rf-secao {
-  --cor: var(--acento);
   position: relative;
   overflow: hidden;
   padding: var(--esp-4);
@@ -499,9 +739,9 @@
     var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
+  scroll-margin-top: 150px;
   animation: entrar-cena var(--t-cena) var(--curva-saida) both;
-  transition: border-color var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva),
-    transform var(--t-medio) var(--curva);
+  transition: border-color var(--t-medio) var(--curva), box-shadow var(--t-medio) var(--curva);
 }
 
 .rf .rf-secao::before {
@@ -517,23 +757,6 @@
 .rf .rf-secao:hover {
   border-color: color-mix(in srgb, var(--cor) 40%, transparent);
   box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--cor) 60%, transparent);
-  transform: translateY(-2px);
-}
-
-.rf .rf-secao[data-sec='pre'] {
-  --cor: var(--safira);
-}
-
-.rf .rf-secao[data-sec='pos'] {
-  --cor: var(--agua);
-}
-
-.rf .rf-secao[data-sec='ipca'] {
-  --cor: var(--ametista);
-}
-
-.rf .rf-secao[data-sec='isentos'] {
-  --cor: var(--marca);
 }
 
 .rf .rf-secao:nth-child(2) {
@@ -548,12 +771,30 @@
   animation-delay: 210ms;
 }
 
+/* Chamada por um destaque, a seção acende uma vez. */
+.rf .rf-secao.rf-acesa {
+  animation: rf-acender 1400ms var(--curva-saida);
+}
+
+@keyframes rf-acender {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cor) 0%, transparent);
+  }
+  25% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--cor) 38%, transparent);
+    border-color: var(--cor);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cor) 0%, transparent);
+  }
+}
+
 .rf .rf-secao-topo {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--esp-3);
-  margin-bottom: var(--esp-3);
+  margin-bottom: var(--esp-2);
 }
 
 .rf .rf-secao-titulo {
@@ -567,7 +808,7 @@
   gap: var(--esp-2);
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -586,13 +827,69 @@
   font-size: 0.74rem;
 }
 
-/* A curva se desenha da esquerda para a direita, a área enche por baixo e os pontos estalam
-   um a um, depois do traço. */
+/* Copiar só a categoria: um botão discreto, na cor dela; copiado, o visto. */
+.rf .rf-copiar-secao {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background: color-mix(in srgb, var(--cor) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor) 28%, transparent);
+  border-radius: var(--r-pilula);
+  color: var(--cor);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
+}
+
+.rf .rf-copiar-secao::before,
+.rf .rf-chip::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  -webkit-mask: var(--i-copiar) center / contain no-repeat;
+  mask: var(--i-copiar) center / contain no-repeat;
+}
+
+.rf .rf-copiar-secao:hover {
+  background: color-mix(in srgb, var(--cor) 16%, transparent);
+}
+
+.rf .rf-copiar-secao:active {
+  transform: scale(0.96);
+}
+
+.rf .rf-copiar-secao.copiado,
+.rf .rf-chip.copiado {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
+  animation: estalar var(--t-medio) var(--curva-mola);
+}
+
+.rf .rf-copiar-secao.copiado::before,
+.rf .rf-chip.copiado::before {
+  -webkit-mask-image: var(--i-check);
+  mask-image: var(--i-check);
+}
+
+/* O gráfico de taxa × prazo: a curva se desenha da esquerda para a direita, a área enche por baixo,
+   os pontos estalam um a um e a maior taxa aparece escrita sobre o ponto dela. A linha e o ponto se
+   acendem juntos (index.js, `rf-par`). */
 .rf .rf-curva {
-  flex: 0 0 auto;
-  width: 120px;
-  height: 38px;
   overflow: visible;
+}
+
+.rf .rf-secao > .rf-curva {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  margin: 0 0 var(--esp-2);
 }
 
 .rf .rf-curva stop {
@@ -600,7 +897,7 @@
 }
 
 .rf .rf-curva stop[offset='0'] {
-  stop-opacity: 0.32;
+  stop-opacity: 0.34;
 }
 
 .rf .rf-curva stop[offset='1'] {
@@ -614,21 +911,47 @@
 .rf .rf-traco {
   fill: none;
   stroke: var(--cor);
-  stroke-width: 1.8;
+  stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
   stroke-dasharray: 1;
   animation: desenhar 900ms var(--curva-saida) 160ms both;
 }
 
+.rf .rf-curva-mini .rf-traco {
+  stroke-width: 1.6;
+}
+
+.rf .rf-eixo-linha {
+  stroke: var(--borda-forte);
+  stroke-dasharray: 2 4;
+}
+
+.rf .rf-eixo {
+  fill: var(--texto-fraco);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.rf .rf-rotulo-maior {
+  fill: var(--cor);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  animation: entrar var(--t-lento) var(--curva-saida) 1000ms both;
+}
+
 .rf .rf-curva circle {
   fill: var(--superficie-afundada);
   stroke: var(--cor);
-  stroke-width: 1.8;
+  stroke-width: 2;
   transform-box: fill-box;
   transform-origin: center;
+  cursor: default;
   animation: estalar var(--t-lento) var(--curva-mola) both;
   animation-delay: 700ms;
+  transition: r var(--t-medio) var(--curva-mola), fill var(--t-medio) var(--curva);
 }
 
 .rf .rf-curva circle:nth-of-type(2) {
@@ -644,6 +967,20 @@
   animation-delay: 940ms;
 }
 
+.rf .rf-curva circle.rf-ponto-maior,
+.rf .rf-curva circle.rf-par {
+  fill: var(--cor);
+}
+
+.rf .rf-curva circle.rf-par {
+  r: 5.5px;
+}
+
+/* ── As linhas ──────────────────────────────────────────────────────────────────────────────
+   Embaixo de cada uma, a força da taxa na categoria: uma barra fina que cresce até a fração dela (a
+   menor fica com um quarto, a maior cheia). A maior taxa leva um fio aceso à esquerda e o número na
+   cor da categoria. */
+
 .rf .rf-linhas {
   display: flex;
   flex-direction: column;
@@ -651,12 +988,13 @@
 }
 
 .rf .rf-linha {
+  position: relative;
   display: grid;
   grid-template-columns: 3.4rem auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--esp-3);
+  gap: 2px var(--esp-3);
   margin: 0 calc(-1 * var(--esp-2));
-  padding: var(--esp-2);
+  padding: var(--esp-2) var(--esp-2) calc(var(--esp-2) + 3px);
   border-top: 1px solid var(--borda);
   border-radius: var(--r-sm);
   font-size: 0.84rem;
@@ -681,18 +1019,56 @@
   --n: 4;
 }
 
-.rf .rf-linha:hover {
-  background: color-mix(in srgb, var(--cor) 5%, transparent);
+.rf .rf-linha:hover,
+.rf .rf-linha.rf-par {
+  background: color-mix(in srgb, var(--cor) 7%, transparent);
 }
 
 /* A borda de cima some sob a linha acesa e sob a seguinte, para o realce não virar uma caixa riscada. */
 .rf .rf-linha:hover,
-.rf .rf-linha:hover + .rf-linha {
+.rf .rf-linha:hover + .rf-linha,
+.rf .rf-linha.rf-par,
+.rf .rf-linha.rf-par + .rf-linha {
   border-top-color: transparent;
 }
 
 .rf .rf-linha:first-child {
   border-top: none;
+}
+
+.rf .rf-forca {
+  position: absolute;
+  left: var(--esp-2);
+  bottom: 3px;
+  width: calc((100% - 2 * var(--esp-2)) * var(--forca, 1));
+  height: 2px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cor) 8%, transparent), color-mix(in srgb, var(--cor) 60%, transparent));
+  border-radius: 2px;
+  transform-origin: left;
+  animation: crescer 900ms var(--curva-saida) both;
+  animation-delay: calc(320ms + var(--n, 6) * 50ms);
+  pointer-events: none;
+}
+
+.rf .rf-melhor {
+  background: color-mix(in srgb, var(--cor) 5%, transparent);
+}
+
+.rf .rf-melhor::before {
+  content: '';
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  left: -1px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--cor);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cor) 70%, transparent);
+  animation: estalar var(--t-lento) var(--curva-mola) 900ms both;
+}
+
+.rf .rf-melhor .rf-taxa-num {
+  color: var(--cor);
 }
 
 .rf .rf-prazo {
@@ -746,6 +1122,7 @@
   color: var(--texto-forte);
   font-size: 1rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
@@ -776,24 +1153,126 @@
   color: var(--negativo);
 }
 
-/* A mensagem como vai chegar no WhatsApp: um balão de mensagem enviada, com a pontinha, fonte do
-   texto, quebras preservadas e negrito aplicado. Ele chega como uma mensagem que acabou de sair. */
+/* O isento comparado com um título com IR, embaixo da linha dele. "Rende mais" é a comparação boa
+   para o cliente, em verde, como toda alta. */
+.rf .rf-equivale {
+  grid-column: 2 / -1;
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.rf .rf-equivale small {
+  font-size: 0.7rem;
+}
+
+.rf .rf-supera {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.2rem;
+  padding: 0 0.4rem;
+  background: var(--positivo-fundo);
+  border-radius: var(--r-pilula);
+  color: var(--positivo);
+  font-weight: 700;
+  animation: estalar var(--t-lento) var(--curva-mola) 1000ms both;
+}
+
+.rf .rf-supera::before {
+  content: '▲';
+  font-size: 0.6rem;
+}
+
+.rf .rf-perde {
+  margin-left: 0.2rem;
+}
+
+/* ── A mensagem: o celular do cliente ──────────────────────────────────────────────────────
+   A conversa como vai chegar: o balão de mensagem enviada, com a pontinha, o negrito aplicado e a
+   hora com os dois vistos. Ao lado, os números da mensagem e os botões de copiar uma categoria só. */
+
+.rf .rf-zap {
+  display: grid;
+  grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
+  gap: var(--esp-5);
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .rf .rf-zap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rf .rf-celular {
+  overflow: hidden;
+  background: var(--fundo-sutil);
+  border: 1px solid var(--borda-forte);
+  border-radius: 24px;
+  box-shadow: var(--sombra-media);
+  animation: entrar-cena var(--t-cena) var(--curva-saida) both;
+}
+
+.rf .rf-celular-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  background: color-mix(in srgb, var(--acento) 12%, var(--superficie));
+  border-bottom: 1px solid var(--borda);
+}
+
+.rf .rf-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--acento-fundo);
+  box-shadow: 0 0 0 1px var(--acento-borda);
+}
+
+.rf .rf-avatar::before {
+  content: '';
+  width: 17px;
+  height: 17px;
+  background: var(--acento);
+  -webkit-mask: var(--i-pessoas) center / contain no-repeat;
+  mask: var(--i-pessoas) center / contain no-repeat;
+}
+
+.rf .rf-celular-topo strong {
+  display: block;
+  color: var(--texto-forte);
+  font-size: 0.86rem;
+}
+
+.rf .rf-celular-topo small {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+.rf .rf-conversa {
+  min-height: 16rem;
+  padding: var(--esp-4) var(--esp-4) var(--esp-5) calc(var(--esp-4) + 10px);
+  background-image: radial-gradient(color-mix(in srgb, var(--texto) 8%, transparent) 1px, transparent 1.5px);
+  background-size: 15px 15px;
+}
+
 .rf .rf-bolha {
   position: relative;
-  max-width: 34rem;
-  margin-left: var(--esp-2);
-  padding: var(--esp-4) var(--esp-4) var(--esp-4) calc(var(--esp-4) + 2px);
-  background: color-mix(in srgb, var(--acento) 7%, var(--superficie-afundada));
+  padding: var(--esp-3) var(--esp-4) var(--esp-2);
+  background: color-mix(in srgb, var(--acento) 9%, var(--superficie-afundada));
   border: 1px solid var(--acento-borda);
   border-radius: 4px var(--r-lg) var(--r-lg) var(--r-lg);
   box-shadow: 0 10px 26px -18px var(--acento-sombra);
   color: var(--texto-forte);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   line-height: 1.62;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
   transform-origin: top left;
-  animation: rf-mensagem var(--t-cena) var(--curva-mola) both;
+  animation: rf-mensagem var(--t-cena) var(--curva-mola) 160ms both;
 }
 
 .rf .rf-bolha::before {
@@ -820,9 +1299,108 @@
   }
 }
 
+.rf .rf-bolha-texto {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .rf .rf-bolha strong {
   font-weight: 700;
 }
+
+.rf .rf-bolha-hora {
+  display: block;
+  margin-top: var(--esp-1);
+  color: var(--texto-fraco);
+  font-size: 0.68rem;
+  text-align: right;
+}
+
+.rf .rf-bolha-hora i {
+  color: var(--acento);
+  font-style: normal;
+  letter-spacing: -0.2em;
+}
+
+.rf .rf-zap-lado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+  animation: entrar var(--t-cena) var(--curva-saida) 240ms both;
+}
+
+.rf .rf-zap-lado .rf-nota {
+  margin-top: 0;
+}
+
+.rf .rf-zap-numeros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--esp-2);
+}
+
+.rf .rf-zap-numeros div {
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.rf .rf-zap-numeros dd {
+  color: var(--acento);
+  font-family: var(--fonte-titulo);
+  font-size: 1.35rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.rf .rf-zap-numeros dt {
+  order: 2;
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+.rf .rf-zap-numeros div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.rf .rf-zap-trechos > span {
+  display: block;
+  margin-bottom: var(--esp-2);
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.rf .rf-zap-trechos > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+}
+
+.rf .rf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: color-mix(in srgb, var(--cor) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor) 30%, transparent);
+  border-radius: var(--r-pilula);
+  color: var(--cor);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva);
+}
+
+.rf .rf-chip:hover {
+  background: color-mix(in srgb, var(--cor) 17%, transparent);
+  transform: translateY(-1px);
+}
+
+/* ── Bloqueados ─────────────────────────────────────────────────────────────────────────── */
 
 .rf .rf-bloqueados {
   margin-top: var(--esp-4);
@@ -870,6 +1448,259 @@
 .rf .rf-motivo {
   flex: 0 0 auto;
   color: var(--texto-fraco);
+}
+
+/* ── A tela vazia: as boas-vindas ──────────────────────────────────────────────────────────
+   A planilha se monta, a seta se desenha e as linhas viram uma curva que sobe — uma vez, ao chegar.
+   Embaixo, os três passos. */
+
+.rf .rf-boasvindas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-5) var(--esp-4) var(--esp-6);
+  text-align: center;
+}
+
+.rf .rf-boasvindas h3 {
+  margin-top: var(--esp-3);
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 1.2rem;
+  font-weight: 700;
+  animation: entrar var(--t-cena) var(--curva-saida) 300ms both;
+}
+
+.rf .rf-boasvindas > p {
+  max-width: 34rem;
+  color: var(--texto-fraco);
+  font-size: 0.86rem;
+  animation: entrar var(--t-cena) var(--curva-saida) 380ms both;
+}
+
+.rf .rf-ilustra {
+  width: min(240px, 70%);
+  height: auto;
+  overflow: visible;
+}
+
+.rf .rf-ilustra-folha {
+  fill: var(--superficie-afundada);
+  stroke: var(--borda-forte);
+  animation: entrar-cena var(--t-cena) var(--curva-saida) both;
+}
+
+.rf .rf-ilustra-cabeca {
+  fill: color-mix(in srgb, var(--acento) 22%, var(--superficie-afundada));
+  animation: entrar-cena var(--t-cena) var(--curva-saida) 60ms both;
+}
+
+.rf .rf-ilustra-linhas rect {
+  fill: color-mix(in srgb, var(--texto) 16%, transparent);
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: crescer 520ms var(--curva-saida) both;
+}
+
+.rf .rf-ilustra-linhas rect:nth-child(even) {
+  fill: color-mix(in srgb, var(--acento) 45%, transparent);
+}
+
+.rf .rf-ilustra-linhas rect:nth-child(1),
+.rf .rf-ilustra-linhas rect:nth-child(2) {
+  animation-delay: 180ms;
+}
+.rf .rf-ilustra-linhas rect:nth-child(3),
+.rf .rf-ilustra-linhas rect:nth-child(4) {
+  animation-delay: 240ms;
+}
+.rf .rf-ilustra-linhas rect:nth-child(5),
+.rf .rf-ilustra-linhas rect:nth-child(6) {
+  animation-delay: 300ms;
+}
+.rf .rf-ilustra-linhas rect:nth-child(7),
+.rf .rf-ilustra-linhas rect:nth-child(8) {
+  animation-delay: 360ms;
+}
+
+.rf .rf-ilustra-seta,
+.rf .rf-ilustra-seta-ponta {
+  fill: none;
+  stroke: var(--texto-fraco);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rf .rf-ilustra-seta {
+  stroke-dasharray: 1;
+  animation: desenhar 420ms var(--curva-saida) 520ms both;
+}
+
+.rf .rf-ilustra-seta-ponta {
+  animation: entrar var(--t-lento) var(--curva-saida) 820ms both;
+}
+
+.rf .rf-ilustra-area {
+  fill: color-mix(in srgb, var(--acento) 18%, transparent);
+  animation: entrar var(--t-cena) var(--curva-saida) 1100ms both;
+}
+
+.rf .rf-ilustra-curva {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: desenhar 700ms var(--curva-saida) 860ms both;
+}
+
+.rf .rf-ilustra-ponto {
+  fill: var(--acento);
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px var(--acento-sombra));
+  animation: estalar var(--t-lento) var(--curva-mola) 1500ms both;
+}
+
+.rf .rf-passos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 12rem));
+  gap: var(--esp-3);
+  margin: var(--esp-4) 0 var(--esp-3);
+  list-style: none;
+  counter-reset: none;
+}
+
+.rf .rf-passos li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--esp-2);
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  text-align: left;
+  animation: estalar var(--t-lento) var(--curva-mola) both;
+}
+
+.rf .rf-passos li:nth-child(1) {
+  animation-delay: 460ms;
+}
+.rf .rf-passos li:nth-child(2) {
+  animation-delay: 540ms;
+}
+.rf .rf-passos li:nth-child(3) {
+  animation-delay: 620ms;
+}
+
+.rf .rf-passos b {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--acento-fundo);
+  box-shadow: 0 0 0 1px var(--acento-borda);
+  color: var(--acento);
+  font-size: 0.72rem;
+}
+
+.rf .rf-passos span {
+  color: var(--texto-forte);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.rf .rf-passos small {
+  display: block;
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.rf .rf-escolher {
+  animation: entrar var(--t-cena) var(--curva-saida) 700ms both;
+}
+
+/* O botão principal leva o ícone de copiar (acima); este abre a planilha. */
+.rf .rf-escolher:not(.copiado)::before {
+  -webkit-mask-image: var(--i-planilha);
+  mask-image: var(--i-planilha);
+}
+
+@media (max-width: 700px) {
+  .rf .rf-passos {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+}
+
+/* ── Soltar a planilha: a aba inteira vira o alvo ─────────────────────────────────────────
+   Arrastando um arquivo sobre a aba, um véu cobre a tela com o alvo no meio. Some ao soltar ou sair. */
+
+.rf .rf-soltura {
+  position: fixed;
+  inset: 59px 0 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  visibility: hidden;
+  opacity: 0;
+  background: color-mix(in srgb, var(--fundo) 72%, transparent);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  transition: opacity var(--t-medio) var(--curva), visibility 0s linear var(--t-medio);
+}
+
+.rf.arrastando .rf-soltura {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--t-medio) var(--curva);
+}
+
+.rf .rf-soltura > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-6) 3.5rem;
+  background: var(--superficie-alta);
+  border: 2px dashed var(--acento);
+  border-radius: var(--r-lg);
+  box-shadow: 0 0 0 8px var(--acento-fundo), var(--sombra-alta);
+  text-align: center;
+  transform: scale(0.94);
+  transition: transform var(--t-lento) var(--curva-mola);
+}
+
+.rf.arrastando .rf-soltura > div {
+  transform: none;
+}
+
+.rf .rf-soltura > div::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  background: var(--acento);
+  -webkit-mask: var(--i-planilha) center / contain no-repeat;
+  mask: var(--i-planilha) center / contain no-repeat;
+  animation: rf-saltar 700ms var(--curva-mola) infinite alternate;
+}
+
+.rf .rf-soltura strong {
+  color: var(--texto-forte);
+  font-family: var(--fonte-titulo);
+  font-size: 1.3rem;
+}
+
+.rf .rf-soltura span {
+  color: var(--texto-fraco);
+  font-size: 0.84rem;
 }
 
 /* ── Histórico ──────────────────────────────────────────────────────────────────────── */

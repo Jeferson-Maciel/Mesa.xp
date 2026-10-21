@@ -211,12 +211,16 @@ No modo **Mercado Secundário** o título ganha `(MERCADO SECUNDÁRIO)` e cada l
 
 1. Solte a planilha (`.xlsx`, `.xls` ou `.csv`) em qualquer lugar da aba Renda Fixa, ou clique em
    “Arraste a planilha aqui”.
-2. Em **Mercado**, escolha **Emissão primária** ou **Mercado secundário**. A planilha é reprocessada
-   na hora.
-3. Confira os **Cartões** (maior taxa de cada prazo, com a variação ▲/▼ desde a última análise
-   salva antes de hoje) ou a **Mensagem**, como ela vai chegar no WhatsApp.
-4. **Copiar mensagem** coloca o texto na área de transferência. **Salvar** guarda a análise no
-   histórico, que também serve de base para as variações do dia seguinte.
+2. Em **Mercado**, escolha **Emissão primária** ou **Mercado secundário**; cada botão diz quantas
+   oportunidades aquele mercado tem.
+3. Confira os **Cartões**: no alto, a maior taxa de cada categoria (clique para ir até ela); em cada
+   categoria, o gráfico de taxa × prazo e a maior taxa de cada prazo, com a variação ▲/▼ desde a
+   última análise salva antes de hoje. Nos isentos, a taxa equivalente num título com IR e se ela
+   rende mais que o CDB do mesmo prazo. Ou veja a **Mensagem**, num celular, como ela vai chegar no
+   WhatsApp.
+4. **Copiar mensagem** coloca o texto na área de transferência; o **Copiar** de cada categoria leva só
+   ela, com o mesmo texto. **Salvar** guarda a análise no histórico, que também serve de base para
+   as variações do dia seguinte.
 
 O **Funil da análise** mostra quantas linhas foram lidas, quantas ficaram de fora e por quê, e
 quais colunas da planilha foram usadas.
@@ -564,7 +568,7 @@ AGENTS.md, CLAUDE.md       o que vale sempre, para quem (ou o que) for mexer no 
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 1.128 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 1.152 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 

@@ -867,3 +867,81 @@
     padding: var(--esp-3);
   }
 }
+
+/* ── Usar este modelo (21/10/2026) ──────────────────────────────────────────────────────
+   Os campos à esquerda, a prévia à direita: o preenchido em destaque na pedra, o que falta em âmbar. */
+
+.op .op-usar {
+  display: grid;
+  grid-template-columns: minmax(15rem, 22rem) minmax(0, 1fr);
+  gap: var(--esp-5);
+  align-items: start;
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.op .op-usar-campos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.op .op-usar-email {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  padding-top: var(--esp-3);
+  border-top: 1px dashed var(--borda);
+}
+
+.op .op-usar-lado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  min-width: 0;
+}
+
+.op .op-previa mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  color: var(--texto-forte);
+}
+
+.op .op-previa .op-preenchido {
+  background: var(--acento-fundo);
+  box-shadow: inset 0 -2px 0 var(--acento);
+}
+
+.op .op-previa .op-falta {
+  background: var(--atencao-fundo);
+  color: var(--atencao);
+  font-weight: 700;
+}
+
+.op .op-usar-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.op .op-faltam {
+  flex: 1 1 100%;
+  color: var(--positivo);
+  font-size: 0.82rem;
+}
+
+.op .op-faltam:not([data-faltam='0']) {
+  color: var(--atencao);
+}
+
+@media (max-width: 900px) {
+  .op .op-usar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op .op-usar {
+    animation: none;
+  }
+}

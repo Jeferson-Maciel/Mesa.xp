@@ -77,3 +77,16 @@ Fora desta versão, e registrados no roadmap: anexos (foto, áudio, vídeo), ras
 
 A base exige rede, como o Calendário: sem conexão o erro aparece na tela, e nada cai calado no
 modo local.
+
+## Usar este modelo (21/10/2026)
+
+O post com marcadores — o `CLIENTE` da saudação e os `XXX` da conta, do ativo, do valor — tem
+"Usar este modelo" (`modelo.js`, puro e testado). Cada marcador vira um campo, com o nome tirado do
+texto antes dele na linha (`Ativo: XXX;` é "Ativo", `Valor a ser resgatado: XXX` é "Valor a ser
+resgatado", `na conta XP XXXXX` é "Conta XP"); o cliente e a conta são um campo só cada, mesmo
+repetidos (o post da venda traz o modelo de fundos e o de ações). A prévia ao lado acompanha o que se
+digita — o preenchido em destaque, o que falta em âmbar —, e o campo deixado em branco sai como no
+modelo: nada é inventado no lugar dele. **Copiar** leva o texto preenchido; **Abrir no Outlook** abre
+o e-mail novo com ele, o "Para" (opcional) e o título do post como assunto (editável), pelo mesmo
+caminho do Ordens (`src/comum/outlook.js`). O que se digita fica só na memória da página, e uma
+atualização ao vivo da base não apaga o que está sendo preenchido.

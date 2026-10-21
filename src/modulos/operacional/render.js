@@ -10,6 +10,7 @@
  * porque é assim que o texto vai ser copiado e colado.
  */
 
+import { camposDoModelo, preencherModelo, temMarcadores } from './modelo.js';
 import { esc } from '../../ui/html.js';
 
 /* ── Rotas ────────────────────────────────────────────────────────────────────────────── */
@@ -168,10 +169,56 @@ export const htmlTopico = ({ topico, topicos, posts }) => {
 
 /* ── Post ─────────────────────────────────────────────────────────────────────────────── */
 
-export const htmlPost = ({ post, topicos }) => {
+/** O aviso dos campos em branco, embaixo da prévia. */
+export const textoDosCamposEmBranco = (n) =>
+  n ? `${n} ${n === 1 ? 'campo em branco: sai' : 'campos em branco: saem'} como no modelo (XXX)` : 'Tudo preenchido.';
+
+/** A prévia do modelo preenchido: o que foi preenchido em destaque, o que falta em âmbar. */
+export const htmlPrevia = (conteudo, valores) => {
+  const { pedacos, faltam } = preencherModelo(conteudo, valores);
+  const html = pedacos
+    .map((p) => (p.tipo === 'fixo' ? esc(p.texto) : `<mark class="op-${p.tipo === 'falta' ? 'falta' : 'preenchido'}">${esc(p.texto)}</mark>`))
+    .join('');
+  return { html, faltam };
+};
+
+/**
+ * "Usar este modelo": um campo por marcador do post, a prévia ao lado, e Copiar / Abrir no Outlook.
+ *
+ * @param {object} post
+ * @param {{valores: Record<string, string>, para: string, assunto: string}} usar
+ */
+export const htmlUsar = (post, usar) => {
+  const campos = camposDoModelo(post.conteudo);
+  const { html, faltam } = htmlPrevia(post.conteudo, usar.valores);
+  const campo = (rotulo, atributos, valor, dica = '') =>
+    `<label class="op-campo"><span>${esc(rotulo)}</span><input ${atributos} value="${esc(valor)}" placeholder="${esc(dica)}" autocomplete="off" spellcheck="false" /></label>`;
+  return `
+    <section class="op-usar" data-op="usar" aria-label="Usar este modelo">
+      <div class="op-usar-campos">
+        ${campos.map((c) => campo(c.rotulo, `data-usar-campo="${esc(c.chave)}"`, usar.valores[c.chave] ?? '', c.marcador)).join('')}
+        <div class="op-usar-email">
+          ${campo('Para (opcional)', 'data-usar="para" type="email"', usar.para, 'o e-mail do cliente')}
+          ${campo('Assunto', 'data-usar="assunto"', usar.assunto)}
+        </div>
+      </div>
+      <div class="op-usar-lado">
+        <div class="op-texto op-previa" data-op="previa">${html}</div>
+        <div class="op-usar-acoes">
+          <span class="op-faltam" data-op="faltam" data-faltam="${faltam}">${textoDosCamposEmBranco(faltam)}</span>
+          <button type="button" class="copy-btn btn-primario" data-acao="usar-copiar">Copiar</button>
+          <button type="button" class="copy-btn" data-acao="usar-outlook">Abrir no Outlook</button>
+          <button type="button" class="copy-btn" data-acao="usar-fechar">Fechar</button>
+        </div>
+      </div>
+    </section>`;
+};
+
+export const htmlPost = ({ post, topicos, usar = null }) => {
   const topico = topicos.find((t) => t.id === post.topicoId);
   const trilha = topico ? [...ancestrais(topico, topicos), topico] : [];
   const pendente = !post.conteudo.trim();
+  const modelo = !pendente && temMarcadores(post.conteudo);
 
   return `
     <article class="op-post"${tomDe(topico, topicos)}>
@@ -179,7 +226,8 @@ export const htmlPost = ({ post, topicos }) => {
       <div class="op-cabeca-linha">
         <h1 class="op-titulo">${esc(post.titulo)}</h1>
         <div class="op-acoes">
-          ${pendente ? '' : '<button type="button" class="copy-btn btn-primario" data-acao="copiar">Copiar texto</button>'}
+          ${modelo && !usar ? '<button type="button" class="copy-btn btn-primario" data-acao="usar">Usar este modelo</button>' : ''}
+          ${pendente ? '' : `<button type="button" class="copy-btn${modelo ? '' : ' btn-primario'}" data-acao="copiar">Copiar texto</button>`}
           <button type="button" class="copy-btn" data-acao="editar">Editar</button>
           <button type="button" class="copy-btn op-perigo" data-acao="excluir">Excluir</button>
         </div>
@@ -191,7 +239,9 @@ export const htmlPost = ({ post, topicos }) => {
                <p>O texto deste post ainda não foi copiado do Slab.</p>
                <span>Clique em Editar e cole o texto — ele passa a valer para toda a mesa.</span>
              </div>`
-          : `<div class="op-texto">${esc(post.conteudo)}</div>`
+          : usar
+            ? htmlUsar(post, usar)
+            : `<div class="op-texto">${esc(post.conteudo)}</div>`
       }
     </article>`;
 };

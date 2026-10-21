@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { criarRepositorioLocal } from './adaptadores/local.js';
-import { buscar, dataCurta, htmlBusca, htmlEditor, htmlEquipe, htmlLateral, htmlPost, htmlTopico, rotaDe, trecho } from './render.js';
+import { buscar, dataCurta, htmlBusca, htmlEditor, htmlEquipe, htmlLateral, htmlPost, htmlPrevia, htmlTopico, rotaDe, trecho } from './render.js';
 
 const memoria = () => {
   const d = new Map();
@@ -153,5 +153,24 @@ describe('miúdos', () => {
   it('data curta no padrão brasileiro, no fuso local', () => {
     expect(dataCurta('2026-09-30T23:30:00-03:00')).toBe('30/09/2026');
     expect(dataCurta(null)).toBe('');
+  });
+});
+
+describe('usar este modelo (21/10/2026)', () => {
+  const post = { id: 'p1', slug: 'modelo', titulo: 'Modelo', topicoId: null, conteudo: 'Prezado(a) CLIENTE,\nna conta XP XXXXX:\nAtivo: XXX;', atualizadoEm: null };
+
+  it('o post com marcadores oferece "Usar este modelo"; o sem, não', () => {
+    expect(htmlPost({ post, topicos: [] })).toContain('data-acao="usar"');
+    expect(htmlPost({ post: { ...post, conteudo: 'Passo a passo.' }, topicos: [] })).not.toContain('data-acao="usar"');
+  });
+
+  it('um campo por marcador, e a prévia escapa o que se digita', () => {
+    const html = htmlPost({ post, topicos: [], usar: { slug: 'modelo', valores: { cliente: '<img src=x onerror=1>' }, para: '', assunto: 'Modelo' } });
+    expect(html).toContain('data-usar-campo="cliente"');
+    expect(html).toContain('data-usar-campo="conta"');
+    expect(html).toContain('data-usar-campo="campo-0"');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('2 campos em branco');
+    expect(htmlPrevia(post.conteudo, { cliente: 'Fulana' }).html).toContain('<mark class="op-preenchido">Fulana</mark>');
   });
 });

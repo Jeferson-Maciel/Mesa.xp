@@ -12,13 +12,17 @@ import {
   htmlEquipe,
   htmlLateral,
   htmlPost,
+  htmlPrevia,
   htmlTopico,
   linkDoPost,
   linkDoTopico,
-  rotaDe
+  rotaDe,
+  textoDosCamposEmBranco
 } from './render.js';
 import { criarCena } from '../../ui/cena.js';
 import { abrirJanela } from '../../ui/janela.js';
+import { abrirNoOutlook, enderecoDoEmail } from '../../comum/outlook.js';
+import { preencherModelo } from './modelo.js';
 import './operacional.css';
 
 /**
@@ -60,7 +64,9 @@ export const iniciarOperacional = (secao) => {
     sequencia: 0,
     termo: '',
     // Editor aberto: { post: Post | null, topicoId, original: { titulo, topicoId, conteudo } }
-    editor: null
+    editor: null,
+    // "Usar este modelo" aberto: { slug, valores, para, assunto } — só na memória da página.
+    usando: null
   };
 
   const principal = el('principal');
@@ -152,8 +158,11 @@ export const iniciarOperacional = (secao) => {
 
     const rota = rotaDe(location.hash);
     if (rota.tipo === 'post') {
+      // O modelo sendo preenchido não é redesenhado: uma atualização ao vivo apagaria o que se digita.
+      const usando = estado.usando?.slug === rota.slug ? estado.usando : null;
+      if (usando && principal.querySelector('[data-op="usar"]')) return;
       const post = postDoSlug(rota.slug);
-      principal.innerHTML = post ? htmlPost({ post, topicos: estado.topicos }) : naoEncontrado('Post');
+      principal.innerHTML = post ? htmlPost({ post, topicos: estado.topicos, usar: usando }) : naoEncontrado('Post');
       return;
     }
     const topico = rota.tipo === 'topico' ? topicoDoSlug(rota.slug) : raiz();
@@ -284,6 +293,56 @@ export const iniciarOperacional = (secao) => {
     }
   }
 
+  /* "Usar este modelo": os marcadores viram campos (modelo.js), e o texto sai preenchido. */
+  function usarModelo() {
+    const post = postAberto();
+    if (!post) return;
+    estado.usando = { slug: post.slug, valores: {}, para: '', assunto: post.titulo };
+    render();
+    principal.querySelector('[data-usar-campo]')?.focus();
+  }
+
+  const modeloPreenchido = () => {
+    const post = postAberto();
+    return post && estado.usando ? preencherModelo(post.conteudo, estado.usando.valores) : null;
+  };
+
+  principal.addEventListener('input', (e) => {
+    if (!estado.usando) return;
+    const chave = e.target.dataset?.usarCampo;
+    const campo = e.target.dataset?.usar;
+    if (chave) estado.usando.valores[chave] = e.target.value;
+    else if (campo === 'para' || campo === 'assunto') estado.usando[campo] = e.target.value;
+    else return;
+    const post = postAberto();
+    if (!post || !chave) return;
+    const { html, faltam } = htmlPrevia(post.conteudo, estado.usando.valores);
+    el('principal').querySelector('[data-op="previa"]').innerHTML = html;
+    const aviso = el('principal').querySelector('[data-op="faltam"]');
+    aviso.textContent = textoDosCamposEmBranco(faltam);
+    aviso.dataset.faltam = String(faltam);
+  });
+
+  async function copiarModelo() {
+    const preenchido = modeloPreenchido();
+    if (!preenchido) return;
+    const ok = await copiarTexto(preenchido.texto);
+    aviso(ok ? `Modelo copiado${preenchido.faltam ? `, com ${preenchido.faltam} campo(s) em branco` : ''}.` : 'Não foi possível copiar.', { tipo: ok ? 'info' : 'erro' });
+  }
+
+  // O e-mail novo no Outlook na web, com o texto preenchido; o longo demais vai copiado, para colar.
+  async function abrirModeloNoOutlook() {
+    const preenchido = modeloPreenchido();
+    if (!preenchido) return;
+    const { para, assunto } = estado.usando;
+    const comCorpo = enderecoDoEmail({ para: para.trim() || null, assunto: assunto.trim() || undefined, corpo: preenchido.texto });
+    if (!comCorpo && !(await copiarTexto(preenchido.texto))) return aviso('Não consegui copiar o texto para colar no Outlook.', { tipo: 'erro' });
+    if (!abrirNoOutlook(comCorpo ?? enderecoDoEmail({ para: para.trim() || null, assunto: assunto.trim() || undefined }))) {
+      return aviso('O navegador bloqueou a janela do Outlook: permita janelas pop-up para esta página.', { tipo: 'erro' });
+    }
+    aviso(comCorpo ? 'E-mail aberto no Outlook. Confira e envie.' : 'O texto é longo para ir junto: cole-o no corpo do e-mail (Ctrl+V).');
+  }
+
   async function copiarPost(botao) {
     const post = postAberto();
     if (!post) return;
@@ -362,6 +421,7 @@ export const iniciarOperacional = (secao) => {
     }
     rotaAnterior = location.hash;
     estado.editor = null;
+    estado.usando = null;
     estado.termo = '';
     el('busca').value = '';
     render();
@@ -374,6 +434,12 @@ export const iniciarOperacional = (secao) => {
     const acao = botao.dataset.acao;
     if (acao === 'criar-post') criarPostAqui();
     else if (acao === 'copiar') copiarPost(botao);
+    else if (acao === 'usar') usarModelo();
+    else if (acao === 'usar-fechar') {
+      estado.usando = null;
+      render();
+    } else if (acao === 'usar-copiar') copiarModelo();
+    else if (acao === 'usar-outlook') abrirModeloNoOutlook();
     else if (acao === 'editar') {
       const post = postAberto();
       if (post) abrirEditor(post, post.topicoId);

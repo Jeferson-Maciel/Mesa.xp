@@ -557,6 +557,38 @@ try {
     const contagem = (nome) => pagina.$eval(`.op-arvore .op-no:has-text("${nome}") .op-contagem`, (e) => e.textContent);
     ok((await contagem('Padrões de Email')) === '14' && (await contagem('Padrões de Fixing')) === '12', 'a árvore conta os posts de cada tópico');
 
+    // Usar este modelo (21/10/2026): os marcadores viram campos, a prévia acompanha, e o texto sai
+    // preenchido para copiar ou abrir no Outlook (a janela é anotada no lugar de abrir).
+    {
+      const resgate = POSTS.find((p) => p.titulo === 'Confirmação resgate Tesouro Direto');
+      await pagina.evaluate(() => {
+        window.__abertas = [];
+        window.open = (endereco) => (window.__abertas.push(endereco), {});
+      });
+      await pagina.evaluate((slug) => (location.hash = `#operacional/post/${slug}`), resgate.slug);
+      await pagina.click('[data-acao="usar"]');
+      await pagina.fill('[data-usar-campo="cliente"]', 'FULANA DE TAL');
+      await pagina.fill('[data-usar-campo="conta"]', '1234567');
+      ok(
+        (await pagina.textContent('[data-op="previa"]')).includes('Prezado(a) FULANA DE TAL,') && (await pagina.textContent('[data-op="faltam"]')).startsWith('3 campos em branco'),
+        '"Usar este modelo": o cliente e a conta entram na prévia, e os campos em branco são contados'
+      );
+      await pagina.click('[data-acao="usar-copiar"]');
+      const preenchido = await pagina.evaluate(() => navigator.clipboard.readText());
+      ok(preenchido.includes('na conta XP 1234567') && preenchido.includes('Título: XXXXXXX'), 'Copiar leva o texto preenchido, e o campo em branco sai como no modelo');
+      await pagina.fill('[data-usar="para"]', 'fulana@exemplo.com');
+      await pagina.click('[data-acao="usar-outlook"]');
+      const [aberta] = await pagina.evaluate(() => window.__abertas);
+      ok(
+        decodeURIComponent(decodeURIComponent(aberta ?? '')).includes('mailto:fulana@exemplo.com') && decodeURIComponent(decodeURIComponent(aberta ?? '')).includes('subject=Confirmação resgate Tesouro Direto'),
+        'Abrir no Outlook leva o texto, o destinatário e o título do post como assunto'
+      );
+      await pagina.click('[data-acao="usar-fechar"]');
+      ok(await pagina.isVisible('.op-post .op-texto') && !(await pagina.$('[data-op="usar"]')), 'Fechar volta ao post');
+      await pagina.evaluate(() => (location.hash = '#operacional'));
+      await pagina.waitForSelector('.op-grupo');
+    }
+
     // Copiar e colar: o texto que vai para o e-mail é o do Slab.
     const compra = POSTS.find((p) => p.slug === 'confirmacao-de-ordem-compra');
     await pagina.click(`.op-linha:has-text("${compra.titulo}")`);

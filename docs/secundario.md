@@ -81,6 +81,16 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
     à toa (a marca já era a do outro), e numa colagem com várias contas as abas 🤖 se acumulavam. Uma aba viva avisa em menos de
     1 s; ocupada desenhando a Prateleira, levou até 3 s, e por isso não é menos. Se a última que
     abriu nunca deu sinal (Hub deslogado), espera um minuto antes de abrir mais uma;
+  - **na caixa de entrada do Outlook (1.8.0) só lê a lista de mensagens**, numa aba que a pessoa já
+    tem aberta — o robô não abre o Outlook. Só olha enquanto a Mesa pede (a cada minuto, enquanto a
+    Fila do dia tem pedido aguardando o cliente ou respondido). De cada linha da lista, lê o texto e
+    para no assunto, se não for resposta a um e-mail de confirmação ("RE:/RES:/ENC: … Confirmação");
+    das que são, e de hoje (o Outlook mostra a hora nas de hoje, e a data nas outras), guarda o
+    remetente, o e-mail (do `title` do remetente), o assunto, a prévia e a hora, com um id que é um
+    resumo, sem nome. Não clica, não rola, não abre e-mail nem marca como lido; um teste confere que o
+    trecho não tem clique, foco, rolagem nem evento. As respostas passam pelo armazenamento do
+    Tampermonkey e saem dele assim que a Mesa as recebe; o `verificar` confere, numa caixa de entrada
+    de mentira, que a outra mensagem e a resposta antiga nunca passam por ele;
   - uma tarefa por vez, numa fila. Desde a 1.7.1, uma tarefa segura a fila por no máximo 3 minutos,
     e a foto do print tem 30 s: uma foto que não terminava (aba escondida há muito tempo, com os
     relógios segurados pelo Chrome) prendia a fila da aba, e nem a cotação andava mais;

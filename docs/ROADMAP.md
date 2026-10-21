@@ -21,6 +21,9 @@ O passo a passo está em [`CONTEXTO.md`](CONTEXTO.md), "A testar no Hub e no Out
 3. **O Tesouro (robô 1.7.x)**: a lista e a posição, com a recarga da aba para ler de novo. O fluxo foi
    repetido à mão no Hub em 20/10; o robô inteiro, não.
 4. **O Estoque clientes**: o deságio e o estoque contra a boleta.
+5. **As respostas no Outlook (robô 1.8.0)**: só a caixa de entrada de mentira foi testada. A forma da
+   lista do Outlook na web de verdade (a lista, as opções, o e-mail no `title` do remetente, a hora)
+   precisa ser conferida com um e-mail de teste respondido.
 
 ## Ordens
 

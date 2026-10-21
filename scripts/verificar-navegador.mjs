@@ -841,6 +841,8 @@ try {
       permissions: ['clipboard-read', 'clipboard-write']
     });
     const loja = {};
+    // Tudo o que passou pelo armazenamento do robô, para conferir o que nunca pode passar por ele.
+    const escritas = [];
     const pedidosAoHub = { lista: 0, preCheck: 0, ficha: 0 };
     const novaAba = async (url) => {
       const p = await contexto.newPage();
@@ -851,6 +853,7 @@ try {
     await contexto.exposeBinding('__gm', async (_origem, op, chave, valor) => {
       if (op === 'set') {
         loja[chave] = valor;
+        escritas.push(JSON.stringify(valor) ?? '');
         for (const p of contexto.pages()) p.evaluate(([k, v]) => window.__gmMudou?.(k, v), [chave, valor]).catch(() => {});
       }
       if (op === 'abrir') novaAba(chave);
@@ -1080,7 +1083,36 @@ try {
     // O Outlook na web de mentira: o compor abre com o texto do endereço (o `body` do `mailto:` dentro
     // do `to`, ou o solto) num corpo editável, uns instantes depois, e trata o colar como o editor dele:
     // o HTML colado entra no corpo.
+    // A caixa de entrada de mentira (robô 1.8.0): a lista de mensagens como a do Outlook na web — cada
+    // mensagem uma opção da lista, com o remetente (o e-mail no title), a hora, o assunto e a prévia.
+    // `chegar` põe uma mensagem nova no alto. Duas mensagens que o robô não pode ler: uma que não é
+    // resposta a pedido e uma resposta antiga (com data, não hora). Um clique qualquer é contado.
+    const CAIXA_DE_ENTRADA = `<!doctype html><meta charset=utf-8><title>Caixa de Entrada - Outlook</title><body>
+      <div role="listbox" aria-label="Lista de mensagens" id="lista"></div>
+      <script>
+        window.__cliques = 0;
+        document.addEventListener('click', () => window.__cliques++, true);
+        const lista = document.getElementById('lista');
+        window.chegar = (m) => {
+          const item = document.createElement('div');
+          item.setAttribute('role', 'option');
+          item.setAttribute('data-convid', m.id);
+          const linha = (texto, title) => {
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            if (title) span.title = title;
+            span.textContent = texto;
+            div.append(span);
+            return div;
+          };
+          item.append(linha(m.de, m.email), linha(m.hora), linha(m.assunto), linha(m.previa));
+          lista.prepend(item);
+        };
+        chegar({ id: 'c0', de: 'Equipe da Mesa', email: 'equipe@exemplo.com', hora: '09:00', assunto: 'Pauta de amanhã', previa: 'TEXTO QUE O ROBO NAO PODE LER' });
+        chegar({ id: 'c00', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', hora: 'seg 19/10', assunto: 'RE: Confirmação de ordem', previa: 'RESPOSTA ANTIGA' });
+      </script></body>`;
     await contexto.route('https://outlook.cloud.microsoft/**', (r) =>
+      !r.request().url().includes('/deeplink/') ? r.fulfill({ contentType: 'text/html', body: CAIXA_DE_ENTRADA }) :
       r.fulfill({
         contentType: 'text/html',
         body: `<!doctype html><meta charset=utf-8><title>Outlook</title><body>
@@ -1521,6 +1553,45 @@ try {
       JSON.stringify(contasSeparadas) === JSON.stringify(['1234567', '7654321']) && (await mesa.inputValue('#entrada')).includes('81.708,17\n7654321'),
       `"Separar" faz dois pedidos, e o de baixo fica na conta dele (${contasSeparadas.join(', ')})`
     );
+
+    // ── As respostas no Outlook (robô 1.8.0) ──
+    // O e-mail copiado entra na Fila; com a caixa de entrada aberta numa aba, a resposta do cliente
+    // passa o cartão para "O cliente respondeu", com a prévia. O robô não lê o resto da caixa.
+    await esquecerFila();
+    await mesa.fill('#entrada', '1234567\nvia email\nC PETR4 100');
+    await mesa.focus('#entrada');
+    await mesa.keyboard.press('Control+Enter');
+    await esperarCliente('FULANA DE TAL DA SILVA');
+    await mesa.locator('[data-copiar="email"]').first().click();
+    const caixa = await novaAba('https://outlook.cloud.microsoft/mail/inbox');
+    await caixa.waitForFunction(() => typeof window.chegar === 'function');
+    await caixa.evaluate(() =>
+      chegar({ id: 'c1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', hora: '10:42', assunto: 'RES: Confirmação de ordem', previa: 'De acordo, pode seguir.' })
+    );
+    await mesa.keyboard.press(altDe('fila'));
+    const respondeu = await mesa
+      .waitForFunction(() => document.querySelector('.fl-coluna[data-estado="respondeu"] .fl-cartao')?.textContent.includes('De acordo, pode seguir.'), null, { timeout: 30_000 })
+      .then(() => true, () => false);
+    ok(respondeu, 'a resposta do cliente no Outlook passa o cartão para "O cliente respondeu", com a prévia');
+    ok((await mesa.getAttribute('[data-fl="outlook"]', 'data-tipo')) === 'vigiando', 'a Fila diz que está vendo as respostas no Outlook');
+    const todasAsEscritas = escritas.join('\n');
+    ok(
+      !todasAsEscritas.includes('TEXTO QUE O ROBO NAO PODE LER') && !todasAsEscritas.includes('Pauta de amanhã') && !todasAsEscritas.includes('RESPOSTA ANTIGA'),
+      'da caixa de entrada só passam as respostas de hoje aos e-mails de confirmação: nem a outra mensagem, nem a resposta antiga'
+    );
+    ok(loja.outlookVigia === null && !JSON.stringify(loja).includes('De acordo'), 'a resposta sai do armazenamento do robô assim que a Mesa a recebe');
+    ok((await caixa.evaluate(() => window.__cliques)) === 0, 'o robô não clica em nada na caixa de entrada');
+
+    // Uma resposta de quem não tem cartão: fica a conferir, e "Não é de pedido" a tira.
+    await caixa.evaluate(() =>
+      chegar({ id: 'c2', de: 'Beltrano Souza', email: 'beltrano@exemplo.com', hora: '10:50', assunto: 'RE: Confirmação de ordem', previa: 'Pode sim.' })
+    );
+    const aConferir = await mesa.waitForSelector('[data-fl="conferir"] .fl-solta', { timeout: 30_000 }).then(() => true, () => false);
+    ok(aConferir && (await mesa.textContent('[data-fl="conferir"]')).includes('Beltrano Souza'), 'a resposta que não casou fica em "Respostas a conferir", com os pedidos para escolher');
+    await mesa.click('[data-fl="conferir"] [data-acao="ignorar"]');
+    ok(await mesa.isHidden('[data-fl="conferir"]'), '"Não é de pedido" tira a resposta da conferência');
+    await caixa.close();
+
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 

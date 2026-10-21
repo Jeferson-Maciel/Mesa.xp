@@ -780,6 +780,7 @@ export const iniciarOrdens = (secao) => {
   const robo = criarRoboHub();
   // A ponte é uma só na página: a Fila (as respostas no Outlook) e a Prateleira de fundos a pegam daqui.
   registrarServico('robo', robo);
+  registrarServico('versaoDoRobo', VERSAO_DO_ROBO);
   // O que o robô está buscando agora, para o painel dizer; vazio quando não está.
   let buscando = '';
   const statusDoRobo = $('robo-status');

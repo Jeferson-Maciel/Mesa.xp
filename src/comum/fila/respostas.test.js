@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest';
+import { mudarEstado, novoPedido } from './regras.js';
+import { assuntoSemPrefixo, casarResposta, ehRespostaDePedido, momentoDaHora } from './respostas.js';
+
+// Contas, nomes e e-mails fictícios. 21/10/2026.
+const em = (hora, min = 0) => new Date(2026, 9, 21, hora, min).getTime();
+const pedido = ({ conta = '1234567', nome = 'FULANA DE TAL DA SILVA', email = 'fulana.tal@exemplo.com', grupo = 'bolsa', assunto = 'Confirmação de ordem', hora = 10 } = {}) =>
+  novoPedido({
+    conta,
+    cliente: { nome, email },
+    grupo,
+    formato: 'email',
+    assunto,
+    ordens: [{ ativo: 'PETR4', operacao: 'C', quantidade: 100 }],
+    texto: '',
+    em: em(hora)
+  });
+const resposta = (extra = {}) => ({ de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'De acordo.', ...extra });
+
+describe('o que é resposta a um pedido', () => {
+  it.each([
+    ['RE: Confirmação de ordem', true],
+    ['RES: Confirmação resgate Tesouro Direto', true],
+    ['Re: RES: Confirmacao de ordem', true],
+    ['ENC: Confirmação aplicação Tesouro Direto', true],
+    ['Confirmação de ordem', false],
+    ['RE: Reunião amanhã', false],
+    ['', false]
+  ])('%s → %s', (assunto, esperado) => expect(ehRespostaDePedido(assunto)).toBe(esperado));
+
+  it('tira os prefixos do assunto', () => {
+    expect(assuntoSemPrefixo('RE: RES: Confirmação de ordem')).toBe('Confirmação de ordem');
+  });
+
+  it('a hora do Outlook vira o momento de hoje; data ou dia da semana não é de hoje', () => {
+    expect(momentoDaHora('10:42', em(15))).toBe(em(10, 42));
+    expect(momentoDaHora('ter 20/10', em(15))).toBeNull();
+    expect(momentoDaHora('25:00', em(15))).toBeNull();
+  });
+});
+
+describe('o cartão de cada resposta', () => {
+  it('o e-mail do cliente casa sozinho, sem ligar para a caixa', () => {
+    const p = pedido();
+    expect(casarResposta(resposta({ email: 'Fulana.Tal@Exemplo.com ' }), [p])).toEqual({ tipo: 'casou', pedido: p });
+  });
+
+  it('com dois cartões do cliente, vale o que espera a resposta', () => {
+    const aprovado = mudarEstado(pedido({ hora: 9 }), 'aprovado', em(9, 30));
+    const esperando = pedido({ hora: 11 });
+    expect(casarResposta(resposta(), [aprovado, esperando])).toEqual({ tipo: 'casou', pedido: esperando });
+  });
+
+  it('e depois o do mesmo assunto: o resgate do Tesouro não é o e-mail da bolsa', () => {
+    const bolsa = pedido();
+    const resgate = pedido({ grupo: 'tesouro-resgate', assunto: 'Confirmação resgate Tesouro Direto' });
+    expect(casarResposta(resposta({ assunto: 'RE: Confirmação resgate Tesouro Direto' }), [bolsa, resgate])).toEqual({ tipo: 'casou', pedido: resgate });
+  });
+
+  it('dois esperando com o mesmo assunto: ambígua, o operador escolhe', () => {
+    const [a, b] = [pedido({ hora: 10 }), pedido({ grupo: 'fundos-compra', hora: 11 })];
+    expect(casarResposta(resposta(), [a, b])).toEqual({ tipo: 'ambigua', candidatos: [a, b] });
+  });
+
+  it('de outro endereço, pelo nome, é só sugestão', () => {
+    const p = pedido();
+    expect(casarResposta(resposta({ email: 'fulana.pessoal@exemplo.com.br', de: 'Fulana Silva' }), [p])).toEqual({ tipo: 'pelo-nome', candidatos: [p] });
+    // Uma parte do nome só não basta: "Fulana" sozinha é qualquer Fulana.
+    expect(casarResposta(resposta({ email: 'outra@exemplo.com', de: 'Fulana' }), [p])).toEqual({ tipo: 'nenhum' });
+  });
+
+  it('o cartão cancelado não recebe resposta, e quem não tem cartão fica sem', () => {
+    expect(casarResposta(resposta(), [mudarEstado(pedido(), 'cancelado', em(11))])).toEqual({ tipo: 'nenhum' });
+    expect(casarResposta(resposta({ email: 'beltrano@exemplo.com', de: 'Beltrano Souza' }), [pedido()])).toEqual({ tipo: 'nenhum' });
+  });
+});

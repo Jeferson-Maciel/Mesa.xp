@@ -108,7 +108,10 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
   por conta própria**: lê só a resposta que o próprio Hub recebe. Um teste confere o texto do script;
 - **nunca põe parâmetro no endereço do Hub**: qualquer um trava o módulo;
 - **só clica no que está numa lista fechada** (`clicarSo`): nunca Próximo, Enviar, Confirmar ou
-  Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu;
+  Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu e, na
+  caixa de entrada (1.8.0), só lê a lista de mensagens: das outras, o assunto; das respostas de hoje
+  aos e-mails de confirmação, o remetente, o e-mail, o assunto, a prévia e a hora. Não clica, não
+  abre e-mail e só olha enquanto a Mesa tem pedido esperando o cliente;
 - uma tarefa por vez, numa fila, e tudo com prazo: nada que trave numa aba prende os pedidos seguintes;
 - mudou o robô, sobe a `@version` **e** a constante `VERSAO`; a Mesa mostra "Copiar robô" até a
   versão instalada ser a que ela espera.
@@ -160,7 +163,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.197 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.225 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

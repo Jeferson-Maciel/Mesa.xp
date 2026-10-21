@@ -78,6 +78,7 @@ export const criarRoboHub = ({ janela = window } = {}) => {
   const aoMudar = new Set();
   const aoCapturar = new Set();
   const aoCotar = new Set();
+  const aoOutlook = new Set();
   const pendentes = new Map();
   const lotes = new Map();
   const lotesDePrints = new Map();
@@ -164,6 +165,19 @@ export const criarRoboHub = ({ janela = window } = {}) => {
       }
     }
 
+    // O que o robô viu na caixa de entrada do Outlook (1.8.0): só as respostas aos e-mails de
+    // confirmação, cada uma com o remetente, o e-mail, o assunto, a prévia e a hora — e quantas
+    // mensagens a lista tinha, para a Fila dizer se a caixa de entrada está à vista.
+    if (mensagem.tipo === 'outlook') {
+      const texto = (v, max) => (typeof v === 'string' ? v.slice(0, max) : null);
+      const respostas = (Array.isArray(mensagem.respostas) ? mensagem.respostas : [])
+        .filter((r) => r && typeof r.id === 'string' && typeof r.assunto === 'string')
+        .slice(0, 100)
+        .map((r) => ({ id: r.id.slice(0, 40), de: texto(r.de, 200), email: texto(r.email, 200), assunto: r.assunto.slice(0, 300), previa: texto(r.previa, 300) ?? '', hora: texto(r.hora, 5) }));
+      const leitura = { em: typeof mensagem.em === 'number' ? mensagem.em : Date.now(), lista: mensagem.lista === true, itens: Number(mensagem.itens) || 0, respostas };
+      aoOutlook.forEach((fn) => fn(leitura));
+    }
+
     if (mensagem.tipo === 'captura' && mensagem.resposta) {
       const captura = { capturadaEm: mensagem.capturadaEm, resposta: mensagem.resposta, id: mensagem.id ?? null };
       aoCapturar.forEach((fn) => fn(captura));
@@ -219,6 +233,25 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     /** @param {(cota: {fundoId: string, valor: number, dataDaCota: string}) => void} fn */
     aoReceberCota(fn) {
       aoCotar.add(fn);
+    },
+
+    /**
+     * O que o robô (1.8.0) vê na caixa de entrada do Outlook, a cada mudança e a cada minuto, enquanto
+     * a Mesa pede (`vigiarOutlook`).
+     *
+     * @param {(leitura: {em: number, lista: boolean, itens: number,
+     *   respostas: Array<{id: string, de: string|null, email: string|null, assunto: string, previa: string, hora: string|null}>}) => void} fn
+     */
+    aoReceberOutlook(fn) {
+      aoOutlook.add(fn);
+    },
+
+    /**
+     * Pede ao robô que olhe as respostas na caixa de entrada do Outlook pelos próximos 3 minutos. A
+     * Fila pede a cada minuto enquanto tem pedido esperando o cliente; sem robô, não faz nada.
+     */
+    vigiarOutlook() {
+      if (versao !== null) enviar({ tipo: 'vigiar-outlook' });
     },
 
     /**

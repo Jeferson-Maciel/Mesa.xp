@@ -6,7 +6,7 @@
  */
 
 import { esc } from '../../ui/html.js';
-import { COLUNAS, NOMES_DOS_GRUPOS, fichaDeExecucao, linkDaBoleta, pedeAtencao, prazoMaisUrgente, situacaoDoPrazo } from '../../comum/fila/regras.js';
+import { COLUNAS, NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, linkDaBoleta, pedeAtencao, prazoMaisUrgente, situacaoDoPrazo } from '../../comum/fila/regras.js';
 import { quantoFalta } from '../../comum/horarios.js';
 
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -64,6 +64,7 @@ export const htmlCartao = (pedido, agora = Date.now()) => {
     <header class="fl-cartao-topo">
       <span class="fl-conta">${esc(pedido.conta)}</span>
       ${cliente}
+      ${pedido.dia !== diaDe(agora) ? `<span class="fl-outro-dia" title="E-mail enviado em ${diaEHora(pedido.criadoEm)}">de ${diaEHora(pedido.criadoEm).split(' ')[0]}</span>` : ''}
       <span class="fl-hora" title="E-mail enviado às ${hora(pedido.criadoEm)}">${hora(pedido.criadoEm)}</span>
     </header>
     <span class="fl-grupo">${esc(NOMES_DOS_GRUPOS[pedido.grupo] ?? pedido.grupo)}</span>
@@ -123,6 +124,49 @@ export const htmlNumeros = (pedidos, agora = Date.now()) => {
     ['executado', 'executados', conta('executado')]
   ];
   return `${itens.map(([estado, rotulo, n]) => `<span class="fl-numero" data-estado="${estado}"><b>${n}</b> ${rotulo}</span>`).join('')}${atencao ? `<span class="fl-numero fl-numero-atencao"><b>${atencao}</b> pedem atenção</span>` : ''}`;
+};
+
+const MOTIVOS = {
+  'pelo-nome': 'Achada pelo nome: veio de outro endereço de e-mail. É deste pedido?',
+  ambigua: 'O cliente tem mais de um pedido esperando, com o mesmo assunto: de qual é?',
+  nenhum: 'Não casou com nenhum pedido aberto: é de algum destes?'
+};
+
+/**
+ * As respostas que o robô viu no Outlook e não casaram sozinhas: cada uma com os cartões candidatos
+ * (ou, sem candidato, os que esperam o cliente), e "Não é de pedido".
+ */
+export const htmlConferir = (soltas, pedidos) => {
+  if (!soltas.length) return '';
+  const porId = new Map(pedidos.map((p) => [p.id, p]));
+  const esperando = pedidos.filter((p) => p.estado === 'enviado' || p.estado === 'respondeu');
+  const itens = soltas.map((s) => {
+    const candidatos = s.candidatos.length ? s.candidatos.map((id) => porId.get(id)).filter(Boolean) : esperando;
+    const r = s.resposta;
+    return `
+    <article class="fl-solta" data-resposta="${esc(r.id)}">
+      <header class="fl-cartao-topo">
+        <span class="fl-conta">${esc(r.de || 'Remetente sem nome')}</span>
+        <span class="fl-cliente">${esc(r.email ?? '')}</span>
+        <span class="fl-hora">${hora(r.em)}</span>
+      </header>
+      <span class="fl-solta-assunto">${esc(r.assunto)}</span>
+      <blockquote class="fl-resposta"><span>${esc(r.previa || '(sem prévia)')}</span></blockquote>
+      <p class="fl-nota">${MOTIVOS[s.motivo] ?? MOTIVOS.nenhum}</p>
+      <footer class="fl-cartao-acoes">
+        ${candidatos
+          .map((p) => `<button type="button" class="fl-botao" data-acao="atribuir" data-pedido="${esc(p.id)}">Conta ${esc(p.conta)} · ${esc(NOMES_DOS_GRUPOS[p.grupo] ?? p.grupo)} · ${hora(p.criadoEm)}</button>`)
+          .join('')}
+        <button type="button" class="fl-botao fl-ignorar" data-acao="ignorar">Não é de pedido</button>
+      </footer>
+    </article>`;
+  });
+  return `
+    <div class="panel-header-row">
+      <h2 class="panel-title">Respostas a conferir</h2>
+      <span class="meta-counter">${soltas.length}</span>
+    </div>
+    <div class="fl-soltas">${itens.join('')}</div>`;
 };
 
 /** A ficha de execução, na janela: o texto, copiar e as boletas. */

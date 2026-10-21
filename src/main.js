@@ -7,7 +7,7 @@ import { repositorioDasAnotacoes } from './modulos/anotacoes/banco.js';
 import { linkDaNota } from './modulos/anotacoes/render.js';
 import { iniciarVigia } from './modulos/anotacoes/vigia.js';
 import { iniciarCalendario } from './modulos/calendario/index.js';
-import { iniciarContadorDaFila, iniciarFila } from './modulos/fila/index.js';
+import { iniciarContadorDaFila, iniciarFila, iniciarVigiaDaFila } from './modulos/fila/index.js';
 import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
 import { iniciarRendaFixa } from './modulos/rendafixa/index.js';
@@ -55,8 +55,10 @@ try {
 }
 
 // O contador da Fila também: a resposta do cliente e o prazo perto aparecem em qualquer aba.
+// E o vigia das respostas no Outlook, pelo robô.
 try {
   iniciarContadorDaFila();
+  iniciarVigiaDaFila();
 } catch (erro) {
   console.error('O contador da Fila não iniciou:', erro);
 }

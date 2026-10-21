@@ -440,3 +440,56 @@ describe('o print da cotação de venda e o corpo no Outlook (robô 1.5.0)', () 
     expect(await robo.prepararOutlook({ html: '<div></div>', texto: '' })).toEqual({ ok: false, motivo: 'sem-robo' });
   });
 });
+
+describe('as respostas no Outlook (robô 1.8.0)', () => {
+  it('pede a vigia só com o robô, e entrega o que ele viu, com cada campo no tamanho certo', async () => {
+    const { janela, recebidas } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    robo.vigiarOutlook();
+    await umInstante();
+    expect(recebidas.at(-1).tipo).toBe('vigiar-outlook');
+
+    const leituras = [];
+    robo.aoReceberOutlook((l) => leituras.push(l));
+    janela.dispatchEvent(
+      Object.assign(new Event('message'), {
+        source: janela,
+        data: {
+          origem: 'robo-hub',
+          tipo: 'outlook',
+          em: 1,
+          lista: true,
+          itens: 30,
+          respostas: [
+            { id: 'r1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'x'.repeat(500), hora: '10:42' },
+            { id: 2, assunto: 'sem id de texto' },
+            null
+          ]
+        }
+      })
+    );
+    expect(leituras).toHaveLength(1);
+    expect(leituras[0]).toMatchObject({ em: 1, lista: true, itens: 30 });
+    expect(leituras[0].respostas).toHaveLength(1);
+    expect(leituras[0].respostas[0].previa).toHaveLength(300);
+  });
+
+  it('sem o robô, pedir a vigia não manda nada', () => {
+    const { janela } = janelaComRobo({ instalado: false });
+    const mandadas = [];
+    const postMessage = janela.postMessage;
+    janela.postMessage = (data) => {
+      mandadas.push(data.tipo);
+      postMessage(data);
+    };
+    criarRoboHub({ janela }).vigiarOutlook();
+    expect(mandadas).toEqual(['ola']);
+  });
+
+  it('o robô não clica, não abre e-mail e não envia nada no Outlook', () => {
+    const vigia = fonteDoRobo.slice(fonteDoRobo.indexOf('const naCaixaDoOutlook'), fonteDoRobo.indexOf('/* ── Na aba da Mesa'));
+    expect(vigia.length).toBeGreaterThan(500);
+    expect(vigia).not.toMatch(/\.click\(|dispatchEvent|\.focus\(|scroll|execCommand/);
+  });
+});

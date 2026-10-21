@@ -3,9 +3,11 @@ import { esc } from '../../ui/html.js';
 import { abrirJanela } from '../../ui/janela.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, mudarEstado, pedeAtencao, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, mudarEstado, pedeAtencao, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
-import { htmlCancelados, htmlFicha, htmlNumeros, htmlQuadro } from './render.js';
+import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
+import { htmlCancelados, htmlConferir, htmlFicha, htmlNumeros, htmlQuadro } from './render.js';
+import { criarVigiaDoOutlook } from './vigiaOutlook.js';
 import './fila.css';
 
 /**
@@ -30,7 +32,9 @@ export const iniciarFila = (secao) => {
     busca: el('busca'),
     janela: el('janela'),
     janelaTitulo: el('janela-titulo'),
-    janelaCorpo: el('janela-corpo')
+    janelaCorpo: el('janela-corpo'),
+    outlook: el('outlook'),
+    conferir: el('conferir')
   };
   const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null };
   const hoje = () => diaDe(Date.now());
@@ -39,7 +43,8 @@ export const iniciarFila = (secao) => {
 
   async function carregar() {
     try {
-      estado.pedidos = await repo.listarDoDia(estado.dia);
+      // Hoje, também o que ficou aberto dos últimos dias (regras.js).
+      estado.pedidos = estado.dia === hoje() ? pedidosDaVista(await repo.listarTodos(), estado.dia) : await repo.listarDoDia(estado.dia);
       render();
     } catch (erro) {
       ui.quadro.innerHTML = `<div class="alert alert-danger">${esc(erro.message)}</div>`;
@@ -73,7 +78,33 @@ export const iniciarFila = (secao) => {
     const [ano, mes, d] = estado.dia.split('-');
     const nome = estado.dia === hoje() ? 'hoje' : new Date(Number(ano), Number(mes) - 1, Number(d)).toLocaleDateString('pt-BR', { weekday: 'long' });
     ui.subtitulo.textContent = `${nome}, ${d}/${mes} · ${estado.pedidos.length} ${estado.pedidos.length === 1 ? 'pedido' : 'pedidos'}`;
+    renderOutlook();
   }
+
+  // O vigia das respostas no Outlook: a situação no alto e as respostas a conferir.
+  function renderOutlook() {
+    const vigia = servico('vigiaDoOutlook');
+    const situacao = vigia?.situacao() ?? { tipo: 'sem-robo', texto: 'Outlook: sem o robô', titulo: 'Instale o robô do Hub (no Ordens, "Copiar robô") para ver as respostas dos clientes aqui.' };
+    ui.outlook.dataset.tipo = situacao.tipo;
+    ui.outlook.textContent = situacao.texto;
+    ui.outlook.title = situacao.titulo;
+    const conferir = vigia && estado.dia === hoje() ? htmlConferir(vigia.soltas(), estado.pedidos) : '';
+    ui.conferir.hidden = !conferir;
+    ui.conferir.innerHTML = conferir;
+  }
+  quandoHouver('vigiaDoOutlook', (vigia) => {
+    vigia.aoMudar(renderOutlook);
+    renderOutlook();
+  });
+
+  ui.conferir.addEventListener('click', (e) => {
+    const botao = e.target.closest('[data-acao]');
+    const vigia = servico('vigiaDoOutlook');
+    const idResposta = botao?.closest('[data-resposta]')?.dataset.resposta;
+    if (!botao || !vigia || !idResposta) return;
+    if (botao.dataset.acao === 'atribuir') vigia.atribuir(idResposta, botao.dataset.pedido);
+    if (botao.dataset.acao === 'ignorar') vigia.ignorar(idResposta);
+  });
 
   /* ── Mexer num cartão ─────────────────────────────────────────────────────────────── */
 
@@ -221,6 +252,22 @@ export const iniciarFila = (secao) => {
 };
 
 /**
+ * O vigia das respostas no Outlook (`vigiaOutlook.js`): começa com a página, assim que o Ordens
+ * registra a ponte do robô, e fica nos serviços para a aba Fila o mostrar. Pede ao robô que olhe a
+ * caixa de entrada a cada minuto, enquanto há pedido esperando o cliente.
+ */
+export const iniciarVigiaDaFila = () => {
+  quandoHouver('robo', (robo) => {
+    const vigia = criarVigiaDoOutlook({ robo, versaoEsperada: servico('versaoDoRobo'), repo: filaDaPagina(), avisar: aviso });
+    registrarServico('vigiaDoOutlook', vigia);
+    aoMudarAFila(() => vigia.pedirSePrecisa());
+    robo.aoMudar(() => vigia.pedirSePrecisa());
+    setInterval(() => vigia.pedirSePrecisa(), 60000);
+    vigia.pedirSePrecisa();
+  });
+};
+
+/**
  * O contador da aba Fila: quantos pedidos pedem atenção agora — o cliente respondeu, ou um prazo está
  * perto ou passou. Começa com a página, como o vigia das Anotações: quem está no Ordens também vê.
  */
@@ -231,7 +278,7 @@ export const iniciarContadorDaFila = () => {
   const contar = async () => {
     try {
       const agora = Date.now();
-      const n = (await repo.listarDoDia(diaDe(agora))).filter((p) => pedeAtencao(p, agora)).length;
+      const n = pedidosDaVista(await repo.listarTodos(), diaDe(agora), agora).filter((p) => pedeAtencao(p, agora)).length;
       contador.hidden = n === 0;
       contador.textContent = n;
       contador.title = n ? `${n} ${n === 1 ? 'pedido pede' : 'pedidos pedem'} atenção` : '';
@@ -258,11 +305,14 @@ const MARCACAO = `
       <button type="button" class="copy-btn" data-fl="hoje">Hoje</button>
     </div>
     <div class="fl-numeros" data-fl="numeros"></div>
+    <span class="fl-outlook" data-fl="outlook" data-tipo="sem-robo">Outlook</span>
     <div class="fl-ferramentas">
       <input type="search" class="fl-busca" data-fl="busca" placeholder="Buscar conta, cliente ou ativo" aria-label="Buscar na Fila" />
       <button type="button" class="copy-btn" data-fl="resumo" title="Copiar o resumo do dia, com o que ficou pendente">Resumo do dia</button>
     </div>
   </section>
+
+  <section class="panel fl-conferir" data-fl="conferir" aria-label="Respostas a conferir" hidden></section>
 
   <div class="fl-area">
     <div class="fl-quadro" data-fl="quadro"></div>

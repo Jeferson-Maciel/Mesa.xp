@@ -7,6 +7,7 @@ import {
   linkDaBoleta,
   mudarEstado,
   novoPedido,
+  pedidosDaVista,
   pedeAtencao,
   prazoMaisUrgente,
   prazosDoPedido,
@@ -159,6 +160,18 @@ describe('a ficha de execução e a boleta', () => {
     expect(linkDaBoleta({ operacao: 'C' }, '1234567', 'fundos-compra')).toBeNull();
     expect(linkDaBoleta({ operacao: 'C' }, '1234567', 'bolsa')).toBeNull();
     expect(linkDaBoleta({}, '1234567', 'tesouro')).toContain('#/produtos/tesouro-direto');
+  });
+});
+
+describe('o que a Fila de um dia mostra', () => {
+  it('hoje, também o que ficou aberto nos últimos 7 dias; outro dia, só o dele', () => {
+    const ontemAberto = bolsa({ conta: '7654321', em: em(17, 0, 20) });
+    const ontemExecutado = mudarEstado(bolsa({ em: em(11, 0, 20) }), 'executado', em(12, 0, 20));
+    const velho = bolsa({ em: new Date(2026, 9, 1, 10).getTime() });
+    const hoje = bolsa();
+    const todos = [ontemAberto, ontemExecutado, velho, hoje];
+    expect(pedidosDaVista(todos, '2026-10-21', em(12)).map((p) => p.id)).toEqual([ontemAberto.id, hoje.id]);
+    expect(pedidosDaVista(todos, '2026-10-20', em(12)).map((p) => p.id)).toEqual([ontemAberto.id, ontemExecutado.id]);
   });
 });
 

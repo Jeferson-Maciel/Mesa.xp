@@ -85,7 +85,41 @@ O `index.js` do Ordens anota `ordem.repetidoHoje` e `solicitacao.contaNova`; o v
 - **Anotar**: abre uma anotação nova com o pedido escrito. O pedido passa pela memória da página
   (`anotarDeFora.js`), nunca pelo endereço, que iria para o histórico do navegador com a conta.
 
-## O que vem a seguir
+## As respostas no Outlook (robô 1.8.0)
 
-A resposta do cliente no Outlook, pelo robô (a leitura só da lista da caixa de entrada: remetente,
-assunto, prévia e hora), está em [`ROADMAP.md`](ROADMAP.md) até sair.
+A pergunta do usuário em 21/10/2026: "linkar o Outlook para quando o cliente responder ter um aviso no
+sistema". Sem login nem API da Microsoft (o Graph pediria registrar um app no Azure da XP): o robô lê
+a **lista** da caixa de entrada do Outlook na web, numa aba que a pessoa deixa aberta no mesmo Chrome.
+O que ele lê e não lê está nas regras do robô, em [`secundario.md`](secundario.md).
+
+```
+src/comum/fila/respostas.js    o que é resposta a pedido, e o cartão de cada resposta (puro, testado)
+src/modulos/fila/vigiaOutlook.js  o vigia, do lado da Mesa: pede ao robô, casa, grava, avisa
+```
+
+- **Quando olha**: o vigia começa com a página. A cada minuto, e a cada mudança na Fila, se há cartão
+  aguardando o cliente ou respondido (de hoje, ou aberto dos últimos 7 dias), pede ao robô que olhe a
+  caixa de entrada pelos próximos 3 minutos. O robô olha quando a lista muda (no máximo a cada 2 s) e
+  manda tudo de novo a cada minuto.
+- **O e-mail do cliente casa sozinho.** A resposta do endereço do cliente de um cartão (o e-mail que o
+  robô trouxe da ficha do Hub) vai para ele, e o cartão passa para "O cliente respondeu", com a prévia
+  e um aviso na tela ("Ver na Fila"). Com mais de um cartão do mesmo cliente vale o que ainda espera a
+  resposta, e depois o do mesmo assunto (o resgate do Tesouro não é o e-mail da bolsa).
+- **O resto fica "a conferir"**, no alto da Fila: a resposta ambígua (dois cartões esperando, com o
+  mesmo assunto), a achada só pelo nome (o cliente respondeu de outro endereço: todas as partes do
+  nome de quem respondeu, duas ou mais, estão no nome do cliente) e a que não casou com nada. Cada uma
+  com um botão por cartão candidato e "Não é de pedido" (que a esconde até o fim do dia; o id fica no
+  `localStorage`, e é um resumo, sem nome).
+- **A conversa com mensagem nova** (o cliente escreve de novo, "só metade") troca a prévia do cartão.
+- **A resposta não aprova nada.** Quem lê "de acordo" e clica em "Aprovou" é o operador.
+- **No alto da Fila**, o selo do Outlook: verde "vendo as respostas", com a hora da última olhada;
+  âmbar "abra a caixa de entrada" (nenhuma lista vista há 2,5 minutos) ou "atualize o robô"; neutro
+  "nada esperando resposta" ou "sem o robô".
+- **Os cartões abertos de outros dias** aparecem na Fila de hoje, com a data em âmbar: o e-mail das
+  17h tem resposta na manhã seguinte.
+
+**O que o Outlook de verdade pode mudar**: a lista do Outlook na web foi lida pelo que ele expõe aos
+leitores de tela — a lista (`role="listbox"`), cada mensagem uma opção (`role="option"`), o e-mail
+no `title` do remetente, a hora nas de hoje. Só o Outlook de mentira do `verificar` foi testado; o
+de verdade está em "A testar" no [`CONTEXTO.md`](CONTEXTO.md). Se o selo ficar em "abra a caixa de
+entrada" com ela aberta, é a lista que mudou de forma.

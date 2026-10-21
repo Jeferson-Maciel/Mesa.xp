@@ -20,7 +20,7 @@
 
 .fl .fl-topo {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--esp-3) var(--esp-5);
 }
@@ -116,6 +116,95 @@
 .fl .fl-ferramentas {
   display: flex;
   gap: var(--esp-2);
+}
+
+/* O vigia do Outlook: verde vendo as respostas, âmbar quando falta algo (a caixa de entrada, o robô
+   novo), neutro parado. */
+.fl .fl-outlook {
+  --cor: var(--texto-fraco);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  justify-self: start;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--cor) 34%, transparent);
+  border-radius: var(--r-pilula);
+  background: color-mix(in srgb, var(--cor) 9%, transparent);
+  color: var(--texto);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.fl .fl-outlook::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cor);
+}
+
+.fl .fl-outlook[data-tipo='vigiando'] {
+  --cor: var(--positivo);
+}
+
+.fl .fl-outlook[data-tipo='vigiando']::before {
+  animation: fl-ao-vivo 2.4s var(--curva) infinite;
+}
+
+.fl .fl-outlook[data-tipo='sem-caixa'],
+.fl .fl-outlook[data-tipo='robo-velho'] {
+  --cor: var(--atencao);
+}
+
+/* ── As respostas a conferir ────────────────────────────────────────────────────────── */
+
+.fl .fl-conferir {
+  border-color: color-mix(in srgb, var(--acento) 45%, var(--borda));
+  box-shadow: var(--sombra), inset 0 3px 0 var(--acento);
+  animation: fl-entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.fl .fl-soltas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: var(--esp-3);
+}
+
+.fl .fl-solta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  min-width: 0;
+  padding: var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+}
+
+.fl .fl-solta-assunto {
+  overflow: hidden;
+  color: var(--texto);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl .fl-botao.fl-ignorar {
+  margin-left: auto;
+  border-style: dashed;
+  color: var(--texto-fraco);
+}
+
+/* O cartão aberto de outro dia: a data dele, para não passar por pedido de hoje. */
+.fl .fl-outro-dia {
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  background: var(--atencao-fundo);
+  color: var(--atencao);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ── O quadro ───────────────────────────────────────────────────────────────────────── */
@@ -548,6 +637,16 @@
   }
 }
 
+@keyframes fl-ao-vivo {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cor) 60%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
 @keyframes fl-estalar {
   0% {
     transform: scale(0.8);
@@ -566,9 +665,13 @@
     order: 3;
   }
 
+  .fl .fl-outlook {
+    order: 4;
+  }
+
   .fl .fl-ferramentas {
     grid-column: 1 / -1;
-    order: 4;
+    order: 5;
   }
 
   .fl .fl-busca {
@@ -604,7 +707,9 @@
   .fl .fl-cartao,
   .fl .fl-cartao.fl-atencao,
   .fl .fl-resposta,
-  .fl .fl-numero.fl-numero-atencao {
+  .fl .fl-numero.fl-numero-atencao,
+  .fl .fl-conferir,
+  .fl .fl-outlook[data-tipo='vigiando']::before {
     animation: none;
   }
 }

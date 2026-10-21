@@ -258,6 +258,19 @@ export const resumoDoDia = (pedidos, dia) => {
   return [`${d}/${mes}/${ano}: ${doDia.length} ${doDia.length === 1 ? 'pedido' : 'pedidos'} — ${partes.join(', ')}.`, ...(pendentes.length ? ['', 'Pendentes:', ...pendentes] : [])].join('\n');
 };
 
+/**
+ * Os cartões de um dia, como a Fila os mostra. Hoje, também os que ficaram abertos nos últimos 7 dias
+ * (aguardando o cliente, respondidos, aprovados): o e-mail das 17h tem resposta na manhã seguinte, e
+ * o que não foi executado ontem continua pendente hoje.
+ */
+export const DIAS_ABERTOS = 7;
+const ABERTOS = new Set(['enviado', 'respondeu', 'aprovado']);
+export const pedidosDaVista = (todos, dia, agora = Date.now()) => {
+  if (dia !== diaDe(agora)) return todos.filter((p) => p.dia === dia);
+  const limite = diaDe(agora - DIAS_ABERTOS * 86400000);
+  return todos.filter((p) => p.dia === dia || (p.dia < dia && p.dia >= limite && ABERTOS.has(p.estado)));
+};
+
 /** Os cartões que já passaram do tempo de guarda (90 dias). */
 export const DIAS_DE_GUARDA = 90;
 export const vencidosDaGuarda = (pedidos, agora = Date.now()) => {

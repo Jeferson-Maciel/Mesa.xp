@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.7.1
-// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu. Não lê senha nem token.
+// @version      1.8.0
+// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
 // @match        https://outlook.cloud.microsoft/*
@@ -57,6 +57,14 @@
  *   aba da Mesa  ←── de cada título que o cliente tem, só o nome, o vencimento, a quantidade, a
  *                    bloqueada, o PU de venda e o valor bruto — para o e-mail de resgate
  *
+ *   aba da Mesa   pede ──→ a caixa de entrada do Outlook na web, numa aba que a pessoa já tem aberta
+ *                          (1.8.0): enquanto a Mesa tem pedido esperando o cliente, o robô olha a
+ *                          lista de mensagens e, dela, só as respostas de hoje aos e-mails de
+ *                          confirmação ("RE: Confirmação…") — de cada uma, o remetente, o e-mail, o
+ *                          assunto, a prévia e a hora. Das outras mensagens lê só o assunto, para
+ *                          saber que não são. Não clica, não abre e-mail, não marca como lido
+ *   aba da Mesa  ←── as respostas, para a Fila do dia; saem do armazenamento assim que a Mesa as recebe
+ *
  *   São abas separadas porque a Posição Consolidada e o Renda Fixa são outros módulos do Hub: ir e voltar da Prateleira
  *   recarregaria a página inteira a cada cliente, e a Prateleira deixaria de estar pronta para a
  *   cotação. Na aba de clientes, trocar de cliente é só trocar o fim do endereço.
@@ -103,7 +111,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.7.1';
+  const VERSAO = '1.8.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -1171,6 +1179,86 @@
     tentar();
   };
 
+  /* ── Na caixa de entrada do Outlook (1.8.0) ───────────────────────────────────────── */
+
+  // A resposta (ou o encaminhamento) a um e-mail de confirmação da mesa; a hora que o Outlook mostra
+  // nas mensagens de hoje; um endereço de e-mail.
+  const RESPOSTA_DE_PEDIDO = /^\s*(?:(?:re|res|resp|enc|fw|fwd|tr|aw|wg)\s*:\s*)+.*confirma[çc][ãa]o/i;
+  const HORA_DE_HOJE = /^\d{1,2}:\d{2}$/;
+  const ENDERECO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Um resumo curto e estável de um texto, para a identidade de uma resposta: a Mesa guarda os ids
+  // das respostas que a pessoa disse não serem de pedido, e o id não pode levar o nome de ninguém.
+  const resumo = (texto) => {
+    let h = 5381;
+    for (let i = 0; i < texto.length; i++) h = ((h << 5) + h + texto.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  };
+
+  /*
+   * As respostas dos clientes, na lista da caixa de entrada que a pessoa deixa aberta. Só age:
+   *  - fora do compor (`/deeplink/`), na janela da caixa de entrada;
+   *  - enquanto a Mesa pede (`vigiaOutlook`, renovado a cada minuto enquanto há pedido esperando o
+   *    cliente): com a Mesa fechada, ou sem pedido esperando, não lê nada;
+   *  - na lista de mensagens que o Outlook já desenhou: não rola, não clica, não abre e-mail.
+   * De cada mensagem lê o texto da linha e para no assunto, se não for resposta a um e-mail de
+   * confirmação; das que são, e de hoje (com a hora, não a data), guarda o remetente, o e-mail (do
+   * `title` do remetente), o assunto, a prévia e a hora. Manda tudo de novo quando muda, e a cada
+   * minuto, para a Mesa que acabou de abrir também saber.
+   */
+  const naCaixaDoOutlook = () => {
+    if (location.pathname.includes('/deeplink/')) return;
+    let ultima = '';
+    let mandouEm = 0;
+    let mexeu = true;
+
+    const lerLinha = (item) => {
+      const linhas = String(item.innerText || '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const iAssunto = linhas.findIndex((l) => RESPOSTA_DE_PEDIDO.test(l));
+      if (iAssunto < 0) return null;
+      const hora = linhas.find((l) => HORA_DE_HOJE.test(l));
+      if (!hora) return null;
+      const email = [...item.querySelectorAll('[title]')].map((el) => el.getAttribute('title').trim()).find((t) => ENDERECO.test(t)) || null;
+      const de = linhas.slice(0, iAssunto).find((l) => !HORA_DE_HOJE.test(l)) || null;
+      const previa = linhas
+        .slice(iAssunto + 1)
+        .filter((l) => !HORA_DE_HOJE.test(l))
+        .join(' ')
+        .slice(0, 280);
+      const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhas[iAssunto]}|${hora}`;
+      return { id: 'r' + resumo(chave), de, email, assunto: linhas[iAssunto], previa, hora };
+    };
+
+    const olhar = () => {
+      const vigia = GM_getValue('vigiaOutlook', null);
+      if (!vigia || Date.now() > vigia.ate) return;
+      const listas = [...document.querySelectorAll('[role="listbox"]')].filter((l) => l.querySelector('[role="option"]'));
+      const itens = listas.flatMap((l) => [...l.querySelectorAll('[role="option"]')]);
+      const respostas = itens.map(lerLinha).filter(Boolean);
+      const agora = JSON.stringify(respostas);
+      if (agora === ultima && Date.now() - mandouEm < 60 * 1000) return;
+      ultima = agora;
+      mandouEm = Date.now();
+      GM_setValue('outlookVigia', { em: Date.now(), lista: listas.length > 0, itens: itens.length, respostas });
+    };
+
+    // A lista muda (mensagem nova, a pessoa troca de pasta): olha logo, no máximo uma vez a cada 2 s.
+    new MutationObserver(() => {
+      mexeu = true;
+    }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    setInterval(() => {
+      if (mexeu || Date.now() - mandouEm >= 60 * 1000) {
+        mexeu = false;
+        olhar();
+      }
+    }, 2000);
+    // A Mesa acabou de pedir (um e-mail acabou de sair): olha já.
+    GM_addValueChangeListener('vigiaOutlook', () => olhar());
+    olhar();
+  };
+
   /* ── Na aba da Mesa ─────────────────────────────────────────────────────────────────── */
 
   const naAbaDaMesa = () => {
@@ -1292,6 +1380,10 @@
         if (atual && atual.id === mensagem.id) GM_setValue('corpoParaOutlook', { id: mensagem.id, cancelado: true, em: Date.now() });
       }
 
+      // As respostas dos clientes no Outlook (1.8.0): a Mesa pede a cada minuto enquanto tem pedido
+      // esperando o cliente; a caixa de entrada olha por 3 minutos a partir do último pedido.
+      if (mensagem.tipo === 'vigiar-outlook') GM_setValue('vigiaOutlook', { ate: Date.now() + 3 * 60 * 1000 });
+
       // A lista do Tesouro da conta, na aba do Tesouro (1.6.0).
       if (mensagem.tipo === 'pedir-tesouro') {
         const { id } = mensagem;
@@ -1388,6 +1480,12 @@
     GM_addValueChangeListener('corpoColado', (_chave, _antiga, nova) => {
       if (nova) enviar({ tipo: 'corpo-colado', id: nova.id, ok: nova.ok === true, motivo: nova.motivo || null });
     });
+    // As respostas vistas na caixa de entrada seguem para a Mesa e saem do armazenamento na hora.
+    GM_addValueChangeListener('outlookVigia', (_chave, _antiga, nova) => {
+      if (!nova) return;
+      enviar({ tipo: 'outlook', em: nova.em, lista: nova.lista === true, itens: nova.itens || 0, respostas: Array.isArray(nova.respostas) ? nova.respostas : [] });
+      GM_setValue('outlookVigia', null);
+    });
 
     apresentar();
     document.addEventListener('DOMContentLoaded', apresentar);
@@ -1400,5 +1498,9 @@
 
   if (ehOHub()) naAbaDoHub();
   else if (ehAMesa()) naAbaDaMesa();
-  else if (ehOOutlook()) document.addEventListener('DOMContentLoaded', naAbaDoOutlook);
+  else if (ehOOutlook())
+    document.addEventListener('DOMContentLoaded', () => {
+      naAbaDoOutlook();
+      naCaixaDoOutlook();
+    });
 })();

@@ -120,8 +120,15 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.7.1)
+### A testar no Hub e no Outlook de verdade (robô 1.8.0)
 
+0. **As respostas no Outlook (1.8.0, a Fila do dia)**: com o robô novo, deixar o Outlook na web aberto
+   na caixa de entrada numa aba do mesmo Chrome; mandar um e-mail de teste pelo Ordens (Abrir no
+   Outlook) para um endereço seu, como se fosse o cliente, e responder a ele. Na Fila, o selo deve
+   ficar verde ("vendo as respostas") e o cartão passar para "O cliente respondeu" com a prévia. Se o
+   selo ficar âmbar "abra a caixa de entrada" com ela aberta, a lista do Outlook de verdade tem outra
+   forma: dizer o que aparece. Conferir também uma resposta vinda de outro endereço (deve cair em
+   "Respostas a conferir").
 1. Copiar robô → Tampermonkey (o script agora tem ~260 KB, com a SnapDOM); fechar as abas 🤖 antigas.
    Ao abrir o Outlook na web pela primeira vez com o robô novo, o Tampermonkey pode pedir permissão.
 2. Colar um pedido com venda do total de um fundo seu e conferir, no bloco "Venda no secundário",

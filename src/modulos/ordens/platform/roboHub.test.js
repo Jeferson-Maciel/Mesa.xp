@@ -313,7 +313,7 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
   });
 
   it('nunca clica em Próximo: os cliques do print estão numa lista fechada', () => {
-    expect(fonteDoRobo).toContain("const CLIQUES_PERMITIDOS = ['Total de cotas', 'Visualizar mais detalhes da operação'];");
+    expect(fonteDoRobo).toContain("const CLIQUES_PERMITIDOS = ['Estoque XP', 'Estoque clientes', 'Total de cotas', 'Visualizar mais detalhes da operação'];");
     // O código sem os comentários: fora do `clicarSo`, o robô só clica no Atualizar da Prateleira, e
     // nenhum botão de seguir adiante aparece nele.
     const codigo = fonteDoRobo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -392,10 +392,14 @@ describe('o print da cotação de venda e o corpo no Outlook (robô 1.5.0)', () 
     await umInstante();
     const itens = [
       { fundoId: FUNDO, conta: '1234567', quantidade: null },
-      { fundoId: FUNDO, conta: '7654321', quantidade: 590 }
+      { fundoId: FUNDO, conta: '7654321', quantidade: 590, modalidade: 'clientes', desagio: 10 }
     ];
     const [primeiro, segundo] = await robo.pedirPrints({ itens });
-    expect(recebidas.find((m) => m.tipo === 'pedir-prints').itens).toEqual(itens);
+    // O estoque vai junto (1.9.0): sem ele, o Estoque XP, e sem o deságio, nada a conferir no painel.
+    expect(recebidas.find((m) => m.tipo === 'pedir-prints').itens).toEqual([
+      { fundoId: FUNDO, conta: '1234567', quantidade: null, modalidade: 'xp', desagio: null },
+      { fundoId: FUNDO, conta: '7654321', quantidade: 590, modalidade: 'clientes', desagio: 10 }
+    ]);
     expect(primeiro).toMatchObject({ indice: 0, png: PNG, quantidade: 10.5 });
     expect(segundo.erro).toMatchObject({ codigo: 'quantidade-diferente' });
     expect(segundo.erro.message).toContain('não bateu');

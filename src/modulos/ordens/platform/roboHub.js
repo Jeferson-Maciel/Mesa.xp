@@ -37,7 +37,9 @@ const MENSAGENS = {
   'ficha-desconhecida': 'a ficha do cliente veio do Hub num formato que o robô não conhece — o robô precisa ser atualizado',
   invalido: 'fundo ou conta numa forma que o robô não aceita',
   // O print da cotação de venda (1.5.0): cada passo que pode não sair, com o que a pessoa vê.
-  'sem-campo': 'a boleta de venda não mostrou o campo de quantidade',
+  'sem-estoque': 'a boleta de venda não mostrou a escolha do Estoque clientes',
+  'estoque-diferente': 'o deságio do painel não é o do estoque pedido — o print não foi tirado',
+  'sem-campo': 'a boleta de venda não mostrou o campo de quantidade, nem depois de escolher o estoque',
   'sem-total': 'a boleta de venda não mostrou o botão "Total de cotas"',
   'sem-conta': 'a boleta não fez a conta da venda com a quantidade',
   'sem-detalhe': 'o detalhe da operação não abriu na boleta',
@@ -350,7 +352,15 @@ export const criarRoboHub = ({ janela = window } = {}) => {
       itens.forEach((item, indice) => {
         const quantidadeBoa = item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0);
         if (FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)) && quantidadeBoa) {
-          validos.push({ fundoId: item.fundoId, conta: String(item.conta), quantidade: item.quantidade, indice });
+          validos.push({
+            fundoId: item.fundoId,
+            conta: String(item.conta),
+            quantidade: item.quantidade,
+            // O estoque da venda (1.9.0): o robô o escolhe na boleta, e confere o deságio dele no painel.
+            modalidade: item.modalidade === 'clientes' ? 'clientes' : 'xp',
+            desagio: typeof item.desagio === 'number' && Number.isFinite(item.desagio) ? item.desagio : null,
+            indice
+          });
         } else resultados[indice] = { indice, fundoId: item.fundoId, erro: new ErroDoRobo('invalido') };
       });
       if (validos.length === 0) return Promise.resolve(resultados);
@@ -391,7 +401,7 @@ export const criarRoboHub = ({ janela = window } = {}) => {
           terminar
         });
         esperar();
-        enviar({ tipo: 'pedir-prints', id, itens: validos.map(({ fundoId, conta, quantidade }) => ({ fundoId, conta, quantidade })) });
+        enviar({ tipo: 'pedir-prints', id, itens: validos.map(({ fundoId, conta, quantidade, modalidade, desagio }) => ({ fundoId, conta, quantidade, modalidade, desagio })) });
       });
     },
 

@@ -349,8 +349,8 @@ export const iniciarOrdens = (secao) => {
 
   /* ── Os prints da cotação de venda ──────────────────────────────────────────────────── */
 
-  // Um print é da conta, do fundo e da quantidade: o total, ou a quantidade escrita.
-  const chaveDoPrint = (conta, ordem) => `${ordem.venda?.fundoId}|${conta}|${ordem.total ? 'total' : ordem.quantidade}`;
+  // Um print é da conta, do fundo, do estoque e da quantidade: o total, ou a quantidade escrita.
+  const chaveDoPrint = (conta, ordem) => `${ordem.venda?.fundoId}|${conta}|${ordem.venda?.modalidade ?? 'xp'}|${ordem.total ? 'total' : ordem.quantidade}`;
   const mesmoNumero = (a, b) => typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 1e-7;
 
   /**
@@ -398,7 +398,13 @@ export const iniciarOrdens = (secao) => {
     anotar('pediu os prints', { quantos: faltam.length });
     const motivos = [];
     await robo.pedirPrints({
-      itens: faltam.map((o) => ({ fundoId: o.venda.fundoId, conta: solicitacao.conta, quantidade: o.total ? null : o.quantidade })),
+      itens: faltam.map((o) => ({
+        fundoId: o.venda.fundoId,
+        conta: solicitacao.conta,
+        quantidade: o.total ? null : o.quantidade,
+        modalidade: o.venda.modalidade,
+        desagio: o.venda.condicoes?.desagio ?? null
+      })),
       aoChegar: (r) => {
         const o = faltam[r.indice];
         o.buscandoPrint = false;

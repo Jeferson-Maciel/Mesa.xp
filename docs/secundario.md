@@ -250,17 +250,23 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   o painel do fim da **etapa 1** da boleta de venda — a caixa "Valor total da operação" e
   "Visualizar mais detalhes da operação" aberto —, o mesmo que vai nos e-mails de auditoria aprovados.
   Ele só existe com a quantidade preenchida, e por isso, **só para o print**, o robô:
+  - **escolhe o estoque da venda** (1.9.0): "Estoque XP" ou "Estoque clientes", o que o pedido diz.
+    O operador viu em 21/10 que, na boleta de verdade, o campo e o detalhe só aparecem depois dessa
+    escolha — e o print não saía porque o robô não a fazia. Se a opção já está escolhida, não clica;
+    se a boleta não mostra a escolha, segue no Estoque XP (no Estoque clientes, para: `sem-estoque`);
   - preenche a quantidade: clica em "Total de cotas" na venda do total, ou põe a quantidade do pedido
     no campo (máscara de 8 casas, os dígitos entram pela direita: 590 cotas são `59000000000`);
-  - abre "Visualizar mais detalhes da operação";
+  - abre "Visualizar mais detalhes da operação", esperando a opção aparecer embaixo depois da conta
+    (até 8 s), e clica de novo se o painel não abrir (1.9.0);
   - confere que a quantidade do painel é a esperada (a pedida, ou a posição disponível) — sem isso,
-    não há print (`quantidade-diferente`);
+    não há print (`quantidade-diferente`) — e, se o painel mostra o deságio, que é o do estoque pedido
+    (`estoque-diferente`): o outro estoque daria um print com outra conta;
   - tira o print do painel, recortado da caixa do total ao último valor do detalhe, com a SnapDOM;
   - apaga o campo e volta à Prateleira.
   Os cliques ficam numa lista fechada (`CLIQUES_PERMITIDOS`, conferida por teste): **nunca Próximo**,
   nem a caixa de notificação ao cliente. A Mesa tira os prints que faltam na hora de copiar ou de abrir
   no Outlook o e-mail de venda ("atualizado em tempo real", pedido do operador), ou no botão **Tirar
-  prints** da venda; cada um vale um dia útil, preso à conta, ao fundo e à quantidade — se a posição
+  prints** da venda; cada um vale um dia útil, preso à conta, ao fundo, ao estoque e à quantidade — se a posição
   mudar, o print velho não serve —, e fica **só na memória da página**. A miniatura aparece na venda.
   Sem o robô, o e-mail sai sem o print, com um aviso para colá-lo abaixo de "Condições:"; sem o robô
   da versão certa, o motivo aparece em vermelho na hora de copiar ou abrir no Outlook. O print que

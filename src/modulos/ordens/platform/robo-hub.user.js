@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.8.0
+// @version      1.9.0
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
@@ -74,7 +74,8 @@
  *    fora do Chrome: só escuta o `fetch` do próprio app e muda a rota da aba dele;
  *  - na boleta, não digita nem clica em nada: abrir o endereço já carrega o cliente. Nunca passa da
  *    etapa 1. A exceção (1.5.0) é o print da cotação de venda, pedido pela Mesa: na boleta de venda o
- *    robô preenche a quantidade (o botão "Total de cotas", ou a quantidade do pedido no campo) e abre
+ *    robô escolhe o estoque do pedido ("Estoque XP" ou "Estoque clientes", 1.9.0), preenche a
+ *    quantidade (o botão "Total de cotas", ou a quantidade do pedido no campo) e abre
  *    "Visualizar mais detalhes da operação", e só isso — um clique em qualquer outra coisa é recusado
  *    (`clicarSo`), e Próximo nunca. Confere que a quantidade do painel é a pedida antes de tirar o
  *    print, apaga o campo e sai da boleta. Vai de uma boleta direto para a próxima — voltar à Prateleira entre elas custava uns
@@ -111,7 +112,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.8.0';
+  const VERSAO = '1.9.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -629,7 +630,7 @@
 
     // O robô só clica no que está nesta lista — e no que estiver em volta do rótulo, para o clique
     // chegar ao componente. Próximo, Cancelar, Vender e a caixa de notificação ficam de fora.
-    const CLIQUES_PERMITIDOS = ['Total de cotas', 'Visualizar mais detalhes da operação'];
+    const CLIQUES_PERMITIDOS = ['Estoque XP', 'Estoque clientes', 'Total de cotas', 'Visualizar mais detalhes da operação'];
     const textoInteiro = (el) => String(el.textContent || '').replace(/\s+/g, ' ').trim();
     const clicarSo = (el, extras = []) => {
       const texto = el ? textoProprio(el) || textoInteiro(el) : '';
@@ -655,16 +656,57 @@
     };
     const mesmoNumero = (a, b) => a !== null && b !== null && Math.abs(a - b) < 1e-7;
 
+    /*
+     * A escolha do estoque (1.9.0): na boleta de venda do Hub, o campo de quantidade e o detalhe da
+     * operação só aparecem depois de escolher "Estoque XP" ou "Estoque clientes" (visto pelo operador
+     * em 21/10/2026: o print não saía porque o robô não escolhia). O rótulo é procurado pelo texto
+     * exato; já escolhido (marcado como selecionado nele ou em volta), não é clicado de novo.
+     */
+    const ROTULOS_DO_ESTOQUE = { xp: ['Estoque XP'], clientes: ['Estoque clientes', 'Estoque Clientes', 'Estoque cliente'] };
+    const SELECIONADO = /(^|[\s_-])(selected|checked|active|ativo|ativa|selecionado|selecionada)($|[\s_-])/i;
+    const jaEscolhido = (el) =>
+      ancestrais(el)
+        .slice(0, 5)
+        .some(
+          (a) =>
+            a.getAttribute?.('aria-checked') === 'true' ||
+            a.getAttribute?.('aria-selected') === 'true' ||
+            a.getAttribute?.('aria-pressed') === 'true' ||
+            a.checked === true ||
+            a.hasAttribute?.('checked') ||
+            a.hasAttribute?.('selected') ||
+            SELECIONADO.test(String(a.className || ''))
+        );
+    const escolherEstoque = async (modalidade) => {
+      const rotulos = ROTULOS_DO_ESTOQUE[modalidade] || ROTULOS_DO_ESTOQUE.xp;
+      const opcao = await esperar(() => elementosDe(document).find((el) => rotulos.includes(textoProprio(el)) && visivel(el)) || null, 8000);
+      if (!opcao) {
+        registrar('não achou a escolha do estoque', { modalidade });
+        return modalidade === 'xp';
+      }
+      if (jaEscolhido(opcao)) {
+        registrar('o estoque já estava escolhido', { modalidade });
+        return true;
+      }
+      // O clique sai do rótulo e sobe até o componente; a lista fechada aceita o rótulo deste estoque.
+      if (!clicarSo(opcao, rotulos)) return false;
+      registrar('escolheu o estoque', { modalidade });
+      await pausa(500);
+      return true;
+    };
+
     /**
      * O print de uma venda, na boleta de venda que está aberta: `quantidade` é a do pedido, ou null
-     * para o total da posição. Devolve o PNG (data URL) e a quantidade que o painel mostrou.
+     * para o total da posição; `modalidade`, o estoque pedido ('xp' ou 'clientes'); `desagio`, o do
+     * estoque pedido, para conferir no painel. Devolve o PNG (data URL) e a quantidade que o painel mostrou.
      */
-    const tirarPrint = async ({ quantidade, posicao }) => {
+    const tirarPrint = async ({ quantidade, posicao, modalidade = 'xp', desagio = null }) => {
+      if (!(await escolherEstoque(modalidade))) return { erro: 'sem-estoque' };
       const campo = await esperar(campoDeQuantidade, 10000);
       if (!campo) return { erro: 'sem-campo' };
 
       if (quantidade === null) {
-        const total = elementosDe(document).find((el) => textoProprio(el) === 'Total de cotas');
+        const total = await esperar(() => elementosDe(document).find((el) => textoProprio(el) === 'Total de cotas') || null, 5000);
         if (!clicarSo(total)) return { erro: 'sem-total' };
       } else {
         // A máscara do campo tem 8 casas, e os dígitos entram pela direita: 590 cotas são 59000000000.
@@ -683,13 +725,19 @@
       }, 10000);
       if (!fez) return { erro: 'sem-conta' };
 
-      // Abre o detalhe, se estiver fechado.
-      const linhaDaQuantidade = () => elementosDe(document).find((el) => textoProprio(el) === 'Quantidade de cotas' && visivel(el));
-      if (!linhaDaQuantidade()) {
-        const detalhe = elementosDe(document).find((el) => textoProprio(el) === 'Visualizar mais detalhes da operação');
-        clicarSo(detalhe);
+      // Abre o detalhe, se estiver fechado. A opção aparece embaixo depois que a boleta faz a conta, e
+      // pode demorar (1.9.0): o robô espera por ela, e clica de novo se o painel não abrir.
+      const linhaDaQuantidade = () => elementosDe(document).find((el) => textoProprio(el) === 'Quantidade de cotas' && visivel(el)) || null;
+      let rotuloDaQuantidade = linhaDaQuantidade();
+      for (let tentativa = 0; !rotuloDaQuantidade && tentativa < 2; tentativa++) {
+        const detalhe = await esperar(
+          () => elementosDe(document).find((el) => textoProprio(el) === 'Visualizar mais detalhes da operação' && visivel(el)) || null,
+          8000
+        );
+        if (!clicarSo(detalhe)) break;
+        registrar('abriu o detalhe da operação');
+        rotuloDaQuantidade = await esperar(linhaDaQuantidade, 4000);
       }
-      const rotuloDaQuantidade = await esperar(linhaDaQuantidade, 5000);
       if (!rotuloDaQuantidade) return { erro: 'sem-detalhe' };
 
       // A quantidade do painel tem de ser a esperada: sem isso, nada de print.
@@ -698,6 +746,15 @@
       if (esperada !== null && esperada !== undefined && !mesmoNumero(quantidadeNoPainel, esperada)) {
         registrar('a quantidade do painel não bateu');
         return { erro: 'quantidade-diferente' };
+      }
+      // O deságio do painel, se ele o mostra, tem de ser o do estoque pedido: o outro estoque escolhido
+      // daria um print com outra conta.
+      const rotuloDoDesagio = todos.find((el) => /^Deságio/i.test(textoProprio(el)) && visivel(el));
+      const desagioNoPainel = rotuloDoDesagio ? numeroDaTela(textoProprio(valorDoRotulo(todos, rotuloDoDesagio, /^-?[\d.,]+ ?%$/) || { childNodes: [] })) : null;
+      if (typeof desagio === 'number' && desagioNoPainel !== null && Math.abs(desagioNoPainel - desagio) > 0.005) {
+        registrar('o deságio do painel não é o do estoque pedido');
+        preencher(campo, '');
+        return { erro: 'estoque-diferente' };
       }
 
       // A região: da caixa do total ao último valor do detalhe, recortada no lugar exato.
@@ -740,14 +797,14 @@
     // assim que sai.
     const lerPrints = async ({ id, itens }) => {
       const resultados = [];
-      for (const [i, { fundoId, conta, quantidade }] of itens.entries()) {
+      for (const [i, { fundoId, conta, quantidade, modalidade, desagio }] of itens.entries()) {
         if (naBoleta()) await passarPelaPrateleira();
         const cota = await abrirBoleta(fundoId, conta, PRE_CHECK_MS, false, 'vender');
         let resultado = { fundoId, indice: i, erro: 'sem-boleta' };
         if (cota) {
           const posicao = cota.posicao ? cota.posicao.quotaQuantityAvailable : null;
           try {
-            resultado = { fundoId, indice: i, ...(await tirarPrint({ quantidade, posicao })) };
+            resultado = { fundoId, indice: i, ...(await tirarPrint({ quantidade, posicao, modalidade, desagio })) };
           } catch {
             resultado = { fundoId, indice: i, erro: 'falhou-o-print' };
           }
@@ -1049,7 +1106,13 @@
       const itens = pedido.itens
         .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
         .filter((item) => item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0))
-        .map((item) => ({ fundoId: item.fundoId, conta: String(item.conta), quantidade: item.quantidade }));
+        .map((item) => ({
+          fundoId: item.fundoId,
+          conta: String(item.conta),
+          quantidade: item.quantidade,
+          modalidade: item.modalidade === 'clientes' ? 'clientes' : 'xp',
+          desagio: typeof item.desagio === 'number' && Number.isFinite(item.desagio) ? item.desagio : null
+        }));
       if (itens.length > 0) receber({ ...pedido, itens }, lerPrints);
     };
 
@@ -1357,7 +1420,13 @@
         const itens = (Array.isArray(mensagem.itens) ? mensagem.itens : [])
           .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
           .filter((item) => item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0))
-          .map(({ fundoId, conta, quantidade }) => ({ fundoId, conta: String(conta), quantidade }));
+          .map(({ fundoId, conta, quantidade, modalidade, desagio }) => ({
+            fundoId,
+            conta: String(conta),
+            quantidade,
+            modalidade: modalidade === 'clientes' ? 'clientes' : 'xp',
+            desagio: typeof desagio === 'number' && Number.isFinite(desagio) ? desagio : null
+          }));
         if (itens.length === 0) {
           enviar({ tipo: 'prints-fim', id });
           return;

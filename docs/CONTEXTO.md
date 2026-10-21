@@ -155,7 +155,15 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robô 1.8.0)
+### A testar no Hub e no Outlook de verdade (robô 1.9.0)
+
+**O print da venda (1.9.0)**: o operador viu em 21/10 que, na boleta de venda de verdade, é preciso
+escolher "Estoque XP" ou "Estoque clientes" antes da quantidade, e só então aparece embaixo o
+"Visualizar mais detalhes da operação". O robô passou a escolher o estoque do pedido. Testar: Copiar
+robô → Tampermonkey; colar uma venda de um fundo seu; **Tirar prints**. Se não sair, o motivo aparece
+ao lado da venda ("sem o print: …") e o "Copiar tempos" diz em que passo parou ("escolheu o estoque",
+"não achou a escolha do estoque", "abriu o detalhe da operação").
+
 
 0. **As respostas no Outlook (1.8.0, a Fila do dia)**: com o robô novo, deixar o Outlook na web aberto
    na caixa de entrada numa aba do mesmo Chrome; mandar um e-mail de teste pelo Ordens (Abrir no

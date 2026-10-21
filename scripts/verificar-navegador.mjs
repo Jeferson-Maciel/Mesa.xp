@@ -1183,20 +1183,41 @@ try {
             }
             const POSICOES_DA_PAGINA = ${JSON.stringify(Object.fromEntries(Object.entries(POSICOES).map(([k, v]) => [k, v.quotaQuantityAvailable])))};
             const PUS_DA_PAGINA = ${JSON.stringify(PRECOS)};
+            // O deságio de venda de cada estoque, o mesmo do pre-check: o painel o mostra (robô 1.9.0).
+            const DESAGIOS_DA_VENDA = ${JSON.stringify(
+              Object.fromEntries(
+                Object.entries(ESTOQUES).map(([k, v]) => [k, { xp: v.treasury.sell.secondaryDiscount ?? null, clientes: v.peerToPeer.sell.secondaryDiscount ?? null }])
+              )
+            )};
             window.__proximo = 0;
+            window.__estoqueEscolhido = [];
+            // Como o Hub de verdade, visto pelo operador em 21/10/2026: primeiro se escolhe o estoque
+            // (Estoque XP ou Estoque clientes); só então aparecem o campo e o "Total de cotas"; e o
+            // detalhe da operação só aparece embaixo depois que a boleta faz a conta.
             const montarVenda = (fundo) => {
               document.getElementById('boleta-venda')?.remove();
               const b = document.createElement('div');
               b.id = 'boleta-venda';
               b.innerHTML =
-                '<campo-falso></campo-falso><span class="total">Total de cotas</span>' +
+                '<div class="modalidades"><div class="opcao" data-m="xp"><span>Estoque XP</span></div><div class="opcao" data-m="clientes"><span>Estoque clientes</span></div></div>' +
+                '<div class="passo2" hidden><campo-falso></campo-falso><span class="total">Total de cotas</span></div>' +
                 '<div class="info"><div class="caixa"><span>Valor total da operação</span><span class="vt">R$ 0,00</span></div>' +
-                '<div class="det"><span>Visualizar mais detalhes da operação</span></div>' +
+                '<div class="det" hidden><span>Visualizar mais detalhes da operação</span></div>' +
                 '<div class="linhas" hidden><div><span>Quantidade de cotas</span><span class="q">0</span></div>' +
+                '<div><span>Deságio</span><span class="ds">—</span></div>' +
                 '<div><span>Preço unitário da cota</span><span>R$ 9,00</span></div>' +
                 '<div><span>Valor total da operação</span><span class="vt2">R$ 0,00</span></div></div></div>' +
                 '<button class="proximo">Próximo</button>';
               document.body.append(b);
+              for (const opcao of b.querySelectorAll('.opcao')) {
+                opcao.addEventListener('click', () => {
+                  for (const outra of b.querySelectorAll('.opcao')) outra.classList.toggle('selecionada', outra === opcao);
+                  window.__estoqueEscolhido.push(opcao.dataset.m);
+                  const desagio = (DESAGIOS_DA_VENDA[fundo] || {})[opcao.dataset.m];
+                  b.querySelector('.ds').textContent = typeof desagio === 'number' ? desagio.toFixed(2).replace('.', ',') + '%' : '—';
+                  b.querySelector('.passo2').hidden = false;
+                });
+              }
               const campo = b.querySelector('campo-falso').shadowRoot.querySelector('input');
               const conta = () => {
                 const digitos = campo.value.replace(/\\D/g, '');
@@ -1206,6 +1227,8 @@ try {
                 b.querySelector('.vt').textContent = total;
                 b.querySelector('.vt2').textContent = total;
                 b.querySelector('.q').textContent = String(Number(n.toFixed(8)));
+                // A opção do detalhe aparece embaixo uns instantes depois da conta.
+                if (n > 0) setTimeout(() => { b.querySelector('.det').hidden = false; }, 600);
               };
               campo.addEventListener('input', conta);
               b.querySelector('.total').addEventListener('click', () => {
@@ -1551,6 +1574,10 @@ try {
     ok(prints && fontes.every((f) => /^data:image\/png;base64,.{200,}/.test(f)), 'o robô tira o print da cotação de cada venda na boleta, e a miniatura aparece na venda');
     ok((await mesa.textContent('.secundario-vendas')).includes('vale até'), 'cada print diz até quando vale (um dia útil)');
     const roboAgora = await abaDoRobo();
+    ok(
+      JSON.stringify(await roboAgora.evaluate(() => window.__estoqueEscolhido)) === '["xp","clientes"]',
+      `o robô escolhe na boleta o estoque de cada venda (o XP do IMOV11, o clientes do Riza Terrax), antes da quantidade, e confere o deságio dele no painel (${JSON.stringify(await roboAgora.evaluate(() => window.__estoqueEscolhido))})`
+    );
     ok((await roboAgora.evaluate(() => window.__proximo)) === 0, 'o robô nunca clica em Próximo na boleta');
     ok((await roboAgora.evaluate(() => location.hash)) === '#/secundario/prateleira', 'depois dos prints, a aba do robô volta à Prateleira, sem a boleta preenchida');
     const lojaDosPrints = JSON.stringify(loja);

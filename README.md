@@ -558,16 +558,18 @@ src/dados/                 a conexão única com o Supabase e a configuração
 src/vendor/                SheetJS 0.20.1 (licença Apache 2.0)
 supabase/schema.sql        tabelas, políticas e Realtime do Calendário
 supabase/operacional.sql   tabelas, histórico, políticas, Realtime e a base inicial do Operacional
-docs/                      formatos de saída do Ordens; roadmap e sugestões; contexto da última sessão
-AGENTS.md, CLAUDE.md       regras para quem (ou o que) for mexer no código
+docs/                      um documento por módulo, os formatos de saída, o roadmap e onde paramos
+AGENTS.md, CLAUDE.md       o que vale sempre, para quem (ou o que) for mexer no código
+.github/workflows/         a lista de tickers da B3, refeita toda semana
 scripts/                   atualizar tickers e fundos, gerar os goldens, verificar no navegador
 ```
 
-São 1.117 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
+São 1.128 testes. Os do Renda Fixa comparam o motor com o do RendaFixa Pro original em planilhas reais
 da XP, que por serem da XP não estão no repositório: sem elas, esses testes são pulados e só roda o
 da planilha sintética.
 
-Convenções e regras de negócio para quem (ou o que) for mexer no código: [`CLAUDE.md`](CLAUDE.md),
+Convenções e regras de negócio para quem (ou o que) for mexer no código: [`CLAUDE.md`](CLAUDE.md)
+(o que vale sempre e o mapa) e um documento por módulo em `docs/`,
 e o resumo para outros agentes em [`AGENTS.md`](AGENTS.md). Onde o trabalho parou — o que funciona,
 o que foi testado no Hub de verdade e o que falta: [`docs/CONTEXTO.md`](docs/CONTEXTO.md). Defeitos
 conhecidos, sugestões e próximos passos: [`docs/ROADMAP.md`](docs/ROADMAP.md).

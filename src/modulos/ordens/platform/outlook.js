@@ -1,7 +1,7 @@
 /**
  * Abrir o e-mail da ordem já montado no Outlook na web.
  *
- * O operador escreve pelo Outlook na web (CLAUDE.md, "E-mail em tabela"). Um `mailto:` abriria o
+ * O operador escreve pelo Outlook na web (docs/ordens.md, "Invariantes"). Um `mailto:` abriria o
  * programa de e-mail padrão do Windows, que não é ele. O endereço de compor do Outlook na web aceita
  * assunto e corpo, mas o corpo só em texto puro: o "E-mail em tabela" vai com a tabela em texto,
  * com TAB entre as colunas (decidido com o operador em 09/10/2026). Em grade, só pelo Copiar.

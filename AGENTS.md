@@ -8,8 +8,10 @@ Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 
 ## Leia antes de mexer
 
-1. [`CLAUDE.md`](CLAUDE.md) — **a fonte da verdade**: regras de negócio, arquitetura, armadilhas e
-   verificação. Em caso de conflito, vale ele.
+1. [`CLAUDE.md`](CLAUDE.md) — **o que vale sempre** e o mapa da documentação. As regras detalhadas
+   de cada módulo estão em `docs/` (`ordens.md`, `secundario.md`, `tesouro.md`, `rendafixa.md`,
+   `calendario.md`, `operacional.md`, `anotacoes.md`, `casca-e-visual.md`). Em caso de conflito,
+   valem eles.
 2. [`docs/CONTEXTO.md`](docs/CONTEXTO.md) — **onde paramos**: o que funciona, o que foi testado no
    Hub de verdade, o que está no ar e o que falta.
 3. [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md) — os literais das saídas do Ordens.
@@ -33,7 +35,7 @@ Requer Node 22+. **Pronto só depois de `npm test`, `npm run build` e `npm run v
 
 - **Nada é adivinhado.** No Ordens, faltou dado ou houve ambiguidade, a saída é bloqueada e o que
   falta fica à vista. Quantidade e financeiro nunca trocam de lugar. A única exceção é a compra de
-  fundo no secundário, convertida pela conta da boleta. As 11 invariantes estão no `CLAUDE.md`.
+  fundo no secundário, convertida pela conta da boleta. As 11 invariantes estão no `CLAUDE.md`, e o detalhe em `docs/ordens.md`.
 - **Test-first.** O caso de negócio vira teste antes do código. Pedido real colado pela mesa vira
   teste antes da correção.
 - **Arquivo único.** Nada de CDN, `import()` dinâmico, `fetch` de arquivo local nem service worker:
@@ -45,7 +47,7 @@ Requer Node 22+. **Pronto só depois de `npm test`, `npm run build` e `npm run v
 - **Dados reais da XP** — planilhas, capturas do Hub, contas de cliente — **nunca vão para o git**:
   o repositório é público. Nos testes, use contas fictícias (`1234567`).
 - **O robô do Hub** (`src/modulos/ordens/platform/robo-hub.user.js`, Tampermonkey):
-  - não lê token, senha nem cabeçalho;
+  - não lê token, senha, cabeçalho, `localStorage` nem `sessionStorage`;
   - não chama a API do Hub por conta própria: só escuta o `fetch` (e, na aba de clientes, o XHR) do
     próprio app e troca a rota das abas dele;
   - nunca passa da etapa 1 da boleta, e na boleta só preenche a quantidade e abre o detalhe para o
@@ -60,10 +62,11 @@ Requer Node 22+. **Pronto só depois de `npm test`, `npm run build` e `npm run v
     do cliente naquele fundo (quantidade, disponível, à venda); nada do cliente fica guardado: nem
     no Tampermonkey depois da busca, nem na Mesa fora da memória da página.
 - **Os e-mails do Ordens saem por grupo** (Bolsa, Fundos · Compra, Fundos · Venda, Tesouro · Aplicação, Tesouro · Resgate): ver "Venda de
-  fundo e Estoque clientes" no `CLAUDE.md`. O nome do cliente vai como o Hub manda, em maiúsculas.
+  fundo e Estoque clientes" em `docs/secundario.md`. O nome do cliente vai como o Hub manda, em maiúsculas.
 
   Mudou o comportamento dele, suba a `@version`: a Mesa compara a versão e pede a cópia nova.
-- **Commit, push, deploy e SQL no banco só com o OK do usuário.**
+- **Push (que é deploy) e SQL no banco só com o OK do usuário.** A exceção é o workflow semanal dos
+  tickers da B3, autorizado em 21/10/2026.
 - **Em português:** nomes de domínio (`conta`, `quantidade`, `financeiro`), textos de interface e
   comentários. Termos técnicos ficam em inglês (`parse`, `format`).
 

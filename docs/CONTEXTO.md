@@ -1,8 +1,9 @@
 # Contexto — onde paramos
 
-**Última atualização: 20/10/2026.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 21/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
-regras de negócio e de código estão no [`CLAUDE.md`](../CLAUDE.md), que é a fonte da verdade; o
+regras estão no [`CLAUDE.md`](../CLAUDE.md) (o que vale sempre, e o mapa) e nos documentos de cada
+módulo, aqui em `docs/`; o
 [`AGENTS.md`](../AGENTS.md) é o resumo delas para outros agentes. Atualize este arquivo no fim de
 cada sessão.
 
@@ -21,20 +22,39 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (20/10): 1.117 testes (`npm test`), o build e 216
+- A última verificação passou inteira (21/10): 1.128 testes (`npm test`), o build e 216
   conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **Em 20/10 foram 18 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera o OK
-  do usuário.
+- **De 20 a 21/10 foram 23 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera
+  o OK do usuário. Com o push, entra também o workflow semanal dos tickers da B3.
+
+## 21/10: a revisão, a lista da B3 e a documentação por módulo
+
+- **A revisão** (pedido do usuário: bugs, travamentos futuros, o que apagar, velocidade). A abertura
+  ficou duas vezes mais rápida (a casca media a aba no meio do início); o robô 1.7.1 tem prazo na foto
+  do print (30 s) e na fila (3 min); a prateleira do dia entra no reconhecimento de fundo por nome; os
+  prints e as boletas vencidos saem da memória. Conferido e bom: o armazenamento, as datas, os
+  relógios, o custo por tecla (0,7 ms) e os pedidos ao robô, que sempre terminam.
+- **Os ETFs de renda fixa** (IMAB11, LFTS11, B5P211, 5PRE11 e mais 67) vinham no cadastro da B3 como
+  renda fixa, fora do mercado à vista, e ficavam fora da lista; e o formato de ticker exigia letra na
+  frente. A lista é do pregão de 21/10 (2.765 tickers), e um workflow do GitHub a refaz toda
+  segunda (autorizado pelo usuário).
+- **A documentação por módulo.** O `CLAUDE.md` tinha 103 KB e era lido inteiro a cada sessão: virou o
+  que vale sempre e o mapa (15 KB), e o resto foi para `docs/` sem cortar uma linha (um script
+  conferiu). O `ROADMAP.md` ficou só com o que está em aberto.
+- **A limpeza.** O `netlify.toml` e duas funções sem uso saíram do repositório; os arquivos soltos da
+  pasta-mãe foram para a Lixeira (ver "Fora do repositório").
+- **A separação do `index.js` do Ordens** ficou para depois, aos poucos: o usuário perguntou se
+  mudaria algo, e não muda nada para quem usa.
 
 ## Fase 1 do grilling de 20/10: venda de fundo, Estoque clientes e um e-mail por grupo
 
 Um grilling com o usuário, a partir de um pedido real que misturava bolsa, fundos comprados e
-fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão no `CLAUDE.md`,
+fundos vendidos, com "Quantidade Total" e "(Estoque cliente)". As decisões estão em `docs/secundario.md`,
 "Venda de fundo e Estoque clientes", e o literal novo em `docs/FORMATOS-DE-SAIDA.md`, seção 1b. O
 plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplicação e resgate):
 
@@ -69,7 +89,7 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
   automático** ("código de fora") e não foi contornado.
 - **Fase 3 (feita, robô 1.6.0): Tesouro Direto, a aplicação.** O quarto grupo de e-mail, no modelo do
   operador ("Confirmação aplicação Tesouro Direto"), com o título, a taxa e o vencimento da lista do
-  Hub, lida pelo robô na hora, pela conta (regras no `CLAUDE.md`, "Tesouro Direto"; literal em
+  Hub, lida pelo robô na hora, pela conta (regras em `docs/tesouro.md`; literal em
   `FORMATOS-DE-SAIDA.md`, 1c).
 - **O resgate no Tesouro (feito, robô 1.7.0).** O modelo chegou (T10): um quinto grupo de e-mail,
   "Confirmação resgate Tesouro Direto", com o título e o vencimento da posição do cliente, que o robô
@@ -78,12 +98,12 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
   usuário. **O fluxo do robô foi testado no Hub de verdade** (só leitura, os passos dele repetidos à
   mão pelo Claude in Chrome), e isso mudou a leitura: o Hub só pede a lista e a posição uma vez por
   carga da página (a 1.6.0 falharia na segunda leitura da taxa), o clique no resultado da busca que
-  chega cedo é ignorado, e a posição só vem no clique da aba "Tesouro Direto" — ver o `CLAUDE.md`,
+  chega cedo é ignorado, e a posição só vem no clique da aba "Tesouro Direto" — ver `docs/tesouro.md`,
   "Como o Hub de verdade se comporta". De quebra, um defeito antigo: a conferência de 3 s da Mesa
   abria aba do robô à toa quando um pedido terminava rápido e outro vinha logo (no `verificar`, 8
   aberturas viraram 4). **T3, resolvido:** o número de 7 dígitos depois do valor, na linha do pedido real, era **a
   conta de um segundo pedido** (confirmado pelo usuário), colada pela quebra de linha perdida. A
-  Mesa agora segura esse caso sem confirmar e oferece "Separar" (ver o `CLAUDE.md`, "A entrada
+  Mesa agora segura esse caso sem confirmar e oferece "Separar" (ver `docs/ordens.md`, "A entrada
   real"). A conta saiu dos testes e da documentação, e o histórico local foi reescrito sem ela
   (`filter-branch`; a cópia antiga e os objetos soltos foram apagados com `gc`): nada disso foi
   para o GitHub.
@@ -126,7 +146,7 @@ e o Hub falso do `verificar` agora responde nesse formato. Falta o usuário inst
 testar de novo.
 
 A pedido do usuário: o **Abrir no Outlook** já vai para o e-mail do cliente, com o assessor
-responsável em cópia e o nome completo do cliente na saudação. Regras no `CLAUDE.md`, "O cliente e
+responsável em cópia e o nome completo do cliente na saudação. Regras em `docs/ordens.md`, "O cliente e
 o assessor (robô 1.3.0)". Decisões do usuário: trazer nome e e-mail do Hub **sem guardar**; a
 planilha dos assessores **carregada à mão** na Mesa; a saudação com o **nome completo**.
 
@@ -154,11 +174,11 @@ planilha dos assessores **carregada à mão** na Mesa; a saudação com o **nome
 ## Abrir no Outlook (07/10)
 
 A pedido do usuário: ao lado do Copiar dos dois e-mails do Ordens, **Abrir no Outlook** abre um
-e-mail novo no Outlook na web, com o assunto **Confirmação de ordem**. Regras no `CLAUDE.md`, logo
-antes do link para os formatos de saída; o literal está em `docs/FORMATOS-DE-SAIDA.md`.
+e-mail novo no Outlook na web, com o assunto **Confirmação de ordem**. Regras em `docs/ordens.md`, no fim de
+"Invariantes"; o literal está em `docs/FORMATOS-DE-SAIDA.md`.
 
 - É o endereço de compor do Outlook na web (`outlook.cloud.microsoft/mail/deeplink/compose`), não um
-  `mailto:` solto: o `CLAUDE.md` registra que o operador cola no Outlook na web.
+  `mailto:` solto: `docs/ordens.md` registra que o operador cola no Outlook na web.
 - A Ordem por e-mail vai inteira no endereço, e a área de transferência não é tocada. **Desde
   09/10 o E-mail em tabela também**: vai com a tabela em texto, com TAB entre as colunas, porque o
   endereço só leva texto puro. Até então ele abria sem o corpo e ia copiado para colar com Ctrl+V,
@@ -277,7 +297,7 @@ temas e no celular. A paleta, os temas e as outras abas ficaram como estavam; mu
 
 - **A tabela do cartão cabe inteira até o Preço de 1280px para cima.** Antes, até um pedido só de
   tickers transbordava em 1366 e 1400px, e o Preço ficava atrás de uma rolagem lateral (detalhes
-  no `CLAUDE.md`, "Fundos no secundário").
+  em `docs/secundario.md`, "Fundos no secundário").
 - **Os cenários do Secundário viraram uma tabelinha** de colunas alinhadas; no celular, empilhados.
 - **O Secundário do painel** virou duas linhas de estado com ponto de cor (Cotação e Robô), com o
   carregamento à mão recolhido. Os textos do robô mudaram: "não instalado", "pronto · aba 🤖 do Hub
@@ -347,24 +367,26 @@ O trabalho de 05 a 07/10 entrou num commit só, depois de `81e7981`. Novos nele:
 `platform/{assessores,favorito-hub,favoritoDoHub*,outlook*,robo-hub.user,roboHub*,secundario}.js`,
 `ui/{cliente,secundario,tempos}*`, `AGENTS.md` e este arquivo.
 
-## Fora do repositório (na pasta-mãe, `…/unificando ordens disparo calendario +/`)
+## Fora do repositório
 
-- `mercado-secundario-06-10-2026-12h09.json` — a captura real. **Nunca versionar**: o repositório
-  é público, e os dados são internos da XP.
-- `favorito-roa-adicional.js` (fonte), `.txt` e `instalar-roa-adicional.html` — o favorito próprio
-  do usuário, "📊 ROA Secundário", com a regra certa.
-- `OPERACIONAL_CLAUDE.md` — documento antigo de outro agente (29/09). Não reflete o código atual.
-- Prints das boletas: `OneDrive\Imagens\Screenshots` (05/10 17:22–18:16 e 06/10 11:11).
+Em 21/10/2026, a pedido do usuário, os arquivos soltos da pasta-mãe
+(`…/unificando ordens disparo calendario +/`) foram para a **Lixeira do Windows**: a captura da
+Prateleira de 06/10, a fonte e o instalador do favorito "📊 ROA Secundário" do usuário (o favorito
+instalado no Chrome continua funcionando), o `OPERACIONAL_CLAUDE.md` de 29/09, um teste do Outlook e
+a pasta `anexos_claude/` (o material de auditoria de venda, com dado real de cliente). A pasta-mãe
+tem só o `mesa-xp`. Os prints das boletas de 05 e 06/10 estão em `OneDrive\Imagens\Screenshots`.
 
 ## Como o usuário prefere trabalhar
 
 - Quando ele pede para **"só pensar e planejar"**, nada é alterado.
 - **Medir antes de otimizar.** O relatório de tempos decidiu o que fazer no robô.
-- Commit, push, deploy e SQL no banco **só com o OK dele**.
+- Push (que é deploy) e SQL no banco **só com o OK dele**.
 - **Nunca** ler ou guardar token ou cabeçalho do Hub, nem chamar a API dele por conta própria. O
-  robô só escuta o `fetch` do próprio app e troca a rota da aba dele, e nunca passa da etapa 1 da
-  boleta: não digita, não clica, não preenche.
-- **Nunca pôr conta de cliente** em endereço nem escolher cliente no Hub por conta própria. Conta
-  real em teste só a que o usuário informar, e ela não entra no repositório nem neste arquivo.
+  robô só escuta o `fetch`/XHR do próprio app e troca a rota das abas dele, e nunca passa da etapa 1
+  da boleta. Liberado pelo usuário em 20/10: preencher a quantidade e abrir o detalhe, só para o
+  print da venda; no Tesouro, digitar a conta do pedido e clicar no resultado dela.
+- **Nunca pôr dado de cliente em parâmetro de endereço** (as rotas do próprio Hub, a boleta e a
+  ficha, levam a conta como o Hub as escreve). Conta real em teste só a que o usuário informar, e
+  ela não entra no repositório nem neste arquivo.
 - Ao testar no Chrome dele (Claude in Chrome), **não abrir o Hub com parâmetro no endereço**: além
   de travar o Hub, o robô instalado pode adotar a aba.

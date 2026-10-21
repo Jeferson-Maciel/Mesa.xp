@@ -1,7 +1,8 @@
 # Roadmap
 
 O que está **em aberto**: defeitos conhecidos, ideias e decisões que esperam o operador. O que já foi
-feito sai daqui — a história fica no `git log` e as regras no `CLAUDE.md`. Revisto em 21/10/2026.
+feito sai daqui — a história fica no `git log`, e as regras no `CLAUDE.md` e nos documentos de cada
+módulo. Revisto em 21/10/2026.
 
 Cada item diz o que falta e, quando há, de quem é a decisão. Sugestão nova vem para cá, não para o
 código.

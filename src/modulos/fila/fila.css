@@ -409,7 +409,7 @@
 .fl .fl-ordens {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -422,7 +422,7 @@
 
 .fl .fl-ordens li {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--esp-2);
   min-width: 0;
   font-size: 0.86rem;
@@ -454,10 +454,32 @@
   white-space: nowrap;
 }
 
+/* O quanto: em destaque, as cotas que o e-mail aprovado levou; embaixo, menores, o valor pedido e o
+   estoque. Sem as cotas no e-mail, o valor fica em âmbar: confira antes de executar. */
 .fl .fl-quanto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
   color: var(--texto);
   font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
+}
+
+.fl .fl-quanto b {
+  color: var(--texto-forte);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.fl .fl-quanto b.fl-sem-cotas {
+  color: var(--atencao);
+}
+
+.fl .fl-quanto small {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
 }
 
 .fl .fl-prazo {

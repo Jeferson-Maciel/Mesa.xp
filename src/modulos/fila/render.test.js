@@ -137,3 +137,23 @@ describe('as respostas a conferir e a ficha', () => {
     expect(html).toContain('Copiar a ficha');
   });
 });
+
+describe('as cotas para executar', () => {
+  it('a compra em R$ mostra as cotas do e-mail aprovado em destaque, com o valor pedido e o estoque', () => {
+    const p = respondido({
+      grupo: 'fundos-compra',
+      ordens: [{ ativo: 'VGPR11', operacao: 'C', financeiro: 10000, fundoId: FUNDO }],
+      texto: 'Ativo: VGPR11;\nQuantidade: 1193;\nPreço: A mercado\nOperação: Compra'
+    });
+    const html = htmlLista([p], 'executar', em(11));
+    expect(html).toContain('<b>1.193 cotas</b><small>pedido R$');
+    expect(html).toContain('Estoque XP</small>');
+  });
+
+  it('sem as cotas no e-mail, o valor em âmbar e o aviso', () => {
+    const p = respondido({ grupo: 'fundos-compra', ordens: [{ ativo: 'Fundo X', operacao: 'C', financeiro: 5000 }], texto: 'Ativo: Fundo X;\nValor: R$ 5.000,00;' });
+    const html = htmlLista([p], 'executar', em(11));
+    expect(html).toContain('class="fl-sem-cotas"');
+    expect(html).toContain('sem as cotas no e-mail');
+  });
+});

@@ -198,26 +198,90 @@ const verbo = (ordem, grupo) => {
   return ordem.operacao === 'V' ? 'vender' : 'comprar';
 };
 
-/** Quanto, como o e-mail diz: as cotas, o valor ou "o total". */
-const quanto = (ordem) => {
-  if (ordem.total && !ordem.quantidade && !ordem.financeiro) return 'o total da posição';
-  if (ordem.quantidade) return `${ordem.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} ${ordem.fundoId ? 'cotas' : ''}`.trim();
-  if (ordem.financeiro) return ordem.financeiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  return '';
+// "1193" → 1193, "123,45678910" → 123.4567891: como o e-mail escreve a quantidade (sem milhar).
+const numeroDoEmail = (texto) => {
+  const t = String(texto ?? '').trim();
+  if (!/^\d[\d.,]*$/.test(t)) return null;
+  const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/**
+ * A quantidade de cada ativo **no e-mail que saiu** — o que o cliente aprovou (pedido do operador em
+ * 21/10/2026: "ter também a quantidade de cotas que foi auditada, para executar com base nas cotas").
+ * É o `Quantidade:` do bloco de cada `Ativo:` (o e-mail por grupo e a auditoria de venda), ou a coluna
+ * `Qtd. Total` do E-mail em tabela. Na compra de fundo em R$, são as cotas da conversão, com o ROA
+ * escolhido no Copiar; na venda do total, a posição lida na boleta. O bloco com `Valor:` não tem cotas.
+ *
+ * @param {string} texto  o e-mail, como saiu
+ * @returns {Map<string, number>} pelo ativo, sem acento e em maiúsculas
+ */
+export const quantidadesDoEmail = (texto) => {
+  const mapa = new Map();
+  const linhas = String(texto ?? '').split(/\r?\n/);
+  linhas.forEach((linha, i) => {
+    const ativo = /^Ativo:\s*(.+?);?\s*$/.exec(linha.trim());
+    const quantidade = ativo && /^Quantidade:\s*([\d.,]+);?\s*$/.exec((linhas[i + 1] ?? '').trim());
+    const n = quantidade ? numeroDoEmail(quantidade[1]) : null;
+    if (n !== null) mapa.set(normalizar(ativo[1]), n);
+  });
+  // O E-mail em tabela: a linha de cabeçalho com Ativo e Qtd. Total, e as linhas embaixo dela.
+  linhas.forEach((linha, i) => {
+    const colunas = linha.split('\t').map((c) => c.trim());
+    const iAtivo = colunas.indexOf('Ativo');
+    const iQuantidade = colunas.findIndex((c) => c === 'Qtd. Total' || c === 'Quantidade');
+    if (iAtivo < 0 || iQuantidade < 0) return;
+    for (const abaixo of linhas.slice(i + 1)) {
+      const celulas = abaixo.split('\t').map((c) => c.trim());
+      if (celulas.length <= Math.max(iAtivo, iQuantidade)) break;
+      const n = numeroDoEmail(celulas[iQuantidade]);
+      if (n !== null && celulas[iAtivo]) mapa.set(normalizar(celulas[iAtivo]), n);
+    }
+  });
+  return mapa;
+};
+
+/** A quantidade da ordem como o e-mail aprovado a escreveu; sem ela no e-mail, a da própria ordem. */
+export const quantidadeAprovada = (pedido, ordem) => quantidadesDoEmail(pedido.texto).get(normalizar(ordem.ativo)) ?? ordem.quantidade ?? null;
+
+// Com o espaço comum depois do R$ (o toLocaleString põe o não separável): a ficha é copiada e colada.
+const reais = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\s/g, ' ');
+const numeroNaTela = (n) => n.toLocaleString('pt-BR', { maximumFractionDigits: 8 });
+
+/** O estoque da ordem de fundo: o que o pedido disse, e o Estoque XP sem nada dito. */
+export const estoqueDaOrdem = (pedido, ordem) =>
+  pedido.grupo.startsWith('fundos') ? (ordem.estoque === 'clientes' ? 'Estoque clientes' : 'Estoque XP') : null;
+
+/**
+ * O quanto de cada ordem, para executar: as cotas do e-mail aprovado (ou a quantidade da bolsa) em
+ * primeiro lugar, e o que o pedido disse — o valor em R$, o total da posição — ao lado.
+ *
+ * @returns {{principal: string, detalhes: string[]}}
+ */
+export const quantoParaExecutar = (pedido, ordem) => {
+  const fundo = pedido.grupo.startsWith('fundos');
+  const quantidade = quantidadeAprovada(pedido, ordem);
+  const detalhes = [];
+  if (ordem.financeiro && !ordem.quantidade && quantidade !== null) detalhes.push(`pedido ${reais(ordem.financeiro)}`);
+  if (ordem.total && quantidade !== null) detalhes.push('o total da posição');
+  if (quantidade !== null) return { principal: `${numeroNaTela(quantidade)}${fundo ? ' cotas' : ''}`, detalhes };
+  if (ordem.total) return { principal: 'o total da posição', detalhes };
+  if (ordem.financeiro) return { principal: reais(ordem.financeiro), detalhes: fundo ? ['sem as cotas no e-mail'] : [] };
+  return { principal: '', detalhes };
 };
 
 /**
  * A ficha para executar no Hub: a conta e o cliente, o que fazer com cada ativo e o prazo que vale.
- * Sai do que o e-mail aprovado pediu — nada é refeito nem recalculado aqui.
+ * Sai do que o e-mail aprovado pediu — as cotas são as dele —, e nada é refeito nem recalculado aqui.
  */
 export const fichaDeExecucao = (pedido, agora = Date.now()) => {
   const cabeca = `EXECUTAR · conta ${pedido.conta}${pedido.cliente?.nome ? ` · ${pedido.cliente.nome}` : ''}`;
   const aprovado = [...pedido.historico].reverse().find((h) => h.estado === 'aprovado');
   const sub = `${NOMES_DOS_GRUPOS[pedido.grupo] ?? pedido.grupo}${aprovado ? ` · aprovado às ${hora(aprovado.em)}` : ''}`;
   const linhas = pedido.ordens.map((o) => {
-    const modalidade = o.estoque === 'clientes' ? ' (Estoque clientes)' : pedido.grupo.startsWith('fundos') ? ' (Estoque XP)' : '';
-    const preco = pedido.grupo === 'bolsa' ? ` · ${o.preco ?? 'A mercado'}` : '';
-    return `- ${o.ativo}: ${verbo(o, pedido.grupo)} ${quanto(o)}${modalidade}${preco}`;
+    const { principal, detalhes } = quantoParaExecutar(pedido, o);
+    const partes = [`${verbo(o, pedido.grupo)} ${principal}`, estoqueDaOrdem(pedido, o), pedido.grupo === 'bolsa' ? (o.preco ?? 'A mercado') : null, ...detalhes];
+    return `- ${o.ativo}: ${partes.filter(Boolean).join(' · ')}`;
   });
   const prazo = prazoMaisUrgente(pedido, agora);
   const rodape = prazo ? `Prazo: ${prazo.rotulo} ${diaEHora(prazo.ate)}` : null;

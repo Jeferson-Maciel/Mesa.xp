@@ -12,7 +12,7 @@
  */
 
 import { esc } from '../../ui/html.js';
-import { NOMES_DOS_GRUPOS, diaDe, fichaDeExecucao, linkDaBoleta, pedeAtencao, prazoMaisUrgente, situacaoDoPrazo } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, diaDe, estoqueDaOrdem, fichaDeExecucao, linkDaBoleta, pedeAtencao, prazoMaisUrgente, quantoParaExecutar, situacaoDoPrazo } from '../../comum/fila/regras.js';
 import { quantoFalta } from '../../comum/horarios.js';
 
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -34,17 +34,17 @@ export const pastaDoEstado = (estado) => PASTAS.find((p) => p.estados.includes(e
 
 const OPERACAO = { C: 'compra', V: 'venda' };
 
-// O resumo de uma ordem: o lado, o ativo e o quanto, curto.
-const resumoDaOrdem = (o, grupo) => {
-  const quanto = o.total && !o.quantidade && !o.financeiro
-    ? 'total'
-    : o.quantidade
-      ? `${o.quantidade.toLocaleString('pt-BR', { maximumFractionDigits: 8 })}${o.fundoId ? ' cotas' : ''}`
-      : o.financeiro
-        ? o.financeiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-        : '';
-  const lado = grupo === 'tesouro' ? 'aplica' : grupo === 'tesouro-resgate' ? 'resgata' : OPERACAO[o.operacao] ?? '';
-  return `<li><span class="fl-op fl-op-${o.operacao === 'V' ? 'v' : 'c'}">${esc(lado)}</span><span class="fl-ativo" title="${esc(o.ativo)}">${esc(o.ativo)}</span><span class="fl-quanto">${esc(quanto)}</span></li>`;
+/*
+ * Uma ordem, para executar: o lado, o ativo e, em destaque, a quantidade que o e-mail aprovado levou —
+ * as cotas da conversão na compra em R$, a posição na venda do total (pedido do operador em
+ * 21/10/2026: "executar com base nas cotas") —, com o valor pedido e o estoque embaixo, menores.
+ */
+const resumoDaOrdem = (o, pedido) => {
+  const { principal, detalhes } = quantoParaExecutar(pedido, o);
+  const sem = detalhes.includes('sem as cotas no e-mail');
+  const notas = [...detalhes.filter((d) => d !== 'sem as cotas no e-mail'), estoqueDaOrdem(pedido, o), sem ? 'sem as cotas no e-mail' : null].filter(Boolean);
+  const lado = pedido.grupo === 'tesouro' ? 'aplica' : pedido.grupo === 'tesouro-resgate' ? 'resgata' : OPERACAO[o.operacao] ?? '';
+  return `<li><span class="fl-op fl-op-${o.operacao === 'V' ? 'v' : 'c'}">${esc(lado)}</span><span class="fl-ativo" title="${esc(o.ativo)}">${esc(o.ativo)}</span><span class="fl-quanto"><b${sem ? ' class="fl-sem-cotas"' : ''}>${esc(principal)}</b>${notas.length ? `<small>${esc(notas.join(' · '))}</small>` : ''}</span></li>`;
 };
 
 /** O prazo que pede atenção, como chip: âmbar perto, vermelho vencido. */
@@ -98,7 +98,7 @@ const cartaoParaExecutar = (pedido, agora) => {
   <article class="fl-cartao fl-cartao-executar${pedeAtencao(pedido, agora) ? ' fl-atencao' : ''}" data-id="${esc(pedido.id)}" data-grupo="${esc(pedido.grupo)}" data-estado="${esc(pedido.estado)}">
     ${cabecaDoCartao(pedido, agora)}
     ${resposta}
-    <ul class="fl-ordens">${pedido.ordens.map((o) => resumoDaOrdem(o, pedido.grupo)).join('')}</ul>
+    <ul class="fl-ordens">${pedido.ordens.map((o) => resumoDaOrdem(o, pedido)).join('')}</ul>
     ${htmlPrazo(pedido, agora)}
     <footer class="fl-cartao-acoes">
       ${botao('ficha', 'Ficha de execução')}

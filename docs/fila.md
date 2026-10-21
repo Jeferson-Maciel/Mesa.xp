@@ -94,6 +94,15 @@ O `index.js` do Ordens anota `ordem.repetidoHoje` e `solicitacao.contaNova`; o v
 
 ## A ficha de execução, a boleta e o resumo
 
+- **As cotas para executar** (pedido do operador em 21/10/2026: "ter também a quantidade de cotas que
+  foi auditada, para executar com base nas cotas"): cada ordem mostra, em destaque, a quantidade que
+  **o e-mail aprovado levou** — lida do texto do e-mail guardado no cartão (`quantidadesDoEmail`): o
+  `Quantidade:` de cada `Ativo:`, ou a coluna `Qtd. Total` do E-mail em tabela. Na compra de fundo em
+  R$, são as cotas da conversão, com o ROA escolhido no Copiar; na venda do total, a posição lida na
+  boleta. Embaixo, menores, o valor pedido (ou "o total da posição") e o estoque (Estoque XP ou
+  clientes). O e-mail que saiu com `Valor:` (sem os fundos carregados) não tem cotas: o valor fica em
+  âmbar, com "sem as cotas no e-mail", e nada é convertido na Fila. Vale também para os cartões que já
+  estavam lá, porque o texto do e-mail sempre foi guardado.
 - **A ficha** (no aprovado): a conta e o cliente, o que fazer com cada ativo (comprar, vender, aplicar,
   resgatar; as cotas, o valor ou "o total da posição"; Estoque XP ou clientes; o preço na bolsa) e o
   prazo que vale. Sai do que o e-mail aprovado pediu: nada é refeito nem recalculado.

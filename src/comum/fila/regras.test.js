@@ -8,6 +8,8 @@ import {
   mudarEstado,
   novoPedido,
   pedidosDaVista,
+  quantidadesDoEmail,
+  quantoParaExecutar,
   pedeAtencao,
   prazoMaisUrgente,
   prazosDoPedido,
@@ -149,8 +151,85 @@ describe('a ficha de execução e a boleta', () => {
       em: em(10)
     });
     const ficha = fichaDeExecucao(p, em(11));
-    expect(ficha).toContain('- XP Hedge Fund: vender 123,4567891 cotas (Estoque XP)');
-    expect(ficha).toContain('- Riza Malls: vender o total da posição (Estoque clientes)');
+    expect(ficha).toContain('- XP Hedge Fund: vender 123,4567891 cotas · Estoque XP');
+    expect(ficha).toContain('- Riza Malls: vender o total da posição · Estoque clientes');
+  });
+});
+
+// As cotas que o cliente aprovou (pedido do operador em 21/10/2026): lidas do e-mail que saiu.
+describe('as cotas do e-mail aprovado', () => {
+  const EMAIL_DE_COMPRA = [
+    'Prezado(a) Cliente,',
+    '',
+    'Conforme conversado, gostaria de realizar as ordens abaixo na conta XP 1234567:',
+    '',
+    'Ativo: VGPR11;',
+    'Quantidade: 1193;',
+    'Preço: A mercado',
+    'Operação: Compra',
+    '',
+    'Ativo: Riza Terrax Vintage FIAgro RL;',
+    'Quantidade: 162;',
+    'Preço: A mercado',
+    'Operação: Compra',
+    '',
+    'Ativo: Fundo Fora da Prateleira;',
+    'Valor: R$ 5.000,00;',
+    'Preço: A mercado',
+    'Operação: Compra'
+  ].join('\n');
+  const EMAIL_DE_VENDA = ['Prezado(a) Cliente,', '', 'Ativo: Riza Malls Feeder FII RL;', 'Quantidade: 123,45678910;', 'Operação: Venda;', '', 'Condições:', '', 'atte,'].join('\n');
+
+  it('o Quantidade de cada Ativo; o bloco com Valor não tem cotas', () => {
+    const mapa = quantidadesDoEmail(EMAIL_DE_COMPRA);
+    expect([...mapa]).toEqual([
+      ['VGPR11', 1193],
+      ['RIZA TERRAX VINTAGE FIAGRO RL', 162]
+    ]);
+    expect(quantidadesDoEmail(EMAIL_DE_VENDA).get('RIZA MALLS FEEDER FII RL')).toBe(123.4567891);
+  });
+
+  it('e a coluna Qtd. Total do E-mail em tabela', () => {
+    const tabela = ['Conforme conversado…', '', 'Ativo\tC/V\tPreço\tQtd. Total', 'PETR4\tC\tA mercado\t100', 'VGPR11\tC\tA mercado\t1193', '', 'Att,'].join('\n');
+    expect([...quantidadesDoEmail(tabela)]).toEqual([
+      ['PETR4', 100],
+      ['VGPR11', 1193]
+    ]);
+  });
+
+  it('a compra em R$ executa pelas cotas do e-mail, com o valor pedido ao lado', () => {
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'fundos-compra',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [
+        { ativo: 'VGPR11', operacao: 'C', financeiro: 10000 },
+        { ativo: 'Riza Terrax Vintage FIAgro RL', operacao: 'C', financeiro: 15000, estoque: 'clientes' },
+        { ativo: 'Fundo Fora da Prateleira', operacao: 'C', financeiro: 5000 }
+      ],
+      texto: EMAIL_DE_COMPRA,
+      em: em(10)
+    });
+    expect(quantoParaExecutar(p, p.ordens[0])).toEqual({ principal: '1.193 cotas', detalhes: ['pedido R$ 10.000,00'] });
+    const ficha = fichaDeExecucao(p, em(11));
+    expect(ficha).toContain('- VGPR11: comprar 1.193 cotas · Estoque XP · pedido R$ 10.000,00');
+    expect(ficha).toContain('- Riza Terrax Vintage FIAgro RL: comprar 162 cotas · Estoque clientes · pedido R$ 15.000,00');
+    // Sem as cotas no e-mail, o valor, e o aviso: nada é convertido aqui.
+    expect(ficha).toContain('- Fundo Fora da Prateleira: comprar R$ 5.000,00 · Estoque XP · sem as cotas no e-mail');
+  });
+
+  it('a venda do total executa pela posição que o e-mail levou', () => {
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'fundos-venda',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'Riza Malls Feeder FII RL', operacao: 'V', total: true, fundoId: FUNDO }],
+      texto: EMAIL_DE_VENDA,
+      em: em(10)
+    });
+    expect(fichaDeExecucao(p, em(11))).toContain('- Riza Malls Feeder FII RL: vender 123,4567891 cotas · Estoque XP · o total da posição');
   });
 
   it('a boleta pela rota do Hub, com a conta no caminho; bolsa não tem', () => {

@@ -993,3 +993,11 @@ describe('o valor na linha de cima', () => {
     expect(s.ordens[0]).toMatchObject({ ativo: 'Riza Malls Feeder FII RL', financeiro: 16000 });
   });
 });
+
+describe('os ETFs de renda fixa', () => {
+  // Até 21/10/2026, o formato de ticker exigia letra na frente: 5PRE11 nem virava ativo.
+  it('o ETF que começa com algarismo vira ordem, como os outros', () => {
+    const o = uma('1234567\nC 5PRE11 R$ 1.000,00\nC IMAB11 100').ordens;
+    expect(o.map((x) => [x.ativo, x.ticker?.situacao])).toEqual([['5PRE11', 'conhecido'], ['IMAB11', 'conhecido']]);
+  });
+});

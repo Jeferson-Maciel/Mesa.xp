@@ -8,8 +8,13 @@
  * `RARA11` — um ETF — era bloqueado como erro de digitação de `RURA11`. O cadastro da B3 tem todos
  * os papéis à vista, com a categoria de cada um.
  *
- * Rodar de tempos em tempos: a B3 lista e deslista papéis, e um ticker novo ausente da lista vira
- * aviso de "fora da lista" (ou bloqueio de suspeita, se parecer com outro).
+ * Os ETFs de renda fixa (IMAB11, LFTS11, B5P211, 5PRE11…) não vêm no mercado à vista com os outros
+ * ETFs: o cadastro os põe em renda fixa (segmento FORWARD, categoria "FIXED INCOME TRADABLE
+ * INSTRUMENT T1" — 71 papéis em 21/10/2026, todos de final 11). Até 21/10 ficavam de fora.
+ *
+ * Roda sozinho toda semana no GitHub (.github/workflows/atualizar-tickers.yml): a B3 lista e
+ * deslista papéis, e um ticker novo ausente da lista vira aviso de "fora da lista" (ou bloqueio de
+ * suspeita, se parecer com outro).
  *
  * Uso: npm run tickers:update
  */
@@ -70,15 +75,20 @@ const classeDe = (categoria, ticker, nome) => {
   if ((categoria === 'SHARES' || categoria === 'UNIT') && /^[A-Z0-9]{4}([3-8]|11)$/.test(ticker)) return 'acao';
   if (categoria === 'BDR' && /^[A-Z0-9]{4}3[1-59]$/.test(ticker)) return 'bdr';
   if (categoria.startsWith('ETF') && /^[A-Z0-9]{4}11$/.test(ticker)) return 'etf';
+  if (categoria === RENDA_FIXA && /^[A-Z0-9]{4}11$/.test(ticker)) return 'etf';
   if (categoria === 'FUNDS' && /^[A-Z0-9]{4}11$/.test(ticker)) return classeDoFundo(nome);
   return null;
 };
+
+// Os ETFs de renda fixa, no cadastro: renda fixa negociável, e não mercado à vista.
+const RENDA_FIXA = 'FIXED INCOME TRADABLE INSTRUMENT T1';
 
 const porClasse = { acao: [], fii: [], bdr: [], etf: [], fundo: [], fiagro: [], outros: [] };
 const vistos = new Set();
 for (const linha of linhas.slice(iCabecalho + 1)) {
   const c = linha.split(';');
-  if (c[SEGMENTO] !== 'CASH' || c[MERCADO] !== 'EQUITY-CASH') continue;
+  const aVista = c[SEGMENTO] === 'CASH' && c[MERCADO] === 'EQUITY-CASH';
+  if (!aVista && !(c[MERCADO] === 'FIXED INCOME' && c[CATEGORIA] === RENDA_FIXA)) continue;
   const ticker = c[TICKER]?.trim();
   const classe = ticker && !vistos.has(ticker) ? classeDe(c[CATEGORIA], ticker, c[NOME] ?? '') : null;
   if (!classe) continue;
@@ -102,6 +112,9 @@ const conteudo = `// GERADO AUTOMATICAMENTE — não edite à mão para atualiza
 // Esta lista serve para DETECTAR SUSPEITA de erro de digitação e nunca para corrigir
 // automaticamente (invariante 5). Um ticker fora dela não é inválido — é desconhecido,
 // e a decisão continua sendo do operador.
+
+// O pregão do cadastro: o aviso de ticker fora da lista diz de quando ela é.
+export const PREGAO = '${dia}';
 
 export const TICKERS_POR_CLASSE = {
 ${linhasDoArquivo}

@@ -145,3 +145,20 @@ describe('erro de digitação no ticker de um fundo da prateleira', () => {
     expect(d.sugestoes).toContain('VGPR11');
   });
 });
+
+// Os ETFs de renda fixa vêm no cadastro da B3 como renda fixa (segmento FORWARD), e não no mercado à
+// vista com os outros ETFs: até 21/10/2026 ficavam fora da lista, e o operador os via como
+// desconhecidos. Três deles começam com algarismo.
+describe('os ETFs de renda fixa', () => {
+  it.each(['IMAB11', 'IRFM11', 'FIXA11', 'B5P211', 'LFTS11', 'IB5M11', 'DEBB11', 'NTNS11', '5PRE11'])('%s é ETF conhecido', (ticker) => {
+    expect(analisarTicker(ticker)).toMatchObject({ situacao: 'conhecido', classe: 'etf' });
+  });
+
+  it('o ticker que começa com algarismo só vale se estiver na lista da B3', () => {
+    expect(temFormatoDeTicker('5PRE11')).toBe(true);
+    expect(temFormatoDeTicker('03BK11')).toBe(true);
+    expect(temFormatoDeTicker('2X100')).toBe(false);
+    expect(temFormatoDeTicker('123411')).toBe(false);
+    expect(temFormatoDeTicker('9ZZZ11')).toBe(false);
+  });
+});

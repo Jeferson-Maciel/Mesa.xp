@@ -30,8 +30,15 @@ const NOME_NA_PRATELEIRA = new Map(
  */
 const FORMATO = /^[A-Z][A-Z0-9]{3}\d{1,2}$/;
 
-export const temFormatoDeTicker = (token) =>
-  typeof token === 'string' && FORMATO.test(token.trim().toUpperCase());
+// Os ETFs de renda fixa que começam com algarismo (`5PRE11`, `03BK11`) só valem se estiverem na lista
+// da B3: um formato que aceitasse qualquer algarismo na frente faria de "2x100" um ticker.
+const COMECA_COM_ALGARISMO = /^\d[A-Z0-9]{3}\d{1,2}$/;
+
+export const temFormatoDeTicker = (token) => {
+  if (typeof token !== 'string') return false;
+  const t = token.trim().toUpperCase();
+  return FORMATO.test(t) || (COMECA_COM_ALGARISMO.test(t) && /[A-Z]/.test(t) && classeDoTicker(t) !== null);
+};
 
 const raizDe = (ticker) => ticker.slice(0, 4);
 const especieDe = (ticker) => ticker.slice(4);

@@ -1,6 +1,10 @@
 import { LIMITE_DA_COTACAO_MIN } from '../secundario/secundario.js';
 import { LIMITE_DA_TAXA_MIN } from '../tesouro/tesouro.js';
 import { formatarFinanceiro, formatarPercentual } from '../util/dinheiro.js';
+import { PREGAO } from './tickersB3.js';
+
+// A data da lista da B3, no aviso de ticker fora dela: a lista é refeita toda semana no GitHub.
+const DATA_DA_LISTA = PREGAO.split('-').reverse().join('/');
 
 /**
  * Terceira etapa do pipeline: a comporta entre o que foi interpretado e o que pode ser gerado.
@@ -162,7 +166,7 @@ export const validar = (solicitacao, formato) => {
 
     if (o.ticker?.situacao === 'desconhecido') {
       diagnosticos.push(
-        aviso('ticker-desconhecido', `${o.ativo} não está na lista da B3. Confira antes de enviar.`, i)
+        aviso('ticker-desconhecido', `${o.ativo} não está na lista da B3 (pregão de ${DATA_DA_LISTA}). Confira antes de enviar.`, i)
       );
     }
 

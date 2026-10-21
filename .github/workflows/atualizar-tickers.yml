@@ -1,0 +1,50 @@
+# A lista de tickers da B3 (src/modulos/ordens/core/validate/tickersB3.js), refeita toda semana a
+# partir do Cadastro de Instrumentos da B3. Só grava se algum ticker entrou ou saiu, e só depois dos
+# testes passarem; a gravação na main publica a Mesa na Vercel. Se a B3 mudar o arquivo, o gerador
+# recusa a lista (menos de 2.000 tickers) e o GitHub avisa o dono do repositório por e-mail.
+#
+# Também roda à mão: Actions → "Atualizar tickers da B3" → Run workflow.
+
+name: Atualizar tickers da B3
+
+on:
+  schedule:
+    # Segunda-feira, 10:00 UTC (7:00 em Brasília), antes do pregão.
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Baixar o cadastro da B3 e refazer a lista
+        run: npm run tickers:update
+
+      - name: Testes
+        run: npm test
+
+      # A data do pregão muda toda semana; só vale gravar quando a lista mudou.
+      - name: Gravar, se algum ticker mudou
+        run: |
+          ARQUIVO=src/modulos/ordens/core/validate/tickersB3.js
+          if git diff --quiet -I 'pregão de' -I '^export const PREGAO' -- "$ARQUIVO"; then
+            echo "Nenhum ticker mudou."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$ARQUIVO"
+          git commit -m "Tickers da B3: a lista do último pregão"
+          git push

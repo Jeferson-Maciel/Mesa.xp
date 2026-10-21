@@ -2,6 +2,7 @@ import { CORRETAGEM } from '../core/secundario/boleta.js';
 import { formatarCotas } from '../core/secundario/venda.js';
 import { formatarFinanceiro, formatarPercentual } from '../core/util/dinheiro.js';
 import { esc } from '../core/util/html.js';
+import { linkDaBoleta } from '../../../comum/fila/regras.js';
 
 /**
  * O bloco "Secundário" do cartão: o que os fundos do dia dizem de cada compra de fundo cetipado.
@@ -22,6 +23,16 @@ const dataDaPlanilha = ({ exportadaEm, doHub }) => {
   const dia = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return `${doHub ? 'captura' : 'planilha'} de ${dia} às ${hora}`;
+};
+
+// A boleta do fundo no Hub, para executar: pela rota do próprio Hub, com a conta no caminho, como o
+// Hub a escreve — nunca num parâmetro. Abre numa aba nova, a da pessoa.
+const boletaNoHub = (fundoId, conta, operacao) => {
+  if (!fundoId || !/^\d{5,8}$/.test(String(conta ?? ''))) return '';
+  const link = linkDaBoleta({ operacao, fundoId }, String(conta), operacao === 'V' ? 'fundos-venda' : 'fundos-compra');
+  return link
+    ? `<a class="secundario-boleta" href="${esc(link)}" target="_blank" rel="noopener" title="Abre a boleta deste fundo no Hub, para esta conta">Boleta no Hub ↗</a>`
+    : '';
 };
 
 const descontoDoCliente = (desconto) => (desconto < 0 ? `ágio ${formatarPercentual(-desconto)}` : formatarPercentual(desconto));
@@ -105,10 +116,10 @@ const cenarios = (ordem, sec) => {
       </div>`;
 };
 
-const fundo = (ordem, indice) => {
+const fundo = (ordem, indice, conta) => {
   const sec = ordem.secundario;
   const pedido = sec.porValor ? `<span class="secundario-pedido">pedido ${esc(formatarFinanceiro(ordem.financeiro))}</span>` : '';
-  const nome = `<div class="secundario-topo"><span class="secundario-nome">${esc(ordem.ativo)}</span>${pedido}</div>`;
+  const nome = `<div class="secundario-topo"><span class="secundario-nome">${esc(ordem.ativo)}</span>${pedido}${boletaNoHub(sec.fundo?.id, conta, 'C')}</div>`;
 
   if (sec.situacao === 'fora-da-planilha') {
     return `<div class="secundario-fundo" data-ordem="${indice}">${nome}
@@ -164,10 +175,10 @@ const compraNoEstoqueDeClientes = (ordem, indice, nome) => {
 const NOME_DA_MODALIDADE = { xp: 'Estoque XP', clientes: 'Estoque clientes' };
 
 // A venda: a posição do cliente, quanto vender, a modalidade, o deságio e o líquido estimado.
-const venda = (ordem, indice) => {
+const venda = (ordem, indice, conta) => {
   const v = ordem.venda;
   const quanto = v.total ? 'venda do total' : `venda de ${formatarCotas(ordem.quantidade ?? 0)} cotas`;
-  const nome = `<div class="secundario-topo"><span class="secundario-nome">${esc(ordem.ativo)}</span><span class="secundario-pedido">${quanto}</span></div>`;
+  const nome = `<div class="secundario-topo"><span class="secundario-nome">${esc(ordem.ativo)}</span><span class="secundario-pedido">${quanto}</span>${boletaNoHub(v.fundoId, conta, 'V')}</div>`;
   const falta = {
     'sem-planilha': 'sem os fundos do secundário: a posição e a cotação de venda não podem ser lidas',
     'fora-da-planilha': 'o fundo não está nos fundos do secundário carregados',
@@ -239,7 +250,7 @@ export const renderSecundario = (solicitacao, { so = null } = {}) => {
           <span class="secundario-titulo">Venda no secundário</span>
           ${semPrint ? '<button type="button" class="btn-confirmar btn-prints" data-campo="tirar-prints" data-valor="">Tirar prints</button>' : ''}
         </div>
-        ${vendas.map(([o, i]) => venda(o, i)).join('')}
+        ${vendas.map(([o, i]) => venda(o, i, solicitacao.conta)).join('')}
       </div>`
     : '';
   if (comFundo.length === 0) return blocoDeVendas;
@@ -266,6 +277,6 @@ export const renderSecundario = (solicitacao, { so = null } = {}) => {
         <span class="secundario-titulo">Secundário</span>
         ${buscando || quando}
       </div>
-      ${comFundo.filter(([o]) => o.secundario.situacao !== 'sem-planilha').map(([o, i]) => fundo(o, i)).join('')}
+      ${comFundo.filter(([o]) => o.secundario.situacao !== 'sem-planilha').map(([o, i]) => fundo(o, i, solicitacao.conta)).join('')}
     </div>`;
 };

@@ -1831,3 +1831,110 @@ table.preview .seg-total.ativo {
 .tesouro {
   border-left-color: var(--agua);
 }
+
+/* ── O que foi lido do texto (21/10/2026) ───────────────────────────────────────────────
+   Cada linha colada com o que aconteceu com ela: lida, descartada (âmbar, com o motivo) ou ignorada
+   (o ruído do grupo, apagado). Fechado por padrão; o resumo fica âmbar quando há descartada. */
+
+.texto-lido {
+  margin-top: var(--esp-3);
+  padding: var(--esp-2) var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  font-size: 0.8rem;
+}
+
+.texto-lido[data-problema='sim'] {
+  border-color: var(--atencao-borda);
+  box-shadow: inset 3px 0 0 var(--atencao);
+}
+
+.texto-lido summary {
+  color: var(--texto-fraco);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.texto-lido[data-problema='sim'] summary {
+  color: var(--atencao);
+}
+
+.texto-lido-linhas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 18rem;
+  margin: var(--esp-2) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.texto-lido-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--esp-3);
+  padding: 1px var(--esp-2);
+  border-left: 2px solid var(--positivo-borda);
+  color: var(--texto-forte);
+  overflow-wrap: anywhere;
+}
+
+.texto-lido-linha[data-situacao='vazia'] {
+  border-left-color: transparent;
+  min-height: 0.6rem;
+}
+
+.texto-lido-linha[data-situacao='descartada'] {
+  border-left-color: var(--atencao);
+  background: var(--atencao-fundo);
+}
+
+.texto-lido-linha[data-situacao='ignorada'] {
+  border-left-color: var(--borda-forte);
+  color: var(--texto-fraco);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--texto-fraco) 50%, transparent);
+}
+
+.texto-lido-motivo {
+  color: var(--texto-fraco);
+  font-family: var(--fonte);
+  font-size: 0.74rem;
+  font-style: italic;
+  text-decoration: none;
+}
+
+.texto-lido-linha[data-situacao='descartada'] .texto-lido-motivo {
+  color: var(--atencao);
+}
+
+/* Os lotes de várias contas de uma vez. */
+.lotes-juntos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  margin-top: var(--esp-3);
+}
+
+/* A boleta do fundo no Hub, ao lado do nome. */
+.secundario-boleta {
+  margin-left: auto;
+  padding: 0 var(--esp-2);
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--r-sm);
+  color: var(--acento);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.secundario-boleta:hover {
+  border-color: var(--acento);
+  background: var(--acento-fundo);
+}

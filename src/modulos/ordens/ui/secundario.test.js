@@ -189,3 +189,12 @@ describe('o bloco da venda e do Estoque clientes', () => {
     expect(html).toContain('boleta das 11:52');
   });
 });
+
+describe('a boleta do fundo no Hub (21/10/2026)', () => {
+  it('pela rota do Hub, com a conta no caminho, e só com o id do fundo e uma conta de verdade', () => {
+    const FUNDO = '11111111-2222-4333-8444-555555555555';
+    const com = (conta) => ({ conta, ordens: [{ ativo: 'Fundo X', operacao: 'V', quantidade: 10, venda: { situacao: 'sem-boleta', fundoId: FUNDO } }] });
+    expect(renderSecundario(com('1234567'))).toContain(`href="https://hub.xpi.com.br/new/fundos-de-investimento#/secundario/vender/${FUNDO}/1234567"`);
+    expect(renderSecundario(com('12a'))).not.toContain('secundario-boleta');
+  });
+});

@@ -104,6 +104,11 @@
               <button class="danger" id="btn-limpar" title="Limpar (Esc)">Limpar</button>
             </div>
 
+            <details class="texto-lido" id="texto-lido" hidden>
+              <summary id="texto-lido-resumo"></summary>
+              <ol class="texto-lido-linhas" id="texto-lido-linhas"></ol>
+            </details>
+
             <div class="presets-toolbar">
               <span class="presets-label">Exemplos</span>
               <div class="presets-buttons" id="presets"></div>
@@ -155,6 +160,7 @@
               <label class="formato"><input type="checkbox" value="lote" /><span>Lote Simples</span></label>
               <label class="formato"><input type="checkbox" value="twap" /><span>Lote TWAP</span></label>
             </div>
+            <div class="lotes-juntos" id="lotes-juntos" hidden></div>
           </section>
 
           <div id="solicitacoes"></div>

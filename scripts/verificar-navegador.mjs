@@ -165,6 +165,33 @@ try {
     await contexto.close();
   }
 
+  // Os extras de 21/10/2026: o texto colado marcado linha a linha, a linha removida que volta e os
+  // lotes de várias contas num TSV só.
+  titulo('Ordens: o texto lido, desfazer a remoção e os lotes juntos');
+  {
+    const { pagina, contexto, erros } = await abrir();
+    const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+    await pagina.fill('#entrada', '[13:46, 21/09/2026] Paulo: 1234567\nlote\nC PETR4 100\nvender XPML11 100 e comprar BTLG11 100\nenviado mesa\n7654321\nlote\nV VALE3 50');
+    await pagina.click('#btn-analisar');
+    ok(
+      (await pagina.textContent('#texto-lido-resumo')) === 'O que foi lido do texto: 6 linhas lidas · 1 descartada, para fazer na mão · 1 ignorada',
+      `o texto colado aparece marcado: lidas, a descartada e a ignorada (${await pagina.textContent('#texto-lido-resumo')})`
+    );
+    await pagina.click('#lotes-juntos [data-lotes="lote"]');
+    const lotes = await areaDeTransferencia();
+    ok(
+      lotes.split('\n').filter((l) => l.startsWith('Estratégia')).length === 1 && lotes.includes('PETR4') && lotes.includes('VALE3'),
+      '"Copiar todos os Lote Simples" junta as duas contas num TSV com um cabeçalho só'
+    );
+    await pagina.click('[data-solicitacao="0"] .btn-remover');
+    ok((await pagina.$$('[data-solicitacao="0"] tbody tr')).length === 0, 'a linha sai do cartão');
+    await pagina.locator('body').click({ position: { x: 5, y: 5 } });
+    await pagina.keyboard.press('Control+z');
+    ok((await pagina.$$('[data-solicitacao="0"] tbody tr')).length === 1, 'Ctrl+Z fora de um campo traz a linha de volta');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   titulo('Ordens: Abrir no Outlook');
   {
     const { pagina, contexto, erros } = await abrir();

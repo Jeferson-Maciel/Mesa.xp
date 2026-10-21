@@ -3,6 +3,7 @@ import { ErroDosAssessores, lerPlanilhaDosAssessores } from './core/cliente/asse
 import { clienteParaOEmail, lerClienteDoRobo } from './core/cliente/cliente.js';
 import { parseSolicitacoes } from './core/parse/parseSolicitacoes.js';
 import { separarConta } from './core/texto/separarConta.js';
+import { marcarTexto } from './core/texto/marcarTexto.js';
 import { juntarPrateleira } from './core/validate/fundo.js';
 import { ErroDoEstoque, chaveDoFundo, lerCapturaDoHub, lerPlanilhaDoSecundario } from './core/secundario/estoque.js';
 import { ASSUNTOS_DOS_GRUPOS, ROTULOS_DOS_GRUPOS, gruposDe, recorte } from './core/format/grupos.js';
@@ -22,6 +23,7 @@ import * as guardado from './platform/secundario.js';
 import { renderCliente } from './ui/cliente.js';
 import { aplicarEdicao, renderCartao } from './ui/preview.js';
 import { formatarTempos } from './ui/tempos.js';
+import { renderTextoLido } from './ui/textoLido.js';
 import { ROTULOS, chaveDaConfirmacao, esc, gerar, renderSaidas } from './ui/saidas.js';
 import { aviso } from '../../ui/avisos.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
@@ -152,8 +154,10 @@ export const iniciarOrdens = (secao) => {
     estado.escolhaManual = null;
 
     aplicarDeteccao(solicitacoes);
+    ultimaRemocao = null;
     render();
     encenar();
+    mostrarTextoLido(texto, solicitacoes);
     // A Fila de hoje relida: a página pode ter virado o dia aberta. Refaz o cartão quando chega.
     carregarFila();
 
@@ -180,6 +184,21 @@ export const iniciarOrdens = (secao) => {
     buscarClientes(solicitacoes.map((s) => s.conta));
     // E noutra, a lista do Tesouro de cada conta com aplicação, e a posição de cada uma com resgate.
     buscarTesouroDe(solicitacoes);
+  }
+
+  // O texto colado, linha a linha: o que foi lido, descartado e ignorado (core/texto/marcarTexto.js).
+  function mostrarTextoLido(texto, solicitacoes) {
+    const painel = $('texto-lido');
+    if (!texto.trim()) {
+      painel.hidden = true;
+      painel.open = false;
+      return;
+    }
+    const { resumo, html, temProblema } = renderTextoLido(marcarTexto(texto, solicitacoes));
+    $('texto-lido-resumo').textContent = resumo;
+    $('texto-lido-linhas').innerHTML = html;
+    painel.dataset.problema = temProblema ? 'sim' : 'nao';
+    painel.hidden = false;
   }
 
   const TODOS_FORMATOS = ['email', 'auditoria', 'lote', 'twap'];
@@ -415,6 +434,61 @@ export const iniciarOrdens = (secao) => {
     container.innerHTML = estado.solicitacoes
       .map((s, i) => renderCartao(s, i, formatosDe(i), estado.confirmados[i]))
       .join('');
+    renderLotesJuntos();
+  }
+
+  /*
+   * Os lotes de várias contas de uma vez: o Lote Simples e o TWAP de cada conta, num TSV só, com um
+   * cabeçalho só, para colar de uma vez na planilha. Só quando todas as contas estão sem bloqueio
+   * nesse formato — um lote faltando no meio passaria despercebido.
+   */
+  const LOTES = ['lote', 'twap'];
+  const contasComLote = (formato) =>
+    estado.solicitacoes
+      .map((s, i) => [s, i])
+      .filter(([s, i]) => formatosDe(i).includes(formato) && recorte(s, 'bolsa', formato).ordens.length > 0);
+
+  function renderLotesJuntos() {
+    const caixa = $('lotes-juntos');
+    const botoes = LOTES.filter((f) => contasComLote(f).length > 1)
+      .map((f) => `<button type="button" class="preset-btn" data-lotes="${f}" title="Um TSV só, com um cabeçalho, com o ${ROTULOS[f]} de cada conta">Copiar todos os ${ROTULOS[f]} (${contasComLote(f).length} contas)</button>`)
+      .join('');
+    caixa.hidden = !botoes;
+    caixa.innerHTML = botoes ? `<span class="presets-label">Juntos</span>${botoes}` : '';
+  }
+
+  $('lotes-juntos').addEventListener('click', async (e) => {
+    const botao = e.target.closest('[data-lotes]');
+    if (!botao) return;
+    const formato = botao.dataset.lotes;
+    const textos = [];
+    for (const [s, i] of contasComLote(formato)) {
+      calcularSecundario([s]);
+      const saida = gerar(s, formato, estado.confirmados[i]);
+      if (!saida) return aviso(`A conta ${s.conta ?? i + 1} ainda tem bloqueio no ${ROTULOS[formato]}: resolva antes de copiar todos.`, { tipo: 'erro' });
+      textos.push(saida.texto);
+    }
+    const [primeiro, ...resto] = textos;
+    const texto = primeiro + resto.map((t) => t.split('\n').slice(1).join('\n')).join('');
+    const ok = await copiar(texto, null);
+    aviso(ok ? `${ROTULOS[formato]} de ${textos.length} contas copiados, com um cabeçalho só.` : 'Não consegui copiar.', { tipo: ok ? 'info' : 'erro' });
+    if (!ok) return;
+    for (const [s] of contasComLote(formato)) {
+      historico.registrar({ conta: s.conta, ativos: recorte(s, 'bolsa', formato).ordens.map((o) => o.ativo), formato: ROTULOS[formato], textoOriginal: estado.textoOriginal });
+      estado.contasDoHistorico.add(String(s.conta));
+    }
+    atualizarContadorHistorico();
+  });
+
+  /* A linha removida volta: pelo botão do aviso, ou Ctrl+Z fora de um campo de texto. */
+  let ultimaRemocao = null;
+  function desfazerRemocao() {
+    const r = ultimaRemocao;
+    ultimaRemocao = null;
+    if (!r || !estado.solicitacoes.includes(r.solicitacao)) return;
+    r.solicitacao.ordens.splice(Math.min(r.indice, r.solicitacao.ordens.length), 0, r.ordem);
+    render();
+    aviso('Linha de volta.');
   }
 
   // Uma análise nova entra em cena — cartão, linhas e saídas em sequência (ordens.css). Editar o
@@ -511,8 +585,11 @@ export const iniciarOrdens = (secao) => {
 
     const remover = e.target.closest('.btn-remover');
     if (remover) {
-      solicitacao.ordens.splice(indiceDo(remover, 'ordem'), 1);
-      return render();
+      const indice = indiceDo(remover, 'ordem');
+      const [ordem] = solicitacao.ordens.splice(indice, 1);
+      ultimaRemocao = { solicitacao, indice, ordem };
+      render();
+      return aviso(`${ordem?.ativo?.trim() || `Linha ${indice + 1}`} removida.`, { acao: { rotulo: 'Desfazer', fazer: desfazerRemocao } });
     }
 
     // A confirmação vale para o grupo do e-mail em que foi dada (bolsa, fundos comprados, vendidos).
@@ -1242,6 +1319,8 @@ export const iniciarOrdens = (secao) => {
     entrada.value = '';
     entrada.dispatchEvent(new Event('input'));
     estado.solicitacoes = [];
+    ultimaRemocao = null;
+    mostrarTextoLido('', []);
     render();
   });
 
@@ -1349,6 +1428,11 @@ export const iniciarOrdens = (secao) => {
       drawer.classList.contains('open') ? fecharHistorico() : abrirHistorico();
     } else if (e.key === 'Escape' && drawer.classList.contains('open')) {
       fecharHistorico();
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z') && ultimaRemocao) {
+      // Num campo de texto, o Ctrl+Z é o do campo.
+      if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return;
+      e.preventDefault();
+      desfazerRemocao();
     }
   });
 

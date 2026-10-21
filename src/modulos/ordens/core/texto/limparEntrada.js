@@ -38,6 +38,24 @@ const FORMATACAO = /[*_]+/g;
 const MARCADOR_DE_LISTA = /^(?:\d{1,2}(?:\.\s+|\)\s*)|[•·▪◦‣●○■□►▶➤→\-–—]\s+)/;
 
 /**
+ * Uma linha do texto colado, limpa: sem o carimbo do WhatsApp, a formatação e o marcador de lista.
+ * `ruido` é o motivo de a linha não ser lida (a confirmação da mesa, a menção, o telefone).
+ *
+ * @param {string} original
+ * @returns {{linha: string, ruido: string|null, carimbo: boolean}}
+ */
+export const limparLinha = (original) => {
+  const linha = original
+    .replace(CARIMBO_WHATSAPP, '')
+    .replace(FORMATACAO, '')
+    .trim()
+    .replace(MARCADOR_DE_LISTA, '')
+    .trim();
+  const ruido = linha ? (RUIDO.find(({ padrao }) => padrao.test(linha))?.motivo ?? null) : null;
+  return { linha, ruido, carimbo: CARIMBO_WHATSAPP.test(original) };
+};
+
+/**
  * @param {string|null|undefined} texto
  * @returns {{linhas: string[], ignoradas: Array<{linha: string, motivo: string}>}}
  */
@@ -48,21 +66,13 @@ export const limparEntrada = (texto) => {
   const ignoradas = [];
 
   for (const original of texto.split(/\r?\n/)) {
-    const semCarimbo = original
-      .replace(CARIMBO_WHATSAPP, '')
-      .replace(FORMATACAO, '')
-      .trim()
-      .replace(MARCADOR_DE_LISTA, '')
-      .trim();
-    if (!semCarimbo) continue;
-
-    const ruido = RUIDO.find(({ padrao }) => padrao.test(semCarimbo));
+    const { linha, ruido } = limparLinha(original);
+    if (!linha) continue;
     if (ruido) {
-      ignoradas.push({ linha: semCarimbo, motivo: ruido.motivo });
+      ignoradas.push({ linha, motivo: ruido });
       continue;
     }
-
-    linhas.push(semCarimbo);
+    linhas.push(linha);
   }
 
   return { linhas, ignoradas };

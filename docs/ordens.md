@@ -291,6 +291,24 @@ Os textos e cabeçalhos exatos das 4 saídas estão em [`docs/FORMATOS-DE-SAIDA.
 Leia esse arquivo antes de alterar qualquer formatter ou template — ele é a fonte da verdade dos
 literais, e um caractere fora do lugar quebra a colagem no Excel ou o padrão do e-mail.
 
+## O que acompanha o trabalho (21/10/2026)
+
+- **O que foi lido do texto**: embaixo da caixa da solicitação, cada linha colada com o que aconteceu
+  com ela — lida, descartada (âmbar, com o motivo do parser: fica para fazer na mão) ou ignorada (o
+  ruído do grupo, riscado, com o motivo), e o carimbo do WhatsApp tirado à vista
+  (`core/texto/marcarTexto.js`, que usa a mesma limpeza de linha do `limparEntrada`). Fechado por
+  padrão; o resumo fica âmbar quando há descartada.
+- **Desfazer a remoção**: a linha removida do cartão volta pelo "Desfazer" do aviso, ou por Ctrl+Z
+  fora de um campo de texto (num campo, o Ctrl+Z é o do campo). Vale a última remoção; analisar de
+  novo a esquece.
+- **Os lotes juntos**: com duas contas ou mais no Lote Simples (ou no TWAP), "Copiar todos os…" junta
+  os lotes num TSV com um cabeçalho só. Só sai com todas as contas sem bloqueio nesse formato — um
+  lote faltando no meio passaria despercebido.
+- **A boleta no Hub**: ao lado do nome de cada fundo, no bloco do secundário, o link da boleta de
+  compra ou de venda daquele fundo para a conta, pela rota do próprio Hub (a conta no caminho, nunca
+  num parâmetro), numa aba nova da pessoa.
+- **O pedido repetido de hoje e a conta nova**, vindos da Fila do dia: em [`fila.md`](fila.md).
+
 ## Arquitetura
 
 O fluxo é um pipeline de uma direção, e cada etapa é uma função pura testável isoladamente:

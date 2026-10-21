@@ -233,6 +233,14 @@ export const iniciarFila = (secao) => {
     aviso(ok ? 'Resumo do dia copiado.' : 'Não foi possível copiar o resumo.', { tipo: ok ? 'info' : 'erro' });
   });
 
+  // A busca da Mesa (Ctrl+K) abre um cartão: a Fila vai ao dia dele, já filtrada pela conta.
+  registrarServico('fila.mostrar', (pedido) => {
+    estado.dia = pedido.dia;
+    estado.busca = pedido.conta;
+    ui.busca.value = pedido.conta;
+    carregar();
+  });
+
   // O que outra parte gravou (o Ordens, o robô, outra aba) aparece aqui; os prazos andam com o relógio.
   aoMudarAFila((origem) => origem !== 'fila' && carregar());
   setInterval(() => {

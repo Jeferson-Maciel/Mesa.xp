@@ -407,3 +407,265 @@
   margin: var(--esp-6) auto;
   padding: 0 var(--esp-4);
 }
+
+/* ── Os horários do mercado (shell/relogio.js) ──────────────────────────────────────────
+   O que fecha primeiro, com quanto falta: o ponto verde aberto, âmbar a meia hora ou menos, apagado
+   fechado. No clique, os quatro horários do dia. */
+
+.relogio {
+  position: relative;
+}
+
+.relogio-botao {
+  font-variant-numeric: tabular-nums;
+}
+
+.relogio-ponto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--texto-fraco);
+}
+
+.relogio-botao[data-situacao='aberto'] .relogio-ponto {
+  background: var(--positivo);
+}
+
+.relogio-botao[data-situacao='perto'] .relogio-ponto {
+  background: var(--atencao);
+  box-shadow: 0 0 0 3px var(--atencao-fundo);
+}
+
+.relogio-botao[data-situacao='perto'] .relogio-falta {
+  color: var(--atencao);
+}
+
+.relogio-nome {
+  color: var(--texto-fraco);
+  font-weight: 500;
+}
+
+.relogio-painel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 19rem;
+  padding: var(--esp-2);
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-alta);
+  animation: estalar var(--t-medio) var(--curva-saida);
+}
+
+.relogio-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.relogio-itens li {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: var(--esp-2);
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--borda-forte);
+  font-size: 0.8rem;
+}
+
+.relogio-itens li[data-situacao='aberto'] {
+  border-left-color: var(--positivo);
+}
+
+.relogio-itens li[data-situacao='perto'] {
+  border-left-color: var(--atencao);
+  background: var(--atencao-fundo);
+}
+
+.relogio-item-nome {
+  color: var(--texto-forte);
+  font-weight: 700;
+}
+
+.relogio-item-texto {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── A busca da Mesa (shell/busca.js) ─────────────────────────────────────────────────── */
+
+.busca-botao svg,
+.busca-campo svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.busca-tecla,
+.busca kbd {
+  padding: 0 5px;
+  border: 1px solid var(--borda-forte);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--texto-fraco);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.busca {
+  width: min(42rem, calc(100vw - 2 * var(--esp-4)));
+  max-height: min(34rem, calc(100vh - 2 * var(--esp-6)));
+  margin-top: 10vh;
+  padding: 0;
+  overflow: hidden;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta), inset 0 2px 0 var(--acento);
+  color: var(--texto);
+}
+
+.busca[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.busca-campo {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-fraco);
+}
+
+.busca-campo input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--texto-forte);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.busca-resultados {
+  flex: 1;
+  min-height: 0;
+  padding: var(--esp-2);
+  overflow-y: auto;
+}
+
+.busca-grupo + .busca-grupo {
+  margin-top: var(--esp-2);
+}
+
+.busca-grupo-nome {
+  display: block;
+  padding: var(--esp-1) var(--esp-3);
+  color: var(--texto-fraco);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.busca-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 0.45rem var(--esp-3);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.busca-item.ativo,
+.busca-item:hover {
+  background: var(--acento-fundo);
+  box-shadow: inset 2px 0 0 var(--acento);
+}
+
+.busca-titulo {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.busca-detalhe {
+  overflow: hidden;
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.busca-vazio {
+  margin: var(--esp-4);
+  color: var(--texto-fraco);
+  font-size: 0.86rem;
+}
+
+.busca-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: var(--esp-2) var(--esp-4);
+  border-top: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  font-size: 0.74rem;
+}
+
+/* Com as sete abas e as ações do topo, o botão da busca fica no ícone abaixo de 1500px. */
+@media (max-width: 1500px) {
+  .busca-rotulo,
+  .busca-tecla {
+    display: none;
+  }
+
+  .busca-botao {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .relogio-nome {
+    display: none;
+  }
+
+  .relogio-botao {
+    padding: 0 0.55rem;
+  }
+
+  /* No celular o relógio é o primeiro botão da linha: o painel abre alinhado à esquerda dele. */
+  .relogio-painel {
+    right: auto;
+    left: 0;
+    min-width: min(19rem, calc(100vw - 2 * var(--esp-4)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .relogio-painel {
+    animation: none;
+  }
+}

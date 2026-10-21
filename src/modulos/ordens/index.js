@@ -30,6 +30,7 @@ import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
 import { contasConhecidas, diaDe, registrarEnvio, repetidosHoje } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { registrarServico } from '../../comum/servicos.js';
+import { acharEm, registrarFonteDeBusca } from '../../comum/busca.js';
 import './ordens.css';
 
 /**
@@ -1390,6 +1391,24 @@ export const iniciarOrdens = (secao) => {
     historico.limpar();
     renderHistorico();
     atualizarContadorHistorico();
+  });
+
+  // A busca da Mesa (Ctrl+K) acha no histórico pela conta, pelo ativo ou pelo formato; abrir reabre o
+  // pedido, como o "Reabrir" da gaveta.
+  registrarFonteDeBusca({
+    id: 'historico',
+    nome: 'Histórico do Ordens',
+    buscar: (termo) =>
+      acharEm(historico.listar(), termo, (h) => ({ titulo: `${h.conta} ${(h.ativos ?? []).join(' ')}`, resto: `${h.formato} ${h.textoOriginal}` })).map((h) => ({
+        titulo: `Conta ${h.conta} · ${(h.ativos ?? []).join(', ') || 'sem ativos'}`,
+        detalhe: `${h.formato} · ${new Date(h.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '')} · Reabrir`,
+        abrir: () => {
+          location.hash = 'ordens';
+          entrada.value = h.textoOriginal;
+          entrada.dispatchEvent(new Event('input'));
+          analisar();
+        }
+      }))
   });
 
   $('lista-historico').addEventListener('click', (e) => {

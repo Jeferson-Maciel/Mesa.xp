@@ -11,7 +11,14 @@ import { iniciarContadorDaFila, iniciarFila, iniciarVigiaDaFila } from './modulo
 import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
 import { iniciarRendaFixa } from './modulos/rendafixa/index.js';
-import { ligarAbas } from './shell/abas.js';
+import { acharEm, registrarFonteDeBusca } from './comum/busca.js';
+import { NOMES_DOS_GRUPOS } from './comum/fila/regras.js';
+import { filaDaPagina } from './comum/fila/repositorio.js';
+import { quandoHouver } from './comum/servicos.js';
+import { POSTS, TOPICOS } from './modulos/operacional/conteudo.js';
+import { ABAS, ligarAbas } from './shell/abas.js';
+import { ligarBusca } from './shell/busca.js';
+import { ligarRelogio } from './shell/relogio.js';
 import { esc } from './ui/html.js';
 import { ligarBotaoDeTema } from './ui/tema.js';
 
@@ -31,6 +38,8 @@ const falhar = (id, secao, erro) => {
 };
 
 ligarBotaoDeTema(document.getElementById('btn-tema'));
+ligarRelogio();
+ligarBusca();
 
 // O Ordens inicia com a página, como sempre: é a aba padrão e não depende de rede.
 iniciarOrdens(document.getElementById('modulo-ordens'));
@@ -55,6 +64,69 @@ try {
 }
 
 // O contador da Fila também: a resposta do cliente e o prazo perto aparecem em qualquer aba.
+/*
+ * As fontes da busca (Ctrl+K), na ordem em que aparecem: as abas, os modelos e passos do Operacional
+ * (a base do Slab que vem no arquivo), as anotações e os cartões da Fila (os dois no navegador). O
+ * histórico do Ordens é registrado pelo próprio Ordens.
+ */
+const NOMES_DAS_ABAS = { ordens: 'Ordens', fila: 'Fila do dia', rendafixa: 'Renda Fixa', calendario: 'Calendário', operacional: 'Operacional', anotacoes: 'Anotações' };
+registrarFonteDeBusca({
+  id: 'abas',
+  nome: 'Abas',
+  buscar: (termo) =>
+    acharEm(ABAS, termo, (aba) => ({ titulo: NOMES_DAS_ABAS[aba] ?? aba })).map((aba) => ({
+      titulo: `Ir para ${NOMES_DAS_ABAS[aba] ?? aba}`,
+      detalhe: `Alt + ${ABAS.indexOf(aba) + 1}`,
+      abrir: () => (location.hash = aba)
+    }))
+});
+const NOMES_DOS_TOPICOS = Object.fromEntries(TOPICOS.map((t) => [t.slug, t.nome]));
+registrarFonteDeBusca({
+  id: 'operacional',
+  nome: 'Operacional',
+  buscar: (termo) =>
+    acharEm(POSTS, termo, (p) => ({ titulo: p.titulo, resto: `${NOMES_DOS_TOPICOS[p.topico] ?? ''} ${p.conteudo ?? ''}` })).map((p) => ({
+      titulo: p.titulo,
+      detalhe: NOMES_DOS_TOPICOS[p.topico] ?? '',
+      abrir: () => (location.hash = `#operacional/post/${p.slug}`)
+    }))
+});
+registrarFonteDeBusca({
+  id: 'anotacoes',
+  nome: 'Anotações',
+  buscar: async (termo) => {
+    const notas = (await repositorioDasAnotacoes().listarNotas()).filter((n) => !n.excluidaEm);
+    const tituloDe = (n) => n.titulo?.trim() || (n.texto ?? '').trim().split('\n')[0] || 'Sem título';
+    return acharEm(notas, termo, (n) => ({ titulo: tituloDe(n), resto: `${n.texto ?? ''} ${(n.etiquetas ?? []).join(' ')}` })).map((n) => ({
+      titulo: tituloDe(n),
+      detalhe: (n.etiquetas ?? []).map((e) => `#${e}`).join(' ') || (n.texto ?? '').replace(/\s+/g, ' ').slice(0, 90),
+      abrir: () => (location.hash = linkDaNota(n.id))
+    }));
+  }
+});
+const ESTADOS_NA_BUSCA = { enviado: 'aguardando o cliente', respondeu: 'o cliente respondeu', aprovado: 'aprovado', executado: 'executado', cancelado: 'cancelado' };
+registrarFonteDeBusca({
+  id: 'fila',
+  nome: 'Fila do dia',
+  buscar: async (termo) => {
+    const pedidos = (await filaDaPagina().listarTodos()).reverse();
+    return acharEm(pedidos, termo, (p) => ({
+      titulo: `${p.conta} ${p.cliente?.nome ?? ''}`,
+      resto: `${NOMES_DOS_GRUPOS[p.grupo] ?? ''} ${p.ordens.map((o) => o.ativo).join(' ')} ${ESTADOS_NA_BUSCA[p.estado] ?? ''}`
+    })).map((p) => {
+      const [ano, mes, dia] = p.dia.split('-');
+      return {
+        titulo: `Conta ${p.conta}${p.cliente?.nome ? ` · ${p.cliente.nome}` : ''}`,
+        detalhe: `${dia}/${mes}/${ano} · ${NOMES_DOS_GRUPOS[p.grupo] ?? p.grupo} · ${p.ordens.map((o) => o.ativo).join(', ')} · ${ESTADOS_NA_BUSCA[p.estado] ?? p.estado}`,
+        abrir: () => {
+          location.hash = 'fila';
+          quandoHouver('fila.mostrar', (mostrar) => mostrar(p));
+        }
+      };
+    });
+  }
+});
+
 // E o vigia das respostas no Outlook, pelo robô.
 try {
   iniciarContadorDaFila();

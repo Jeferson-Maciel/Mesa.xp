@@ -467,6 +467,38 @@ try {
     await contexto.close();
   }
 
+  /* ── O topo: os horários do mercado e a busca ───────────────────────────────────── */
+  // Uma quarta-feira às 13h10: o que fecha primeiro é o Estoque clientes, às 14h.
+  titulo('O topo: os horários do mercado e a busca (Ctrl+K)');
+  {
+    const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T13:10:00-03:00' });
+    ok(
+      (await pagina.textContent('#btn-relogio .relogio-nome')) === 'Estoque clientes' && (await pagina.textContent('#btn-relogio .relogio-falta')) === '50 min',
+      'o topo mostra o que fecha primeiro: o Estoque clientes, em 50 min'
+    );
+    await pagina.click('#btn-relogio');
+    ok((await pagina.$$eval('#relogio-painel li', (l) => l.length)) === 4 && (await pagina.isVisible('#relogio-painel')), 'no clique, os quatro horários do dia');
+    await pagina.keyboard.press('Escape');
+
+    await pagina.keyboard.press('Control+k');
+    await pagina.waitForSelector('#busca[open]');
+    await pagina.fill('#busca-termo', 'tabela cetipados');
+    await pagina.waitForFunction(() => document.querySelector('.busca-item.ativo .busca-titulo')?.textContent === 'Tabela de Cetipados', null, { timeout: 5000 }).catch(() => {});
+    ok((await pagina.textContent('.busca-item.ativo .busca-titulo')) === 'Tabela de Cetipados', 'Ctrl+K acha o modelo do Operacional pelo nome');
+    await pagina.keyboard.press('Enter');
+    await pagina.waitForFunction(() => location.hash.startsWith('#operacional/post/'), null, { timeout: 5000 }).catch(() => {});
+    ok((await pagina.evaluate(() => location.hash)).startsWith('#operacional/post/') && !(await pagina.$('#busca[open]')), 'Enter abre o post, e a busca fecha');
+
+    await pagina.keyboard.press('Control+k');
+    await pagina.fill('#busca-termo', 'fila');
+    await pagina.waitForFunction(() => document.querySelector('.busca-item.ativo .busca-titulo')?.textContent === 'Ir para Fila do dia');
+    await pagina.keyboard.press('Enter');
+    await pagina.waitForFunction(() => !document.getElementById('modulo-fila').hidden, null, { timeout: 5000 }).catch(() => {});
+    ok(!(await pagina.$eval('#modulo-fila', (s) => s.hidden)), 'e leva às abas');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   /* ── Calendário em modo local ───────────────────────────────────────────────────── */
   titulo('Calendário em modo local: escape, janela do dia, histórico, cascata');
   {

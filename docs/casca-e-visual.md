@@ -39,6 +39,16 @@ scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda 
   leitor de tela e no `title`. A pílula desliza e muda de largura junto, e o topo continua com uma
   linha só acima de 720px (o painel do Ordens gruda a 59px; o `verificar` confere a 1000px). No
   celular as abas descem para a segunda linha, do mesmo jeito: a ativa com o nome, as outras no ícone.
+- **Os horários do mercado no topo** (`shell/relogio.js`, 21/10/2026): o que fecha primeiro entre os
+  abertos, com quanto falta — ponto verde aberto, âmbar a meia hora ou menos —, e, no clique, os
+  quatro do dia: o pregão da B3 (leilão às 16h55), o Estoque clientes (14h), o secundário da XP
+  (16h30) e o Tesouro (9h30 às 18h). Os horários moram em `comum/horarios.js`, o mesmo de onde a
+  Fila do dia tira os prazos. No celular, só quanto falta.
+- **A busca da Mesa (Ctrl+K)** (`shell/busca.js`, com a régua em `comum/busca.js`): de qualquer aba,
+  ou pela lupa do topo. Cada módulo registra a sua fonte — as abas, os modelos e passos do
+  Operacional (a base do Slab que vem no arquivo), as anotações, os cartões da Fila e o histórico do
+  Ordens (que reabre o pedido) —, e a janela mostra o que todas acham, agrupado. Todas as palavras
+  têm de aparecer; no título vale mais. Nada sai do navegador.
 - **Início preguiçoso**: o Ordens inicia com a página, como sempre; as outras só na primeira
   vez que a aba abre. O código já está no arquivo (não há `import()` dinâmico) — o que espera é a
   inicialização, e é nela que Calendário e Operacional conectam ao banco. A exceção é o vigia dos

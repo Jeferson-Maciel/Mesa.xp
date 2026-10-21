@@ -316,8 +316,7 @@ Ficou de fora, por ser conteúdo e não layout: os 15 posts do Operacional com "
    travas desses fundos, e um fundo com ágio.
 5. **Avisos do pre-check:** `checks` e `customer` (garantia, perfil) poderiam virar avisos no cartão
    antes do e-mail.
-6. O resto do secundário está em [`ROADMAP.md`](ROADMAP.md), seção "Secundário — o que ficou em
-   aberto".
+6. O resto do secundário está em [`ROADMAP.md`](ROADMAP.md), seção "Robô do Hub e secundário".
 7. **Fase 2:** login, RLS fechada e repositório privado (`CLAUDE.md`, "Pendência de segurança").
 
 ## Arquivos do secundário e do robô

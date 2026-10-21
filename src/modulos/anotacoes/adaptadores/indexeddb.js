@@ -8,7 +8,7 @@ import { ErroDoRepositorio, fichaDoAnexo, porEdicao, validarAnexo, validarNota }
  * ler; é o que as ferramentas de print no navegador fazem). O índice `notaId` acha os anexos de
  * uma anotação para apagá-los junto com ela.
  *
- * IndexedDB funciona do mesmo jeito no Netlify e aberto do disco (`file://`), mas cada um é um
+ * IndexedDB funciona do mesmo jeito no site (Vercel) e aberto do disco (`file://`), mas cada um é um
  * endereço diferente para o navegador: as anotações de um não aparecem no outro. O backup
  * (backup.js) leva de um para o outro.
  *

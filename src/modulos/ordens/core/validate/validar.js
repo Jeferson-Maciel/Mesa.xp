@@ -767,7 +767,3 @@ export const validar = (solicitacao, formato) => {
 
   return diagnosticos;
 };
-
-/** @returns {boolean} se a saída pode ser gerada sem confirmação do operador. */
-export const podeGerar = (solicitacao, formato) =>
-  validar(solicitacao, formato).every((d) => d.nivel !== 'bloqueio');

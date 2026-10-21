@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { podeGerar, validar } from './validar.js';
+import { validar } from './validar.js';
+
+// Se a saída sai sem confirmação do operador.
+const podeGerar = (solicitacao, formato) => validar(solicitacao, formato).every((d) => d.nivel !== 'bloqueio');
 import { analisarTicker } from './ticker.js';
 import { parseSolicitacoes } from '../parse/parseSolicitacoes.js';
 

@@ -2,7 +2,7 @@
 
 As ferramentas da mesa de operações de um escritório credenciado à XP, num link só e em cinco
 abas: **Ordens**, **Renda Fixa**, **Calendário**, **Operacional** e **Anotações**. É JS puro com
-Vite, e o build gera **um arquivo só** (`dist/index.html`), que roda no Netlify e aberto do disco.
+Vite, e o build gera **um arquivo só** (`dist/index.html`), que roda no site (Vercel) e aberto do disco.
 
 Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 

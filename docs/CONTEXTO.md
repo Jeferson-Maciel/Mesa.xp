@@ -9,7 +9,7 @@ cada sessão.
 ## Resumo
 
 - A Mesa XP tem 5 abas: Ordens, Renda Fixa, Calendário, Operacional e Anotações. O build é um
-  arquivo só (`dist/index.html`), que roda no Netlify e aberto do disco.
+  arquivo só (`dist/index.html`), que roda no site (Vercel) e aberto do disco.
 - O código está no GitHub, em [`Jeferson-Maciel/Mesa.xp`](https://github.com/Jeferson-Maciel/Mesa.xp)
   (`origin`, branch `main`), criado pelo usuário em 07/10/2026. **O repositório é público por
   decisão do usuário ("por enquanto")**, avisado de que isso expõe os textos do Operacional, o robô

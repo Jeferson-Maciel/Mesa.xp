@@ -3,7 +3,6 @@ import {
   adicionarEtiqueta,
   contagens,
   corDaEtiqueta,
-  estaVazia,
   etiquetasEmUso,
   extrairLinks,
   filtrarNotas,
@@ -34,9 +33,6 @@ describe('anotação nova', () => {
       atualizadaEm: 1000,
       excluidaEm: null
     });
-    expect(estaVazia(n)).toBe(true);
-    expect(estaVazia({ ...n, anexos: [{ id: 'a' }] })).toBe(false);
-    expect(estaVazia({ ...n, texto: '  \n ' })).toBe(true);
   });
 });
 

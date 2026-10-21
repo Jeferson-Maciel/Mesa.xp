@@ -378,7 +378,7 @@ navegador.
 
 Calendário e Operacional usam o projeto Supabase da mesa por padrão. Para apontar para outro, defina
 no build
-(no Netlify, em *Site configuration → Environment variables*; localmente, num arquivo `.env`):
+(na Vercel, em *Settings → Environment Variables*; localmente, num arquivo `.env`):
 
 ```bash
 VITE_SUPABASE_URL=https://<projeto>.supabase.co
@@ -518,7 +518,6 @@ configurados:
 - **Vercel** (`vercel.json`): importe o repositório no painel da Vercel; ela usa `npm run build`,
   publica `dist/` e roda Node 22 (pelo `engines` do `package.json`). As abas são por `#`, então não
   precisa de regra de rota.
-- **Netlify** (`netlify.toml`): o mesmo build, Node 22 e todas as rotas para o `index.html`.
 
 A Mesa está no ar em **https://mesa-xp.vercel.app**, publicada pela Vercel a cada envio para a
 `main` no GitHub. O robô do Hub a reconhece nesse endereço; outro endereço (outro site, um domínio

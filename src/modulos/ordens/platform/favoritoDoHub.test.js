@@ -114,7 +114,7 @@ describe('o favorito no Hub', () => {
   });
 
   it('fora do Hub, só explica onde usar', async () => {
-    const hub = hubFalso({ host: 'mesa-xp.netlify.app' });
+    const hub = hubFalso({ host: 'mesa-xp.vercel.app' });
     await hub.clicarNoFavorito();
     expect(hub.alertas[0]).toContain('abra o Hub XP');
     expect(hub.baixados).toEqual([]);

@@ -68,7 +68,7 @@ Um módulo exporta `iniciarX(secao)` e não conhece os outros. O que dois módul
 ## O build: um arquivo só
 
 `npm run build` gera **um único** `dist/index.html`, com JS, CSS e ícone dentro. É ele que vai
-para o site (Vercel, pelo `vercel.json`, ou Netlify, pelo `netlify.toml`) e é ele que os colegas
+para o site (Vercel, pelo `vercel.json`) e é ele que os colegas
 abrem com dois cliques, sem servidor. Aberto do disco
 (`file://`), o navegador bloqueia `<script type="module" src>` e lê `/assets/...` como a raiz do
 drive — a tela aparece e nada funciona. Por isso:
@@ -85,7 +85,7 @@ exigem rede**: sem conexão mostram o erro na tela, e as outras abas seguem func
 **Dependências de runtime:** uma só, `@supabase/supabase-js`, empacotada no build e usada por
 Calendário e Operacional, por uma conexão única (`src/dados/banco.js`): o primeiro que abre cria o
 cliente, o segundo reaproveita — um cliente por módulo abriria duas conexões do Realtime. O SheetJS não é dependência npm (ver Renda Fixa). Vite e Vitest são ferramentas de
-desenvolvimento. O Netlify roda Node 22 (`netlify.toml`): supabase-js e Vitest 5 exigem Node 22+.
+desenvolvimento. A Vercel roda Node 22 (`engines` do `package.json`): supabase-js e Vitest 5 exigem Node 22+.
 A SnapDOM também é vendorizada, e só entra no script do robô (ver "SnapDOM vendorizada").
 
 `dist/index.html` fica em torno de 1,9 MB: o SheetJS e o script do robô, com a SnapDOM dentro.

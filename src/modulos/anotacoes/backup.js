@@ -2,7 +2,7 @@
  * Backup das anotações: um arquivo .json com as anotações e os anexos (em base64).
  *
  * As anotações moram no navegador (ver repositorio.js). O backup é o que as leva para outro
- * computador, da versão aberta do disco para a do Netlify, ou de volta depois de alguém limpar os
+ * computador, da versão aberta do disco para a do site, ou de volta depois de alguém limpar os
  * dados do navegador. Importar **junta**: anotação que já existe só é trocada se a do arquivo for
  * mais recente — importar o mesmo backup duas vezes não duplica nada.
  */

@@ -31,9 +31,6 @@ export const novaNota = (id, agora = Date.now()) => ({
   excluidaEm: null
 });
 
-/** Nada escrito, nada anexado, nada marcado: uma anotação nova abandonada, que pode sumir. */
-export const estaVazia = (n) => !n.titulo.trim() && !n.texto.trim() && n.anexos.length === 0 && n.etiquetas.length === 0 && !n.lembrete;
-
 const primeiraLinha = (texto) =>
   String(texto ?? '')
     .split('\n')

@@ -35,6 +35,7 @@ const seletores = (css) => {
 
 const MODULOS = [
   { arquivo: '../modulos/fila/fila.css', raizes: ['.fl', '#modulo-fila'] },
+  { arquivo: '../modulos/fundos/fundos.css', raizes: ['.fu', '#modulo-fundos'] },
   { arquivo: '../modulos/rendafixa/rendafixa.css', raizes: ['.rf', '#modulo-rendafixa'] },
   { arquivo: '../modulos/calendario/calendario.css', raizes: ['.cal', '#modulo-calendario'] },
   { arquivo: '../modulos/operacional/operacional.css', raizes: ['.op', '#modulo-operacional'] },

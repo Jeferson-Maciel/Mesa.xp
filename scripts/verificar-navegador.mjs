@@ -281,6 +281,9 @@ try {
       await pagina.keyboard.press(altDe('fila'));
       await pagina.waitForSelector('.fl-cartao');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Fila do dia, com um cartão, sem rolagem lateral`);
+      await pagina.keyboard.press(altDe('fundos'));
+      await pagina.waitForSelector('.fu-topo');
+      ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Prateleira de fundos, sem a captura, sem rolagem lateral`);
 
       await pagina.keyboard.press(altDe('rendafixa'));
       await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
@@ -325,7 +328,7 @@ try {
         await pagina.click('[data-visao="semana"]');
         const vazamentos = await pagina.evaluate((seletores) => {
           const achados = [];
-          for (const raizModulo of ['#modulo-fila', '#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional', '#modulo-anotacoes']) {
+          for (const raizModulo of ['#modulo-fila', '#modulo-fundos', '#modulo-rendafixa', '#modulo-calendario', '#modulo-operacional', '#modulo-anotacoes']) {
             const alvo = document.querySelector(raizModulo);
             for (const s of seletores) {
               let n = 0;
@@ -1736,6 +1739,27 @@ try {
     await mesa.click('[data-fl="conferir"] [data-acao="ignorar"]');
     ok(await mesa.isHidden('[data-fl="conferir"]'), '"Não é de pedido" tira a resposta da conferência');
     await caixa.close();
+
+    // ── A Prateleira de fundos (21/10/2026): a mesma captura do Ordens, numa tabela que ordena, e o que
+    // mudou contra a foto do último dia (plantada aqui, com o deságio de um fundo diferente).
+    await mesa.evaluate(() => {
+      const fotos = { '2000-01-01': { 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee': { nome: 'Valora Imobiliário Multiestratégia Premium', ticker: 'VGPR11', desagio: 5, roaMaximo: 0.5, estoque: 500000 } } };
+      localStorage.setItem('mesa_prateleira_fotos', JSON.stringify(fotos));
+    });
+    await mesa.keyboard.press(altDe('fundos'));
+    await mesa.waitForSelector('.fu-tabela tbody tr');
+    ok((await mesa.$$eval('.fu-tabela tbody tr', (l) => l.length)) === 3, 'a aba Fundos mostra os três fundos da prateleira do Hub');
+    ok((await mesa.textContent('.fu-tabela tbody tr:first-child .fu-fundo')).includes('IMOV11'), 'ordenada pelo maior deságio');
+    await mesa.click('[data-ordenar="nome"]');
+    ok((await mesa.textContent('.fu-tabela tbody tr:first-child .fu-fundo')).includes('Navi'), 'o clique no cabeçalho ordena pelo nome');
+    await mesa.fill('[data-fu="busca"]', 'vgpr');
+    ok((await mesa.$$eval('.fu-tabela tbody tr', (l) => l.length)) === 1, 'a busca filtra pelo ticker');
+    ok(
+      (await mesa.textContent('[data-fu="mudancas"]')).includes('Deságio') && (await mesa.textContent('[data-fu="mudancas"]')).includes('Entraram'),
+      'o que mudou desde a última foto: o deságio do fundo e os que entraram'
+    );
+    await mesa.fill('[data-fu="busca"]', '');
+    await mesa.screenshot({ path: join(temporario, 'fundos.png'), fullPage: true });
 
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();

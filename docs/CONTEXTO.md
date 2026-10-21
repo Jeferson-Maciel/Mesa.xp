@@ -9,8 +9,8 @@ cada sessão.
 
 ## Resumo
 
-- A Mesa XP tem 5 abas: Ordens, Renda Fixa, Calendário, Operacional e Anotações. O build é um
-  arquivo só (`dist/index.html`), que roda no site (Vercel) e aberto do disco.
+- A Mesa XP tem 7 abas: Ordens, Fila do dia, Fundos, Renda Fixa, Calendário, Operacional e
+  Anotações. O build é um arquivo só (`dist/index.html`), que roda no site (Vercel) e aberto do disco.
 - O código está no GitHub, em [`Jeferson-Maciel/Mesa.xp`](https://github.com/Jeferson-Maciel/Mesa.xp)
   (`origin`, branch `main`), criado pelo usuário em 07/10/2026. **O repositório é público por
   decisão do usuário ("por enquanto")**, avisado de que isso expõe os textos do Operacional, o robô
@@ -22,15 +22,50 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10): 1.152 testes (`npm test`), o build e 221
-  conferências no navegador (`npm run verificar`), duas rodadas seguidas sem falha. O Hub de mentira
+- A última verificação passou inteira (21/10, fim do dia): 1.265 testes (`npm test`), o build e 308
+  conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 23 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
-  o OK do usuário. Com o push, entra também o workflow semanal dos tickers da B3.
+- **De 20 a 21/10 foram 33 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
+  o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
+  (os colegas precisam copiar o robô de novo).
+
+## 21/10 (tarde): o que foi sugerido, e as respostas do Outlook
+
+O usuário pediu "pode fazer tudo isso que você me indicou" e perguntou se dava para ligar o Outlook,
+para a resposta do cliente aparecer no sistema já formatada para executar. Feito, em 9 commits:
+
+- **Fila do dia** (aba nova, Alt+2, `docs/fila.md`): cada e-mail copiado ou aberto no Outlook vira um
+  cartão — aguardando o cliente, o cliente respondeu, aprovado, executado —, com os prazos (leilão,
+  Estoque clientes, secundário, cotação da venda, Tesouro), a ficha de execução, a boleta do Hub, o
+  resumo do dia e o "Anotar". No Ordens, o pedido repetido de hoje bloqueia (confirmável) e a conta
+  nunca vista avisa. Os cartões abertos dos últimos 7 dias entram na Fila de hoje.
+- **As respostas no Outlook (robô 1.8.0)**: com o Outlook na web aberto na caixa de entrada, o robô
+  lê só a lista de mensagens, e dela só as respostas de hoje aos e-mails de confirmação; o e-mail do
+  cliente passa o cartão para "O cliente respondeu", com a prévia e um aviso; o resto fica "a
+  conferir". Quem aprova é o operador. **Só testado no Outlook de mentira** (ver "A testar", item 0).
+- **Fundos** (aba nova, Alt+3, `docs/fundos.md`): a Prateleira numa tabela que ordena e filtra, e o
+  que mudou desde o último dia (uma foto por dia, no navegador). A "Tabela de Cetipados" espera a
+  regra do ROA.E. (ROADMAP).
+- **O topo**: os horários do mercado (o que fecha primeiro, e os quatro no clique) e a busca da Mesa
+  inteira (Ctrl+K). As sete abas cabem: abaixo de 1280 px só a ativa mostra o nome.
+- **Ordens**: o texto colado marcado (lido, descartado, ignorado), desfazer a remoção (Ctrl+Z), os
+  lotes de várias contas num TSV só, a boleta do fundo no Hub e o "Anotar".
+- **Operacional**: "Usar este modelo" — os marcadores (CLIENTE, XXXXX) viram campos, e o texto sai
+  preenchido para copiar ou abrir no Outlook.
+- **Anotações**: o lembrete que se repete (todo dia, dia útil, semana, mês); feito leva à próxima vez.
+  O teste achou que o editor perdia a repetição ao reabrir a anotação: corrigido.
+- **Renda Fixa**: "Baixar imagem" (as oportunidades num PNG para o WhatsApp) e o simulador de
+  pré-fixado (bruto, IR, líquido).
+- **O que mora em `src/comum/`**: o que dois módulos usam fora da tela — dias úteis, horários,
+  Outlook, a Fila, a busca, os serviços (a ponte do robô e a prateleira) e o "Anotar".
+- **Um número de 20/10**: a quantidade de cotas de 8 casas dos exemplos e testes da venda
+  (a cota de 20/10) parecia uma posição lida de uma boleta; foi trocada por uma fictícia. Ela ainda está
+  nos commits locais de 20/10 (`ddab4a1`, `f8110f7`, `888d7db`), que não foram para o GitHub: se o
+  número for de um cliente, os commits podem ser reescritos antes do push.
 
 ## 21/10: o Renda Fixa repaginado
 

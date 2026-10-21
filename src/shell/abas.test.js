@@ -6,6 +6,7 @@ describe('abaDoHash', () => {
   it('reconhece as rotas de todas as abas', () => {
     expect(abaDoHash('#ordens')).toBe('ordens');
     expect(abaDoHash('#fila')).toBe('fila');
+    expect(abaDoHash('#fundos')).toBe('fundos');
     expect(abaDoHash('#rendafixa')).toBe('rendafixa');
     expect(abaDoHash('#calendario')).toBe('calendario');
     expect(abaDoHash('#operacional')).toBe('operacional');
@@ -42,7 +43,7 @@ describe('abaDoAtalho', () => {
   const tecla = (code, extra = {}) => ({ altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, code, ...extra });
 
   it('Alt+1 em diante levam às abas na ordem da barra', () => {
-    expect(ABAS).toEqual(['ordens', 'fila', 'rendafixa', 'calendario', 'operacional', 'anotacoes']);
+    expect(ABAS).toEqual(['ordens', 'fila', 'fundos', 'rendafixa', 'calendario', 'operacional', 'anotacoes']);
     ABAS.forEach((aba, i) => expect(abaDoAtalho(tecla(`Digit${i + 1}`))).toBe(aba));
     expect(abaDoAtalho(tecla(`Digit${ABAS.length + 1}`))).toBeNull();
   });

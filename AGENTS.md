@@ -1,7 +1,7 @@
 # AGENTS.md — Mesa XP
 
-As ferramentas da mesa de operações de um escritório credenciado à XP, num link só e em seis
-abas: **Ordens**, **Fila do dia**, **Renda Fixa**, **Calendário**, **Operacional** e **Anotações**. É JS puro com
+As ferramentas da mesa de operações de um escritório credenciado à XP, num link só e em sete
+abas: **Ordens**, **Fila do dia**, **Fundos**, **Renda Fixa**, **Calendário**, **Operacional** e **Anotações**. É JS puro com
 Vite, e o build gera **um arquivo só** (`dist/index.html`), que roda no site (Vercel) e aberto do disco.
 
 Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
@@ -23,7 +23,7 @@ Este arquivo é o resumo para qualquer agente (Claude, Codex, Antigravity…).
 
 ```bash
 npm install
-npm test            # Vitest — 1.255 testes
+npm test            # Vitest — 1.265 testes
 npm run build       # dist/index.html, um arquivo só
 npm run verificar   # Playwright: abre o dist/ e confere as abas, a Fila do dia e o robô do Hub
 npm run verificar:supabase   # grava no banco da mesa — só fora do expediente e com o OK do usuário

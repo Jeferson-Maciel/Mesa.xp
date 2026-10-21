@@ -16,6 +16,7 @@ src/comum/            o que dois módulos dividem fora da tela: dias úteis, hor
 src/dados/            a conexão única com o Supabase, a configuração e os erros dos repositórios
 src/modulos/ordens/       Assistente de Ordens
 src/modulos/fila/         Fila do dia: o pedido depois que o e-mail sai (no navegador)
+src/modulos/fundos/       Prateleira de fundos: o secundário numa tabela, e o que mudou
 src/modulos/rendafixa/    RendaFixa Pro
 src/modulos/calendario/   Calendário de presença
 src/modulos/operacional/  base de conhecimento (a cópia do Slab)
@@ -27,7 +28,7 @@ docs/                 formatos de saída do Ordens, o roadmap e o contexto da ú
 scripts/              atualizar tickers e fundos (Ordens), gerar goldens (Renda Fixa), verificar no navegador
 ```
 
-- **Rota por hash**: `#ordens`, `#fila`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
+- **Rota por hash**: `#ordens`, `#fila`, `#fundos`, `#rendafixa`, `#calendario`, `#operacional`, `#anotacoes`; hash vazio ou
   desconhecido abre o Ordens. A aba é o primeiro trecho do hash, e o resto é do módulo:
   `#operacional/post/<slug>` abre o post na aba Operacional. Hash e não caminho porque o mesmo arquivo roda no site (Vercel) e aberto do disco (`file://`).
 - **Alt+1, Alt+2…**, na ordem da barra (`ABAS`), troca a aba na hora, sem esperar o `hashchange` —

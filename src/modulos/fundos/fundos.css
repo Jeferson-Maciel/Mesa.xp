@@ -1,0 +1,275 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════
+   Prateleira de fundos — os fundos do secundário numa tabela que ordena e filtra.
+
+   A pedra é o peridoto (base.css). O deságio tem uma barrinha atrás do número, proporcional ao maior
+   da tela: o olho acha de longe os mais descontados. O que subiu fica verde e o que caiu, vermelho,
+   só no "o que mudou". Todo seletor começa por `.fu` (escopo-css.test.js).
+   ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+.fu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+  width: min(100%, 1480px);
+  margin: 0 auto;
+  padding: var(--esp-5) var(--esp-4) var(--esp-6);
+}
+
+.fu .fu-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3) var(--esp-5);
+}
+
+.fu .fu-titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fu .fu-titulo .panel-title {
+  margin: 0;
+}
+
+.fu .fu-ferramentas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-3);
+}
+
+.fu .fu-busca {
+  width: 16rem;
+  height: 34px;
+  padding: 0 var(--esp-3);
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  color: var(--texto-forte);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.fu .fu-busca:focus-visible {
+  border-color: var(--acento);
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.fu .fu-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+  color: var(--texto);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.fu .fu-filtro input {
+  accent-color: var(--acento);
+}
+
+/* ── A tabela ───────────────────────────────────────────────────────────────────────── */
+
+.fu .fu-tabela-caixa {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+  animation: entrar var(--t-lento) var(--curva-saida) both;
+}
+
+.fu .fu-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.fu .fu-tabela th,
+.fu .fu-tabela td {
+  padding: 0.55rem var(--esp-3);
+  border-bottom: 1px solid var(--borda);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.fu .fu-tabela thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: var(--cabecalho);
+}
+
+.fu .fu-tabela tbody tr:hover {
+  background: color-mix(in srgb, var(--acento) 5%, transparent);
+}
+
+.fu .fu-tabela tbody tr:last-child th,
+.fu .fu-tabela tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.fu .fu-ordenar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0.6rem var(--esp-3);
+  background: none;
+  border: 0;
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fu .fu-sem-ordem {
+  cursor: default;
+}
+
+.fu .fu-ordenar:not(.fu-sem-ordem):hover,
+.fu .fu-ordenar.ativo {
+  color: var(--texto-forte);
+}
+
+.fu .fu-ordenar.ativo span {
+  color: var(--acento);
+}
+
+.fu .fu-fundo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+  max-width: 28rem;
+  font-weight: 600;
+}
+
+.fu .fu-ticker {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  background: var(--acento-fundo);
+  color: var(--texto-forte);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.fu .fu-nome {
+  overflow: hidden;
+  color: var(--texto-forte);
+  text-overflow: ellipsis;
+}
+
+.fu .fu-num {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A barrinha do deságio, atrás do número. */
+.fu .fu-desagio span {
+  position: relative;
+  display: inline-block;
+  min-width: 4.2rem;
+  color: var(--texto-forte);
+  font-weight: 700;
+}
+
+.fu .fu-desagio span::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  bottom: -3px;
+  width: calc(var(--forca, 0) * 100% + 8px);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--acento);
+  opacity: 0.55;
+}
+
+.fu .fu-sem-estoque .fu-nome,
+.fu .fu-sem-estoque .fu-num {
+  opacity: 0.6;
+}
+
+.fu .fu-zerado,
+.fu .fu-fechado {
+  color: var(--texto-fraco);
+  font-style: italic;
+}
+
+.fu .fu-vazio,
+.fu .fu-nota {
+  margin: 0;
+  color: var(--texto-fraco);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* ── O que mudou ────────────────────────────────────────────────────────────────────── */
+
+.fu .fu-mudancas-caixa .panel-title {
+  margin-bottom: var(--esp-2);
+}
+
+.fu .fu-mudancas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: var(--esp-3);
+  margin-top: var(--esp-3);
+}
+
+.fu .fu-mudanca h3 {
+  margin: 0 0 var(--esp-1);
+  color: var(--texto-forte);
+  font-size: 0.82rem;
+}
+
+.fu .fu-mudanca ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.fu .fu-m-fundo {
+  color: var(--texto);
+}
+
+.fu .fu-de {
+  color: var(--texto-fraco);
+}
+
+.fu .fu-subiu {
+  color: var(--positivo);
+}
+
+.fu .fu-caiu {
+  color: var(--negativo);
+}
+
+@media (max-width: 620px) {
+  .fu {
+    padding-inline: var(--esp-3);
+  }
+
+  .fu .fu-busca {
+    flex: 1 1 100%;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fu .fu-tabela-caixa {
+    animation: none;
+  }
+}

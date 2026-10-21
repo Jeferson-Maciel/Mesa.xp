@@ -798,6 +798,7 @@ export const iniciarOrdens = (secao) => {
   const statusDoEstoque = $('estoque-status');
 
   function mostrarEstoque() {
+    for (const fn of ouvintesDaPrateleira) fn();
     const { estoque } = estado;
     if (!estoque) {
       statusDoEstoque.textContent = 'nenhum arquivo carregado';
@@ -868,6 +869,14 @@ export const iniciarOrdens = (secao) => {
   // A ponte é uma só na página: a Fila (as respostas no Outlook) e a Prateleira de fundos a pegam daqui.
   registrarServico('robo', robo);
   registrarServico('versaoDoRobo', VERSAO_DO_ROBO);
+  // A prateleira do secundário, para a aba Fundos: a captura de agora, o aviso quando ela muda e o
+  // pedido de uma nova ao robô.
+  const ouvintesDaPrateleira = new Set();
+  registrarServico('prateleira', {
+    atual: () => estado.estoque,
+    aoMudar: (fn) => ouvintesDaPrateleira.add(fn),
+    atualizar: () => atualizarCotacoes()
+  });
   // O que o robô está buscando agora, para o painel dizer; vazio quando não está.
   let buscando = '';
   const statusDoRobo = $('robo-status');

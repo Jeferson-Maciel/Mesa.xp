@@ -8,13 +8,14 @@ import { linkDaNota } from './modulos/anotacoes/render.js';
 import { iniciarVigia } from './modulos/anotacoes/vigia.js';
 import { iniciarCalendario } from './modulos/calendario/index.js';
 import { iniciarContadorDaFila, iniciarFila, iniciarVigiaDaFila } from './modulos/fila/index.js';
+import { iniciarFotosDaPrateleira, iniciarFundos } from './modulos/fundos/index.js';
 import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
 import { iniciarRendaFixa } from './modulos/rendafixa/index.js';
 import { acharEm, registrarFonteDeBusca } from './comum/busca.js';
 import { NOMES_DOS_GRUPOS } from './comum/fila/regras.js';
 import { filaDaPagina } from './comum/fila/repositorio.js';
-import { quandoHouver } from './comum/servicos.js';
+import { quandoHouver, servico } from './comum/servicos.js';
 import { POSTS, TOPICOS } from './modulos/operacional/conteudo.js';
 import { ABAS, ligarAbas } from './shell/abas.js';
 import { ligarBusca } from './shell/busca.js';
@@ -47,6 +48,7 @@ iniciarOrdens(document.getElementById('modulo-ordens'));
 ligarAbas({
   preguicosos: {
     fila: iniciarFila,
+    fundos: iniciarFundos,
     rendafixa: iniciarRendaFixa,
     calendario: iniciarCalendario,
     operacional: iniciarOperacional,
@@ -69,7 +71,7 @@ try {
  * (a base do Slab que vem no arquivo), as anotações e os cartões da Fila (os dois no navegador). O
  * histórico do Ordens é registrado pelo próprio Ordens.
  */
-const NOMES_DAS_ABAS = { ordens: 'Ordens', fila: 'Fila do dia', rendafixa: 'Renda Fixa', calendario: 'Calendário', operacional: 'Operacional', anotacoes: 'Anotações' };
+const NOMES_DAS_ABAS = { ordens: 'Ordens', fila: 'Fila do dia', fundos: 'Prateleira de fundos', rendafixa: 'Renda Fixa', calendario: 'Calendário', operacional: 'Operacional', anotacoes: 'Anotações' };
 registrarFonteDeBusca({
   id: 'abas',
   nome: 'Abas',
@@ -126,6 +128,28 @@ registrarFonteDeBusca({
     });
   }
 });
+
+// Os fundos da prateleira: abre a aba Fundos já filtrada.
+registrarFonteDeBusca({
+  id: 'fundos',
+  nome: 'Prateleira de fundos',
+  buscar: (termo) =>
+    acharEm(servico('prateleira')?.atual()?.fundos ?? [], termo, (f) => ({ titulo: `${f.ticker ?? ''} ${f.nome}` })).map((f) => ({
+      titulo: f.ticker ? `${f.ticker} · ${f.nome}` : f.nome,
+      detalhe: `deságio ${(f.desagio ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%${(f.estoque ?? 0) > 0 ? '' : ' · sem estoque'}`,
+      abrir: () => {
+        location.hash = 'fundos';
+        quandoHouver('fundos.mostrar', (mostrar) => mostrar(f.ticker ?? f.nome));
+      }
+    }))
+});
+
+// A foto da prateleira de cada dia, para o "o que mudou" da aba Fundos.
+try {
+  iniciarFotosDaPrateleira();
+} catch (erro) {
+  console.error('A foto da prateleira não iniciou:', erro);
+}
 
 // E o vigia das respostas no Outlook, pelo robô.
 try {

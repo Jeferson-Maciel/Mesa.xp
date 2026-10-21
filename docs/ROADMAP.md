@@ -25,6 +25,13 @@ O passo a passo está em [`CONTEXTO.md`](CONTEXTO.md), "A testar no Hub e no Out
    lista do Outlook na web de verdade (a lista, as opções, o e-mail no `title` do remetente, a hora)
    precisa ser conferida com um e-mail de teste respondido.
 
+## Prateleira de fundos
+
+- **O disparo "Tabela de Cetipados"** (o modelo do Operacional: os fundos agrupados por "ROA.E. x%"
+  e por "Deságio Venda x%", com o "(IQ)" dos de investidor qualificado). Espera o operador: **como se
+  chega ao ROA.E. de cada fundo** (o ROA máximo da captura? arredondado como? quais fundos entram?), e
+  de onde vêm o deságio de venda e o "IQ" (a captura da Prateleira tem o de compra).
+
 ## Ordens
 
 - **Tabela de posições colada lê a coluna errada.** `Ativo / Qtd. Teórica / Qtd. Atual` vira ordem

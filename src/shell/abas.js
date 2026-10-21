@@ -5,7 +5,7 @@
  * jeitos: no site (Vercel) e aberto do disco (`file://`). Hash funciona igual nos dois, sem servidor, e
  * dá a cada ferramenta um link próprio para favoritar.
  *
- * Fila, Renda Fixa, Calendário, Operacional e Anotações só iniciam quando a aba abre pela primeira vez. O código já
+ * Fila, Fundos, Renda Fixa, Calendário, Operacional e Anotações só iniciam quando a aba abre pela primeira vez. O código já
  * está no arquivo — o build é um arquivo só, sem `import()` dinâmico —, mas Calendário e
  * Operacional abrem conexão com o banco ao iniciar, e quem só gera ordens não tem por que conectar
  * a nada.
@@ -17,7 +17,7 @@
  * atalhos de teclado de uma ferramenta só valem com a aba dela aberta.
  */
 
-export const ABAS = ['ordens', 'fila', 'rendafixa', 'calendario', 'operacional', 'anotacoes'];
+export const ABAS = ['ordens', 'fila', 'fundos', 'rendafixa', 'calendario', 'operacional', 'anotacoes'];
 
 export const ABA_PADRAO = 'ordens';
 

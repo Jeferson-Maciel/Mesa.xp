@@ -9,6 +9,8 @@ XP usarem o dia inteiro:
   cliente, a posição e o print.
 - **Fila do dia** — o pedido depois que o e-mail sai: aguardando o cliente, o cliente respondeu,
   aprovado, executado; os prazos de cada um, a ficha de execução e a boleta do Hub. Fica no navegador.
+- **Fundos** — a Prateleira do secundário numa tabela que ordena e filtra (deságio, ROA máximo,
+  mínimo, estoques), e o que mudou desde o último dia.
 - **Renda Fixa** — o RendaFixa Pro: lê a planilha de renda fixa exportada pela XP e monta o texto
   de WhatsApp com a maior taxa por prazo e categoria.
 - **Calendário** — o calendário semanal de presença da equipe, gravado no Supabase.
@@ -46,7 +48,8 @@ a tela e para o código. No ar em **https://mesa-xp.vercel.app** (Vercel, ligada
 | Os literais das saídas (e-mails, tabela, lotes) | [`docs/FORMATOS-DE-SAIDA.md`](docs/FORMATOS-DE-SAIDA.md) |
 | Fundos no secundário: a cotação, o preço exato, **as regras do robô do Hub**, a venda, o Estoque clientes, os grupos de e-mail e o print (SnapDOM) | [`docs/secundario.md`](docs/secundario.md) |
 | Tesouro Direto: a aplicação, o resgate e o que o Hub de verdade faz | [`docs/tesouro.md`](docs/tesouro.md) |
-| Fila do dia: o cartão, os estados, os prazos, o pedido repetido e a conta nova | [`docs/fila.md`](docs/fila.md) |
+| Fila do dia: o cartão, os estados, os prazos, o pedido repetido e a conta nova, e as respostas no Outlook | [`docs/fila.md`](docs/fila.md) |
+| Prateleira de fundos: a tabela e o que mudou | [`docs/fundos.md`](docs/fundos.md) |
 | Renda Fixa | [`docs/rendafixa.md`](docs/rendafixa.md) |
 | Calendário | [`docs/calendario.md`](docs/calendario.md) |
 | Operacional | [`docs/operacional.md`](docs/operacional.md) |
@@ -139,7 +142,7 @@ site e o que os colegas abrem com dois cliques, do disco. **Proibido**: recurso 
 - O visual é por token (`--fundo`, `--texto`, `--acento`…), **nunca valor literal**: um `#fff`
   quebra um dos dois temas. Cada aba tem a cor dela em `--acento`. Contrastes medidos (detalhe em
   [`docs/casca-e-visual.md`](docs/casca-e-visual.md)).
-- Todo seletor da Fila começa por `.fl`, do Renda Fixa por `.rf`, do Calendário por `.cal`, do
+- Todo seletor da Fila começa por `.fl`, da Prateleira de fundos por `.fu`, do Renda Fixa por `.rf`, do Calendário por `.cal`, do
   Operacional por `.op` e das Anotações por `.an`; um teste recusa o que escapa.
 
 ## Pendência de segurança — fase 2
@@ -163,7 +166,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.255 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.265 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

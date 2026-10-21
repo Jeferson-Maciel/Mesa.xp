@@ -29,7 +29,7 @@ cada sessão.
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 23 commits locais, sem push**, de `b1aa45d` a este: push é deploy, e espera
+- **De 20 a 21/10 foram 23 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entra também o workflow semanal dos tickers da B3.
 
 ## 21/10: a revisão, a lista da B3 e a documentação por módulo

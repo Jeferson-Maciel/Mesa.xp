@@ -34,7 +34,12 @@ const montar = async (pedidos, { versao = '1.8.0' } = {}) => {
     }
   };
   const avisos = [];
-  const vigia = criarVigiaDoOutlook({ robo, atende: (v) => v >= '1.8.0', repo, avisar: (m) => avisos.push(m), agora: () => AGORA });
+  avisos.opcoes = [];
+  const avisar = (m, o) => {
+    avisos.push(m);
+    avisos.opcoes.push(o);
+  };
+  const vigia = criarVigiaDoOutlook({ robo, atende: (v) => v >= '1.8.0', repo, avisar, agora: () => AGORA });
   const ler = async (respostas, extra = {}) => {
     robo.entregar({ em: AGORA, lista: true, itens: 30, respostas, ...extra });
     await vigia.pronto();
@@ -51,6 +56,12 @@ describe('o vigia das respostas no Outlook', () => {
     expect(lido).toMatchObject({ estado: 'respondeu', resposta: { id: 'r1', previa: 'De acordo, pode seguir.', em: em(10, 42) } });
     expect(avisos[0]).toContain('Fulana Tal respondeu (conta 1234567): "De acordo, pode seguir."');
     expect(vigia.soltas()).toEqual([]);
+  });
+
+  it('a resposta do cliente é um aviso com som (Fase 3: o som só na resposta, no erro e no prazo)', async () => {
+    const { avisos, ler } = await montar([pedido()]);
+    await ler([resposta()]);
+    expect(avisos.opcoes[0]).toMatchObject({ som: true, acao: { rotulo: 'Ver na Fila' } });
   });
 
   it('a mesma resposta de novo não mexe; a conversa com mensagem nova troca a prévia', async () => {

@@ -8,10 +8,35 @@
  * deixa a ação ser de um clique, sem janela de "tem certeza?".
  *
  * Erro e aviso com ação ficam mais tempo: quem estava olhando para outro canto da tela ainda tem
- * tempo de ler e de clicar.
+ * tempo de ler e de clicar. O aviso de prazo da Fila (`tipo: 'prazo'`), mais ainda.
+ *
+ * Fase 3 (21/10/2026, decidido com o usuário): o som toca só no que pede a pessoa de volta — o erro, o
+ * aviso de prazo e a resposta do cliente (que pede `som: true`) —, e não a cada "copiado". E no máximo
+ * 3 avisos à vista: o quarto tira o mais antigo, menos o de erro, que fica até sair sozinho.
  */
 
-const DURACAO = { info: 3200, erro: 6000, acao: 7000 };
+const DURACAO = { info: 3200, erro: 6000, acao: 7000, prazo: 15000 };
+
+export const MAXIMO_DE_AVISOS = 3;
+
+/** Se o aviso toca o som: o erro e o de prazo, ou quando o chamador pede (`som`). */
+export const tocaSom = ({ tipo = 'info', som } = {}) => som ?? (tipo === 'erro' || tipo === 'prazo');
+
+/**
+ * Os avisos à vista que saem para o novo caber (os índices, do mais antigo ao mais novo): os mais
+ * antigos que não são erro. Só erros à vista, nenhum sai.
+ *
+ * @param {string[]} tipos  os tipos dos avisos à vista, do mais antigo ao mais novo
+ */
+export const avisosParaTirar = (tipos, maximo = MAXIMO_DE_AVISOS) => {
+  const sobra = tipos.length - (maximo - 1);
+  if (sobra <= 0) return [];
+  return tipos
+    .map((tipo, i) => [tipo, i])
+    .filter(([tipo]) => tipo !== 'erro')
+    .slice(0, sobra)
+    .map(([, i]) => i);
+};
 
 /**
  * Sinalização de áudio sutil (Web Audio API): feedback não intrusivo para ações concluídas e erros.
@@ -89,17 +114,18 @@ export const ligarBotaoDeSom = (botao) => {
 
 /**
  * @param {string} mensagem
- * @param {{ tipo?: 'info' | 'erro', acao?: { rotulo: string, fazer: () => void } }} [opcoes]
+ * @param {{ tipo?: 'info' | 'erro' | 'prazo', som?: boolean, acao?: { rotulo: string, fazer: () => void } }} [opcoes]
  */
-export const aviso = (mensagem, { tipo = 'info', acao = null } = {}) => {
-  tocarSom(tipo);
+export const aviso = (mensagem, { tipo = 'info', som, acao = null } = {}) => {
+  if (tocaSom({ tipo, som })) tocarSom(tipo === 'erro' ? 'erro' : 'info');
   const lista = document.getElementById('toasts');
   if (!lista) return;
 
   const erro = tipo === 'erro';
-  const duracao = acao ? DURACAO.acao : erro ? DURACAO.erro : DURACAO.info;
+  const duracao = tipo === 'prazo' ? DURACAO.prazo : acao ? DURACAO.acao : erro ? DURACAO.erro : DURACAO.info;
   const toast = document.createElement('div');
-  toast.className = erro ? 'toast erro' : 'toast';
+  toast.className = erro ? 'toast erro' : tipo === 'prazo' ? 'toast prazo' : 'toast';
+  toast.dataset.tipo = tipo;
   toast.setAttribute('role', erro ? 'alert' : 'status');
   // A linha que encolhe no pé do aviso mostra quanto tempo ele ainda fica (base.css).
   toast.style.setProperty('--duracao', `${duracao}ms`);
@@ -134,6 +160,11 @@ export const aviso = (mensagem, { tipo = 'info', acao = null } = {}) => {
     toast.classList.add('com-acao');
     toast.append(botao);
   }
+
+  // O quarto tira o mais antigo, menos o de erro. Os que já estão saindo não contam.
+  const aVista = [...lista.children].filter((t) => !t.classList.contains('saindo'));
+  for (const i of avisosParaTirar(aVista.map((t) => t.dataset.tipo ?? 'info'))) aVista[i].sairAgora?.();
+  toast.sairAgora = sair;
 
   lista.appendChild(toast);
   setTimeout(sair, duracao);

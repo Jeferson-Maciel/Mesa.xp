@@ -540,6 +540,22 @@ dialog:not([open])::backdrop {
   background: var(--negativo);
 }
 
+/* O aviso de prazo da Fila (src/modulos/fila/vigiaPrazos.js): âmbar, com o relógio. */
+.toast.prazo::before {
+  background-color: var(--atencao-fundo);
+  box-shadow: inset 0 0 0 1px var(--atencao-borda);
+}
+
+.toast.prazo > .toast-icone {
+  background: var(--atencao);
+  -webkit-mask-image: var(--i-relogio);
+  mask-image: var(--i-relogio);
+}
+
+.toast.prazo::after {
+  background: var(--atencao);
+}
+
 .toast.saindo {
   animation: toast-sai var(--t-lento) var(--curva) both;
 }

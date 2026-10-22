@@ -92,7 +92,9 @@ export const criarVigiaDoOutlook = ({ robo, atende = () => true, repo, avisar = 
       if (casamento.tipo === 'casou') {
         const atualizado = registrarResposta(casamento.pedido, resposta, agora());
         await gravar(atualizado);
+        // A resposta do cliente é um dos três avisos com som (Fase 3): pede a pessoa de volta.
         avisar(`${r.de || 'O cliente'} respondeu (conta ${atualizado.conta}): "${curto(r.previa) || 'sem prévia'}"`, {
+          som: true,
           acao: { rotulo: 'Ver na Fila', fazer: () => (location.hash = '#fila') }
         });
       } else if (casamento.tipo !== 'nenhum' || r.prefixo || r.conta) {

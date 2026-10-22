@@ -10,43 +10,57 @@
  * (motor.golden.test.js) comparam a saída com a do motor original.
  */
 
-const PU_MAXIMO = 1300;
+import { regrasPadrao } from './regras.js';
 
-// Prazos (em anos) que entram na mensagem, por seção. Isentos têm regra própria em processRows.
+// As regras — o PU máximo, os prazos, os isentos, os bancos, a mensagem… — moram em regras.js,
+// configuráveis na tela, uma por mercado (21/10/2026). Estas são as do padrão, para quem as lê.
+const PADRAO = regrasPadrao('primario');
+
+// Prazos (em anos) que entram na mensagem, por seção, no padrão. Isentos têm regra própria em processRows.
 const PRAZOS_EXIBIDOS = {
-    pre: (prazo) => prazo <= 5,
-    pos: (prazo) => prazo === 2 || prazo === 4 || prazo === 6,
-    ipca: (prazo) => prazo <= 3,
+    pre: (prazo) => PADRAO.prazos.pre.includes(prazo),
+    pos: (prazo) => PADRAO.prazos.pos.includes(prazo),
+    ipca: (prazo) => PADRAO.prazos.ipca.includes(prazo),
 };
 
-const TIPOS_ISENTOS = ['LCA', 'LCI', 'LCD', 'CRI', 'CRA'];
+/** O motivo de cada descarte, com o PU máximo das regras. */
+function motivosDoDescarte(regras = PADRAO) {
+    return {
+        modo: 'Do outro mercado',
+        pu: `PU acima de R$ ${regras.filtros.puMaximo.toLocaleString('pt-BR')}`,
+        publico: 'Público restrito',
+        liquidez: 'Liquidez diária',
+        taxa: 'Sem taxa legível',
+        prazo: 'Prazo fora de ano cheio',
+        tipo: 'Tipo não reconhecido',
+        isento: 'Isento fora dos prazos',
+    };
+}
 
-const MOTIVOS_DESCARTE = {
-    modo: 'Do outro mercado',
-    pu: 'PU acima de R$ 1.300',
-    publico: 'Público restrito',
-    liquidez: 'Liquidez diária',
-    taxa: 'Sem taxa legível',
-    prazo: 'Prazo fora de ano cheio',
-    tipo: 'Tipo não reconhecido',
-    isento: 'Isento fora dos prazos',
-};
+const MOTIVOS_DESCARTE = motivosDoDescarte(PADRAO);
 
-// Nome por extenso → sigla. Vem antes da busca por sigla porque "Letra de Crédito
-// do Desenvolvimento" contém "lc" e seria lida como LC.
-const TIPOS_POR_NOME = [
-    [/certificado de deposito bancario/, 'CDB'],
-    [/letra de credito do agronegocio/, 'LCA'],
-    [/letra de credito imobiliari/, 'LCI'],
-    [/letra de credito do desenvolvimento/, 'LCD'],
-    [/letra financeira/, 'LF'],
-    [/letra de cambio/, 'LC'],
-    [/certificados? de recebiveis imobiliarios/, 'CRI'],
-    [/certificados? de recebiveis do agronegocio/, 'CRA'],
-    [/debenture/, 'DEBÊNTURE'],
-];
+const escaparRegex = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const BANCOS_CONHECIDOS = /(?:XP|BTG|ITAU|ITAÚ|BRADESCO|SANTANDER|SAFRA|BMG|DAYCOVAL|MASTER|PINE|C6|ABC|OMNI|ORIGINAL|PAN|SOFISA|FIBRA|BARI|BRB|INTER|MERCANTIL|MAXIMA|MÁXIMA|PAULISTA|VOTORANTIM|BV|CAIXA|MODAL|SICOOB|SICREDI|AGIBANK|SOCINAL|PERNAMBUCANAS|DIGIMAIS|FACTA)/i;
+// O que o motor usa das regras, preparado uma vez por objeto de regras.
+const compilados = new WeakMap();
+function compilar(regras) {
+    if (compilados.has(regras)) return compilados.get(regras);
+    const porTamanho = (lista) => [...lista].sort((a, b) => b.length - a.length);
+    const siglas = porTamanho(regras.avancado.siglas.map((t) => t.toLowerCase())).map(escaparRegex).join('|');
+    const c = {
+        // O tipo pelo nome por extenso: cada trecho (sem acento), e "|" separa jeitos de escrever.
+        tiposPorNome: regras.avancado.tiposPorNome.map(([trechos, sigla]) => [
+            String(trechos).split('|').map((t) => removeAccents(t.trim())).filter(Boolean),
+            String(sigla).trim(),
+        ]),
+        siglaNoInicio: new RegExp(`^(${siglas})(?![a-z])`),
+        siglaSolta: new RegExp(`\\b(${siglas})\\b`),
+        prefixoEmissor: `^(?:${porTamanho(regras.avancado.siglas.map((t) => t.toUpperCase())).map(escaparRegex).join('|')}|DEB[EÊ]NTURE)\\s+(?:BANCO\\s+)?`,
+        bancos: regras.bancos.length ? new RegExp(`(?:${regras.bancos.map(escaparRegex).join('|')})`, 'i') : null,
+    };
+    compilados.set(regras, c);
+    return c;
+}
 
 // Funciona com Date de outra janela/iframe, onde instanceof falha
 function ehData(valor) {
@@ -214,14 +228,15 @@ function diasAteOVencimento(raw, hoje = new Date()) {
  * Agronegócio"), a sigla solta ("LCA", "LCD BNDES - SET/2036") ou o prefixo de
  * um ticker ("CDB6258GLVF"). Tickers sem prefixo ("26I1LCD8XR3") → null.
  */
-function normalizeTipoLocal(raw) {
+function normalizeTipoLocal(raw, regras = PADRAO) {
     if (raw === null || raw === undefined || ehData(raw)) return null;
     const s = removeAccents(String(raw)).trim();
     if (!s) return null;
-    for (const [padrao, tipo] of TIPOS_POR_NOME) {
-        if (padrao.test(s)) return tipo;
+    const c = compilar(regras);
+    for (const [trechos, tipo] of c.tiposPorNome) {
+        if (trechos.some((t) => s.includes(t))) return tipo;
     }
-    const sigla = s.match(/^(cdb|lca|lci|lcd|lf|cri|cra|lc)(?![a-z])/) || s.match(/\b(cdb|lca|lci|lcd|lf|cri|cra|lc)\b/);
+    const sigla = s.match(c.siglaNoInicio) || s.match(c.siglaSolta);
     return sigla ? sigla[1].toUpperCase() : null;
 }
 
@@ -257,21 +272,22 @@ function limparEmissor(nome) {
  * Emissor da coluna própria, se houver; senão, extraído do nome do ativo
  * (padrão XP: "CDB PINE - ABR/2033" → "PINE"); por fim, lista de bancos conhecidos.
  */
-function extrairEmissor(emissorRaw, descricao) {
+function extrairEmissor(emissorRaw, descricao, regras = PADRAO) {
     const direto = texto(emissorRaw);
     if (direto && direto.toLowerCase() !== 'nan') return limparEmissor(direto);
 
+    const c = compilar(regras);
     const desc = texto(descricao).toUpperCase();
-    const prefixo = '^(?:CDB|LCA|LCI|LCD|LC|LF|CRI|CRA|DEB[EÊ]NTURE)\\s+(?:BANCO\\s+)?';
+    const prefixo = c.prefixoEmissor;
     const nome = desc.match(new RegExp(prefixo + '(.+?)\\s+[-–]\\s')) || desc.match(new RegExp(prefixo + '(.+?)\\s*[-–]'));
     if (nome) return limparEmissor(nome[1]);
 
-    const conhecido = desc.match(BANCOS_CONHECIDOS);
+    const conhecido = c.bancos ? desc.match(c.bancos) : null;
     return conhecido ? conhecido[0].toUpperCase() : '';
 }
 
-function detectarCabecalho(rows) {
-    const keywords = ['taxa', 'ativo', 'instrumento', 'vencimento', 'rentabilidade', 'juros'];
+function detectarCabecalho(rows, palavras = PADRAO.avancado.palavrasDoCabecalho) {
+    const keywords = palavras.map((p) => removeAccents(p));
     let headerIdx = 0, bestScore = 0;
     const limit = Math.min(rows.length, 15);
     for (let i = 0; i < limit; i++) {
@@ -290,33 +306,43 @@ function detectarCabecalho(rows) {
 }
 
 /**
- * Mapeia campo → índice da coluna, pelo nome do cabeçalho sem acento.
- * Quando várias colunas combinam, vale a última; em "taxa" vale a primeira.
+ * Um nome de coluna das regras casa com o cabeçalho? "trecho" = contém; "=texto" = igual; "^texto" =
+ * começa com; "trecho -outro" = contém o trecho e não contém o outro.
  */
-function mapearColunas(headers) {
+function casaColuna(norm, nome) {
+    const a = removeAccents(String(nome)).trim();
+    if (a.startsWith('=')) return norm === a.slice(1).trim();
+    if (a.startsWith('^')) return norm.startsWith(a.slice(1).trim());
+    const [inclui, ...exclui] = a.split(/\s+-/);
+    return norm.includes(inclui.trim()) && exclui.every((e) => !norm.includes(e.trim()));
+}
+
+/**
+ * Mapeia campo → índice da coluna, pelo nome do cabeçalho sem acento e pelos nomes das regras.
+ * Quando várias colunas combinam, vale a última; em "taxa" vale a primeira — e as outras de taxa
+ * ficam em `indicesDeTaxa`, para procurar a taxa quando a primeira vem vazia.
+ */
+function mapearColunas(headers, colunas = PADRAO.avancado.colunas) {
     const mapping = { tipo: -1, instrumento: -1, taxa: -1, indexador: -1, vencimento: -1, liquidez: -1, emissor: -1, emissao: -1, pu: -1, publico: -1, isento: -1 };
+    const indicesDeTaxa = [];
 
     Array.from(headers, (col, idx) => {
         if (!col) return;
         const norm = removeAccents(String(col)).trim();
-        if (norm.includes('tipo') || norm.includes('ativo') || norm.includes('produto') || norm === 'ticker') mapping.tipo = idx;
-        if (norm.includes('instrumento')) mapping.instrumento = idx;
-        if (norm.includes('tax.min') || norm.includes('tax.max') || norm.includes('taxa') || norm.includes('rentabilidade')) { if (mapping.taxa === -1) mapping.taxa = idx; }
-        if (norm.includes('indexador') || norm.includes('indice') || norm.includes('remuneracao') || norm.includes('benchmark') || norm.includes('referencia')) mapping.indexador = idx;
-        if (norm.includes('vencimento') || norm.includes('prazo') || norm.includes('vertice')) mapping.vencimento = idx;
-        if (norm.includes('liquidez') || norm.includes('carencia')) mapping.liquidez = idx;
-        if (norm.includes('emissor') || norm.includes('banco') || norm.includes('instituicao') || norm.includes('contraparte')) mapping.emissor = idx;
-        if (norm === 'data de emissao' || (norm.includes('emissao') && !norm.includes('taxa'))) mapping.emissao = idx;
-        if (norm === 'p.u' || norm === 'pu' || norm.includes('unitario') || norm.includes('p.u.')) mapping.pu = idx;
-        if (norm.includes('publico') || norm.includes('alvo') || norm.includes('destinatario') || norm.includes('investidor')) mapping.publico = idx;
-        if (norm.startsWith('isento') || norm.includes('isencao')) mapping.isento = idx;
+        for (const campo of Object.keys(mapping)) {
+            if (!(colunas[campo] ?? []).some((nome) => casaColuna(norm, nome))) continue;
+            if (campo === 'taxa') {
+                indicesDeTaxa.push(idx);
+                if (mapping.taxa === -1) mapping.taxa = idx;
+            } else mapping[campo] = idx;
+        }
     });
 
     const nomes = {};
     for (const [campo, idx] of Object.entries(mapping)) {
         if (idx !== -1) nomes[campo] = texto(headers[idx]);
     }
-    return { mapping, nomes };
+    return { mapping, nomes, indicesDeTaxa };
 }
 
 // % do CDI e CDI + spread não se comparam sem projetar o CDI: % do CDI tem prioridade.
@@ -339,8 +365,9 @@ function linhaTemDados(row) {
  * @param {Array[]} rows       matriz da planilha (linhas × colunas)
  * @param {boolean} secundario true = mercado secundário (linhas com Data de Emissão)
  * @param {Date}    hoje       data de referência para calcular os prazos
+ * @param {object}  regras     as regras do mercado (regras.js); sem elas, as do padrão
  */
-function processRows(rows, secundario, hoje = new Date()) {
+function processRows(rows, secundario, hoje = new Date(), regras = regrasPadrao(secundario ? 'secundario' : 'primario')) {
     const resultado = {
         secundario,
         linhaCabecalho: -1,
@@ -353,8 +380,8 @@ function processRows(rows, secundario, hoje = new Date()) {
     const pools = { pre: {}, pos: {}, ipca: {}, isentos: {} };
 
     if (rows && rows.length) {
-        const headerIdx = detectarCabecalho(rows);
-        const { mapping, nomes } = mapearColunas(rows[headerIdx] || []);
+        const headerIdx = detectarCabecalho(rows, regras.avancado.palavrasDoCabecalho);
+        const { mapping, nomes, indicesDeTaxa } = mapearColunas(rows[headerIdx] || [], regras.avancado.colunas);
         resultado.linhaCabecalho = headerIdx;
         resultado.colunas = nomes;
 
@@ -374,30 +401,42 @@ function processRows(rows, secundario, hoje = new Date()) {
             if ((emissaoRaw.length > 0) !== secundario) { descartar('modo'); continue; }
             resultado.totais.noMercado++;
 
-            // 2ª Barreira: Preço Unitário acima de R$ 1.300
+            // 2ª Barreira: Preço Unitário acima do máximo das regras (R$ 1.300 no padrão)
             const pu = parsePULocal(getV('pu'));
-            if (pu !== null && pu > PU_MAXIMO) {
+            if (pu !== null && pu > regras.filtros.puMaximo) {
                 resultado.bloqueados.push({ ativo, motivo: `PU R$ ${pu.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` });
                 descartar('pu'); continue;
             }
 
             // 3ª Barreira: ativos restritos a Investidor Qualificado ou Profissional
             const publico = removeAccents(texto(getV('publico')));
-            if (publico.includes('qualificado') || publico.includes('profissional')) {
-                resultado.bloqueados.push({ ativo, motivo: publico.includes('profissional') ? 'Investidor profissional' : 'Investidor qualificado' });
+            const profissional = publico.includes('profissional') && regras.filtros.descartarProfissional;
+            const qualificado = publico.includes('qualificado') && regras.filtros.descartarQualificado;
+            if (profissional || qualificado) {
+                resultado.bloqueados.push({ ativo, motivo: profissional ? 'Investidor profissional' : 'Investidor qualificado' });
                 descartar('publico'); continue;
             }
 
             const liquidez = removeAccents(texto(getV('liquidez'))).toUpperCase().replace(/\s+/g, '');
-            if (liquidez.includes('DIARIA') || liquidez === 'D+0') { descartar('liquidez'); continue; }
+            if (regras.filtros.descartarLiquidezDiaria && (liquidez.includes('DIARIA') || liquidez === 'D+0')) { descartar('liquidez'); continue; }
 
             let taxaRaw = getV('taxa');
             let taxa = parseTaxaLocal(taxaRaw);
+            // A primeira coluna de taxa vazia: procura nas outras colunas de taxa (Tax.Máx…). O original
+            // lia qualquer célula com "%", e o ROA virava taxa; esse jeito é a opção 'qualquer-celula'.
             if (taxa === null) {
-                for (const cell of row) {
-                    if (typeof cell === 'string' && cell.includes('%')) {
-                        const teste = parseTaxaLocal(cell);
-                        if (teste > 0) { taxa = teste; taxaRaw = cell; break; }
+                if (regras.filtros.taxaFora === 'qualquer-celula') {
+                    for (const cell of row) {
+                        if (typeof cell === 'string' && cell.includes('%')) {
+                            const teste = parseTaxaLocal(cell);
+                            if (teste > 0) { taxa = teste; taxaRaw = cell; break; }
+                        }
+                    }
+                } else {
+                    for (const idx of indicesDeTaxa) {
+                        if (idx === mapping.taxa) continue;
+                        const teste = parseTaxaLocal(row[idx]);
+                        if (teste > 0) { taxa = teste; taxaRaw = row[idx]; break; }
                     }
                 }
             }
@@ -406,8 +445,8 @@ function processRows(rows, secundario, hoje = new Date()) {
             const prazo = parsePrazoLocal(getV('vencimento'), hoje);
             if (!prazo) { descartar('prazo'); continue; }
 
-            let tipo = normalizeTipoLocal(tipoRaw) || normalizeTipoLocal(getV('instrumento'));
-            for (let j = 0; !tipo && j < Math.min(5, row.length); j++) tipo = normalizeTipoLocal(row[j]);
+            let tipo = normalizeTipoLocal(tipoRaw, regras) || normalizeTipoLocal(getV('instrumento'), regras);
+            for (let j = 0; !tipo && j < Math.min(5, row.length); j++) tipo = normalizeTipoLocal(row[j], regras);
             if (!tipo) { descartar('tipo'); continue; }
 
             // Indexador: coluna própria e texto da taxa; na falta, IPCA/CDI nas 15 primeiras células
@@ -417,12 +456,12 @@ function processRows(rows, secundario, hoje = new Date()) {
             // Célula numérica em formato de porcentagem: 105% do CDI chega como 1,05
             if (typeof taxaRaw === 'number' && indexador === 'CDI' && taxa >= 1 && taxa < 3) taxa *= 100;
 
-            const entrada = { prazo, tipo, taxa, indexador, emissor: extrairEmissor(getV('emissor'), row[0]), ativo, dias: diasAteOVencimento(getV('vencimento'), hoje) };
+            const entrada = { prazo, tipo, taxa, indexador, emissor: extrairEmissor(getV('emissor'), row[0], regras), ativo, dias: diasAteOVencimento(getV('vencimento'), hoje) };
 
-            if (TIPOS_ISENTOS.includes(tipo) || isentoPorColuna(getV('isento'))) {
+            if (regras.isentos.tipos.includes(tipo) || isentoPorColuna(getV('isento'))) {
                 const sub = indexador === 'IPCA' ? 'IPCA' : indexador === 'PRE' ? 'PRE' : 'CDI';
-                // Isentos: pré até 3 anos; CDI e IPCA só no vértice de 2 anos
-                const permitido = sub === 'PRE' ? prazo <= 3 : prazo === 2;
+                // Isentos: os prazos das regras (no padrão, pré até 3 anos; CDI e IPCA só no vértice de 2)
+                const permitido = regras.isentos[sub.toLowerCase()].includes(prazo);
                 if (!permitido) { descartar('isento'); continue; }
                 // Chave por prazo e subtipo: LCA, LCI e LCD competem entre si
                 disputar(pools.isentos, `${prazo}_${sub}`, { ...entrada, sub });
@@ -439,9 +478,9 @@ function processRows(rows, secundario, hoje = new Date()) {
     const ordemSub = { PRE: 0, CDI: 1, IPCA: 2 };
 
     resultado.secoes = [
-        { id: 'pre', titulo: 'Pré-fixadas', itens: exibidos(pools.pre, PRAZOS_EXIBIDOS.pre) },
-        { id: 'pos', titulo: 'Pós-fixadas', itens: exibidos(pools.pos, PRAZOS_EXIBIDOS.pos) },
-        { id: 'ipca', titulo: 'IPCA+', itens: exibidos(pools.ipca, PRAZOS_EXIBIDOS.ipca) },
+        { id: 'pre', titulo: 'Pré-fixadas', itens: exibidos(pools.pre, (p) => regras.prazos.pre.includes(p)) },
+        { id: 'pos', titulo: 'Pós-fixadas', itens: exibidos(pools.pos, (p) => regras.prazos.pos.includes(p)) },
+        { id: 'ipca', titulo: 'IPCA+', itens: exibidos(pools.ipca, (p) => regras.prazos.ipca.includes(p)) },
         { id: 'isentos', titulo: 'Isentos de IR', itens: Object.values(pools.isentos).sort((a, b) => (ordemSub[a.sub] - ordemSub[b.sub]) || porPrazo(a, b)) },
     ];
     resultado.totais.vencedores = Object.values(pools).reduce((soma, pool) => soma + Object.keys(pool).length, 0);
@@ -474,49 +513,52 @@ function partesDaTaxa(item) {
  * (asteriscos de negrito, "-> ", travessão "–" nos isentos) estável.
  * Retorna '' quando não há oportunidade.
  */
-function montarTexto(resultado) {
-    if (!resultado || !resultado.totais.exibidos) return '';
-    const isSec = resultado.secundario;
-    const em = (e) => (isSec && e.emissor) ? ` (${e.emissor})` : '';
-    const [pre, pos, ipca, isentos] = resultado.secoes;
-    const lines = [`*Oportunidades de RENDA FIXA hoje!* ⭐${isSec ? ' (MERCADO SECUNDÁRIO)' : ''}\n`];
+function montarMensagem(resultado, regras = regrasPadrao(resultado?.secundario ? 'secundario' : 'primario')) {
+    const vazia = { texto: '', cabecalho: '', blocos: {}, rodape: '' };
+    if (!resultado || !resultado.totais.exibidos) return vazia;
+    const m = regras.mensagem;
+    const taxa = (num) => {
+        let t = num.toFixed(m.casas).replace('.', ',');
+        if (m.tirarZeros && m.casas > 0 && t.endsWith(',' + '0'.repeat(m.casas))) t = t.slice(0, -(m.casas + 1));
+        return t;
+    };
+    const prazo = (p) => (p === 1 ? m.prazoUm : m.prazoVarios.replace(/\{n\}/g, String(p)));
+    const preencher = (modelo, e) =>
+        modelo.replace(/\{(prazo|tipo|taxa|emissor)\}/g, (_, k) =>
+            k === 'prazo' ? prazo(e.prazo) : k === 'tipo' ? e.tipo : k === 'taxa' ? taxa(e.taxa) : m.mostrarEmissor && e.emissor ? ` (${e.emissor})` : '');
+    const modeloDe = {
+        pre: () => m.linhas.pre,
+        pos: (e) => (e.indexador === 'CDI+' ? m.linhas.posCdiMais : m.linhas.posCdi),
+        ipca: () => m.linhas.ipca,
+        isentos: (e) => (e.sub === 'IPCA' ? m.linhas.isentoIpca : e.indexador === 'CDI+' ? m.linhas.isentoCdiMais : e.sub === 'CDI' ? m.linhas.isentoCdi : m.linhas.isentoPre),
+    };
 
-    if (pre.itens.length) {
-        lines.push('*Taxas pré fixadas:*');
-        pre.itens.forEach((e) => lines.push(`-> ${fmtP(e.prazo)} - ${e.tipo} ${fmtT(e.taxa)}% a.a.${em(e)}`));
-        lines.push('');
+    const porId = Object.fromEntries(resultado.secoes.map((secao) => [secao.id, secao]));
+    const blocos = {};
+    for (const id of m.ordem) {
+        const secao = porId[id];
+        if (!secao || !secao.itens.length) continue;
+        blocos[id] = [m.titulos[id], ...secao.itens.map((e) => preencher(modeloDe[id](e), e))].filter((linha, i) => i > 0 || linha !== '').join('\n');
     }
+    const ids = Object.keys(blocos);
+    // Como o original: uma linha em branco depois de cada seção, menos a dos isentos no fim.
+    let corpo = ids.map((id) => blocos[id]).join('\n\n') + (ids.at(-1) === 'isentos' ? '' : '\n');
+    if (m.rodape) corpo = corpo.replace(/\n*$/, '') + '\n\n' + m.rodape;
+    const texto = (m.cabecalho ? m.cabecalho + '\n\n' : '') + corpo;
+    return { texto, cabecalho: m.cabecalho, blocos, rodape: m.rodape };
+}
 
-    if (pos.itens.length) {
-        lines.push('*Taxas Pós-fixadas:*');
-        pos.itens.forEach((e) => lines.push(e.indexador === 'CDI+'
-            ? `-> ${fmtP(e.prazo)} - ${e.tipo} CDI + ${fmtT(e.taxa)}% a.a.${em(e)}`
-            : `-> ${fmtP(e.prazo)} - ${e.tipo} ${fmtT(e.taxa)}% CDI${em(e)}`));
-        lines.push('');
-    }
-
-    if (ipca.itens.length) {
-        lines.push('*Taxas IPCA+:*');
-        ipca.itens.forEach((e) => lines.push(`-> ${fmtP(e.prazo)} - ${e.tipo} IPCA + ${fmtT(e.taxa)}% a.a.${em(e)}`));
-        lines.push('');
-    }
-
-    if (isentos.itens.length) {
-        lines.push('*LCAs/LCIs ISENTA DE IR*');
-        isentos.itens.forEach((e) => {
-            const p = fmtP(e.prazo);
-            if (e.sub === 'IPCA') lines.push(`-> ${p} – ${e.tipo} IPCA +${fmtT(e.taxa)}%${em(e)}`);
-            else if (e.indexador === 'CDI+') lines.push(`-> ${p} – ${e.tipo} CDI +${fmtT(e.taxa)}%${em(e)}`);
-            else if (e.sub === 'CDI') lines.push(`-> ${p} – ${e.tipo} ${fmtT(e.taxa)}% CDI${em(e)}`);
-            else lines.push(`-> ${p} – ${e.tipo} ${fmtT(e.taxa)}% a.a.${em(e)}`);
-        });
-    }
-
-    return lines.join('\n');
+/**
+ * Texto final para WhatsApp. É o que o cliente lê: com as regras do padrão, o formato do original
+ * (asteriscos de negrito, "-> ", travessão "–" nos isentos), estável. Retorna '' quando não há
+ * oportunidade.
+ */
+function montarTexto(resultado, regras) {
+    return montarMensagem(resultado, regras).texto;
 }
 
 export {
-    processRows, montarTexto, partesDaTaxa, parseTaxaLocal, parsePULocal, parsePrazoLocal, diasAteOVencimento,
+    processRows, montarTexto, montarMensagem, motivosDoDescarte, mapearColunas, partesDaTaxa, parseTaxaLocal, parsePULocal, parsePrazoLocal, diasAteOVencimento,
     classificarDiasEmAnos, normalizeTipoLocal, detectarIndexador, extrairEmissor, parseNumero,
     fmtT, fmtP, MOTIVOS_DESCARTE, PRAZOS_EXIBIDOS,
 };

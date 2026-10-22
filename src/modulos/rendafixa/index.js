@@ -2,11 +2,11 @@ import { chaveDoDia } from '../../comum/dia.js';
 import { sheetjs } from '../../vendor/sheetjs.js';
 import { aviso } from '../../ui/avisos.js';
 import { buscarReferencia, excluir, lerHistorico, novoRegistro, salvar } from './historico.js';
-import { montarTexto, processRows } from './motor.js';
+import { montarMensagem, motivosDoDescarte, processRows } from './motor.js';
 import { lerPlanilha } from './planilha.js';
-import { trechosDaMensagem } from './analise.js';
 import { desenharImagem, layoutDaImagem } from './imagem.js';
 import { diasUteisAte, simularPre } from './simulador.js';
+import { MARCACAO_DAS_REGRAS, ligarRegras } from './telaDasRegras.js';
 import { ehDiaUtil } from '../../comum/diasUteis.js';
 import {
   DICAS_MERCADO,
@@ -78,6 +78,7 @@ export const iniciarRendaFixa = (secao) => {
   };
 
   const EXTENSOES = /\.(xlsx|xls|csv)$/i;
+  const mercadoAtual = () => (estado.secundario ? 'secundario' : 'primario');
 
   const estado = {
     rows: null, // matriz da planilha atual; reprocessada quando o mercado muda
@@ -91,6 +92,19 @@ export const iniciarRendaFixa = (secao) => {
     visao: 'cartoes',
     leitura: 0 // incrementa a cada arquivo, para descartar leituras antigas
   };
+
+  // As regras de cada mercado (a gaveta "Regras", 21/10/2026): mudou, a análise é refeita.
+  const regras = ligarRegras({
+    raiz: secao.querySelector('.rf'),
+    aoMudar: () => {
+      estado.porMercado = null;
+      if (estado.rows) analisar();
+    },
+    previa: (r, mercado) => {
+      if (!estado.rows) return null;
+      return montarMensagem(processRows(estado.rows, mercado === 'secundario', undefined, r), r).texto || '(nenhuma oportunidade com estas regras)';
+    }
+  });
 
   /* ── Planilha ─────────────────────────────────────────────────────────────────────── */
 
@@ -131,18 +145,23 @@ export const iniciarRendaFixa = (secao) => {
 
   function analisar() {
     if (!estado.rows) return;
-    // Os dois mercados de uma vez: a contagem de cada um vai no seletor, e trocar não relê a planilha.
-    estado.porMercado ??= { false: processRows(estado.rows, false), true: processRows(estado.rows, true) };
+    // Os dois mercados de uma vez, cada um com as regras dele (a gaveta "Regras"): a contagem de cada
+    // um vai no seletor, e trocar não relê a planilha.
+    const config = regras.config();
+    estado.porMercado ??= { false: processRows(estado.rows, false, undefined, config.primario), true: processRows(estado.rows, true, undefined, config.secundario) };
     const resultado = estado.porMercado[estado.secundario];
     estado.resultado = resultado;
-    estado.texto = montarTexto(resultado);
-    estado.trechos = trechosDaMensagem(estado.texto, resultado.secoes);
+    const mensagem = montarMensagem(resultado, config[mercadoAtual()]);
+    estado.texto = mensagem.texto;
+    // Um trecho por seção, para copiar só ela: o cabeçalho, o bloco dela e o rodapé.
+    estado.trechos = Object.fromEntries(Object.entries(mensagem.blocos).map(([id, bloco]) => [id, [mensagem.cabecalho, bloco, mensagem.rodape].filter(Boolean).join('\n\n')]));
     mostrarContagens();
     estado.salvo = false;
     renderResultado();
     renderFunil();
     ui.bloqueados.innerHTML = htmlBloqueados(resultado);
     atualizarArquivo();
+    regras.atualizarPrevia();
     atualizarAcoes();
   }
 
@@ -196,6 +215,7 @@ export const iniciarRendaFixa = (secao) => {
       b.setAttribute('aria-checked', String(ativo));
     }
     ui.dicaMercado.textContent = DICAS_MERCADO[valor];
+    regras.atualizarSelo(valor);
     if (reprocessar && mudou && estado.rows) analisar();
   }
 
@@ -307,7 +327,7 @@ export const iniciarRendaFixa = (secao) => {
   function renderFunil() {
     const abertos = [...ui.funilDetalhes.querySelectorAll('details')].map((d) => d.open);
     ui.funil.innerHTML = htmlFunil(estado.resultado);
-    ui.funilDetalhes.innerHTML = htmlDetalhesFunil(estado.resultado, abertos);
+    ui.funilDetalhes.innerHTML = htmlDetalhesFunil(estado.resultado, abertos, motivosDoDescarte(regras.config()[mercadoAtual()]));
     contar(ui.funil);
   }
 
@@ -429,6 +449,7 @@ export const iniciarRendaFixa = (secao) => {
       i: () => !ui.imagem.disabled && baixarImagem(),
       s: () => !ui.salvar.disabled && salvarAnalise(),
       t: () => document.getElementById('btn-tema')?.click(),
+      r: () => regras.abrir(mercadoAtual()),
       '?': () => abrirJanela(ui.atalhos, el('abrir-atalhos'))
     };
     const acao = acoes[e.key.toLowerCase()];
@@ -626,6 +647,10 @@ const MARCACAO = `
           <button type="button" class="seg" role="radio" data-mercado="secundario">Mercado secundário <span class="rf-conta" data-rf="conta-secundario" hidden></span></button>
         </div>
         <p class="rf-nota" data-rf="dica-mercado"></p>
+        <div class="rf-regras-acesso">
+          <button type="button" class="copy-btn" data-rf="abrir-regras" title="As regras e a mensagem de cada mercado (R)">Regras</button>
+          <button type="button" class="rf-selo-regras" data-rf="selo-regras" hidden></button>
+        </div>
       </section>
 
       <section class="panel">
@@ -679,9 +704,11 @@ const MARCACAO = `
       <div><dt><kbd>C</kbd></dt><dd>Copiar mensagem</dd></div>
       <div><dt><kbd>I</kbd></dt><dd>Baixar as oportunidades como imagem</dd></div>
       <div><dt><kbd>S</kbd></dt><dd>Salvar no histórico</dd></div>
+      <div><dt><kbd>R</kbd></dt><dd>Abrir as regras do mercado</dd></div>
       <div><dt><kbd>T</kbd></dt><dd>Alternar tema claro / escuro</dd></div>
       <div><dt><kbd>?</kbd></dt><dd>Mostrar esta lista</dd></div>
     </dl>
     <p class="rf-nota">Também dá para soltar a planilha em qualquer lugar desta aba.</p>
   </dialog>
+  ${MARCACAO_DAS_REGRAS}
 </div>`;

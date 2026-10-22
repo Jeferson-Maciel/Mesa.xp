@@ -434,6 +434,77 @@ try {
     await contexto.close();
   }
 
+  /* ── Renda Fixa: as regras de cada mercado ──────────────────────────────────────────── */
+  // A gaveta "Regras" (21/10/2026): o que muda vale na hora na mensagem; o inválido fica em vermelho e
+  // não vale; a configuração vai a um colega por texto; e fica no navegador depois de recarregar.
+  titulo('Renda Fixa: as regras de cada mercado');
+  {
+    const { pagina, contexto, erros } = await abrir({ hash: '#rendafixa', relogio: DATA_GOLDEN });
+    await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
+    await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
+    ok(await pagina.isHidden('[data-rf="selo-regras"]'), 'no padrão, sem o selo de regras personalizadas');
+
+    await pagina.click('[data-rf="abrir-regras"]');
+    await pagina.waitForSelector('.rf-regras[open] [data-regra="filtros.puMaximo"]');
+    ok(
+      (await pagina.textContent('[data-rf-regras="previa"]')) === golden('sintetica', 'primario').texto,
+      'a gaveta abre no mercado aberto, com a mensagem do padrão (a mesma do golden) ao lado'
+    );
+
+    // O emissor na emissão primária: vale na hora, na prévia e na mensagem da aba.
+    await pagina.check('[data-regra="mensagem.mostrarEmissor"]');
+    const comEmissor = (await pagina.textContent('[data-rf-regras="previa"]')) ?? '';
+    ok(/a\.a\. \([A-Z]/.test(comEmissor), 'ligar o emissor põe o emissor nas linhas da prévia, na hora');
+
+    // Um prazo inválido: vermelho, com o motivo, e a regra boa continua valendo.
+    await pagina.fill('[data-regra="prazos.pre"]', '1, dois');
+    ok(
+      (await pagina.getAttribute('[data-regra="prazos.pre"]', 'aria-invalid')) === 'true' &&
+        (await pagina.isVisible('[data-erro="prazos.pre"]')) &&
+        (await pagina.textContent('[data-rf-regras="previa"]')) === comEmissor,
+      'um prazo inválido fica em vermelho, com o motivo, e não muda a mensagem'
+    );
+    await pagina.fill('[data-regra="prazos.pre"]', '1, 2');
+    const soDoisPrazos = (await pagina.textContent('[data-rf-regras="previa"]')) ?? '';
+    ok(soDoisPrazos.includes('-> 2 anos') && !soDoisPrazos.includes('-> 3 anos - CDB 14,70%'), 'corrigido, o prazo vale: só 1 e 2 anos nas pré-fixadas');
+
+    // Copiar a configuração e colá-la de volta depois de restaurar: tudo volta.
+    await pagina.click('[data-acao="copiar-config"]');
+    const configuracao = await pagina.evaluate(() => navigator.clipboard.readText());
+    ok(configuracao.startsWith('MESA XP · Renda Fixa · regras v1'), '"Copiar configuração" copia o texto para mandar a um colega');
+    await pagina.click('[data-acao="restaurar-tudo"]');
+    ok((await pagina.textContent('[data-rf-regras="previa"]')) === golden('sintetica', 'primario').texto, '"Restaurar o padrão" volta a mensagem do padrão');
+    await pagina.click('[data-acao="colar-config"]');
+    await pagina.fill('[data-rf-regras="colar-texto"]', configuracao);
+    await pagina.click('[data-acao="conferir-colar"]');
+    const resumo = (await pagina.textContent('[data-rf-regras="colar-resumo"]')) ?? '';
+    ok(resumo.includes('Mostrar o emissor') && resumo.includes('Prazos das pré-fixadas'), 'ao colar, a gaveta mostra o que vai mudar antes de aplicar');
+    await pagina.click('[data-acao="aplicar-colar"]');
+    ok((await pagina.textContent('[data-rf-regras="previa"]')) === soDoisPrazos, '"Aplicar" põe a configuração colada');
+
+    await pagina.click('.rf-regras [data-fechar]');
+    await pagina.click('[data-rf="copiar"]');
+    await pagina.waitForSelector('[data-rf="copiar"].copiado');
+    // O Windows devolve a área de transferência com \r\n; o texto é o mesmo.
+    ok((await pagina.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n') === soDoisPrazos, '"Copiar mensagem" leva a mensagem das regras novas');
+    ok(
+      (await pagina.isVisible('[data-rf="selo-regras"]')) && (await pagina.textContent('[data-rf="selo-regras"]')) === 'regras personalizadas · 2',
+      'o selo diz que as regras do mercado não são as do padrão, e quantas'
+    );
+
+    // O secundário tem as regras dele: o padrão.
+    await pagina.click('[data-rf="mercado"] [data-mercado="secundario"]');
+    ok(await pagina.isHidden('[data-rf="selo-regras"]'), 'o secundário tem as regras dele, no padrão');
+
+    // Recarregar: as regras ficam no navegador.
+    await pagina.reload();
+    await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
+    await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
+    ok((await pagina.textContent('[data-rf="selo-regras"]')) === 'regras personalizadas · 2', 'recarregada a página, as regras continuam (no navegador)');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   /* ── Fila do dia ────────────────────────────────────────────────────────────────── */
   // O caminho de um pedido (21/10/2026): o e-mail copiado no Ordens vira cartão, o mesmo pedido
   // colado de novo bloqueia como repetido, o prazo perto acende o contador da aba, aprovar dá a
@@ -1678,21 +1749,35 @@ try {
 
     // Abrir no Outlook a venda: a janela abre já, com o texto; o robô no Outlook troca o corpo pelo HTML,
     // com os prints abaixo de "Condições:".
-    const [janelaDoOutlook] = await Promise.all([
-      contexto.waitForEvent('page'),
-      mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]')
-    ]);
-    const colou = await janelaDoOutlook
-      .waitForFunction(() => document.querySelectorAll('[role="textbox"] img').length === 2, null, { timeout: 30_000 })
-      .then(() => true, () => false);
-    const corpoNoOutlook = await janelaDoOutlook.evaluate(() => document.querySelector('[role="textbox"]')?.innerText ?? '');
-    ok(colou && corpoNoOutlook.includes('Condições:') && corpoNoOutlook.trim().endsWith('atte,'), 'o robô põe no Outlook o e-mail de venda com os dois prints, abaixo de "Condições:"');
+    // A janela do e-mail pelo endereço, e não pela primeira que abrir: outra aba (a do robô, a do
+    // print) pode nascer no meio.
+    const abrirOEmailDeVenda = async () => {
+      const antes = new Set(contexto.pages());
+      await mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]');
+      for (let i = 0; i < 100; i++) {
+        const janela = contexto.pages().find((pg) => !antes.has(pg) && !pg.isClosed() && pg.url().includes('/deeplink/compose'));
+        if (janela) return janela;
+        await mesa.waitForTimeout(100);
+      }
+      return null;
+    };
+    const janelaDoOutlook = await abrirOEmailDeVenda();
+    const colou = janelaDoOutlook
+      ? await janelaDoOutlook
+        .waitForFunction(() => document.querySelectorAll('[role="textbox"] img').length === 2, null, { timeout: 30_000 })
+        .then(() => true, () => false)
+      : false;
+    const corpoNoOutlook = janelaDoOutlook ? await janelaDoOutlook.evaluate(() => document.querySelector('[role="textbox"]')?.innerText ?? '') : '';
+    ok(
+      colou && corpoNoOutlook.includes('Condições:') && corpoNoOutlook.trim().endsWith('atte,'),
+      `o robô põe no Outlook o e-mail de venda com os dois prints, abaixo de "Condições:"${colou ? '' : ` (${janelaDoOutlook ? 'a janela abriu' : 'a janela do e-mail não abriu'}; o robô disse ${JSON.stringify(loja.corpoColado ?? null)})`}`
+    );
     const avisouQueColou = await mesa
       .waitForFunction(() => document.body.textContent.includes('Os prints da cotação estão no e-mail'), null, { timeout: 10_000 })
       .then(() => true, () => false);
     ok(avisouQueColou, 'a Mesa avisa que os prints estão no e-mail');
     ok(!JSON.stringify(loja).includes('data:image'), 'o corpo em HTML não fica no armazenamento do robô depois de colado');
-    await janelaDoOutlook.close();
+    await janelaDoOutlook?.close();
 
     // O Outlook muda o rótulo e o papel do corpo do e-mail (1.12.0, a lição da caixa de entrada na
     // 1.11.0: a tela da Microsoft muda): o robô acha o corpo pelo começo do texto que a Mesa mandou.
@@ -1700,12 +1785,7 @@ try {
     // A janela do e-mail pelo endereço, e não pela primeira que abrir: no GitHub (Linux), outra aba pode
     // nascer no meio.
     const abertasAntes = new Set(contexto.pages());
-    await mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]');
-    let outroOutlook = null;
-    for (let i = 0; i < 100 && !outroOutlook; i++) {
-      outroOutlook = contexto.pages().find((p) => !abertasAntes.has(p) && !p.isClosed() && p.url().includes('/deeplink/compose')) ?? null;
-      if (!outroOutlook) await mesa.waitForTimeout(100);
-    }
+    const outroOutlook = await abrirOEmailDeVenda();
     const colouNoOutro = outroOutlook
       ? await outroOutlook
         .waitForFunction(() => document.querySelectorAll('[contenteditable="true"] img').length === 2, null, { timeout: 30_000 })

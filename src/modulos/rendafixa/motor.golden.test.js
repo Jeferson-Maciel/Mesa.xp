@@ -6,6 +6,7 @@ import { LINHAS_SINTETICAS } from './fixtures/sintetica.js';
 import { DATA_GOLDEN, MODOS } from './golden/referencia.js';
 import { montarTexto, processRows } from './motor.js';
 import { lerPlanilha } from './planilha.js';
+import { regrasDoOriginal } from './regras.js';
 
 /**
  * O motor da Mesa XP contra o motor original do RendaFixaDisparo.
@@ -14,6 +15,9 @@ import { lerPlanilha } from './planilha.js';
  * lendo cada planilha do jeito do app original. Aqui o motor novo lê as mesmas planilhas pelo
  * caminho novo — SheetJS vendorizado, `lerPlanilha` — e tem que produzir o mesmo texto, caractere
  * por caractere, e o mesmo `processRows` inteiro: funil, descartes, bloqueados e colunas.
+ *
+ * Com as regras do ORIGINAL (`regrasDoOriginal`): desde 21/10/2026 o padrão da Mesa procura a taxa só
+ * nas colunas de taxa, e o original em qualquer célula com "%" — é a única diferença, e é decidida.
  *
  * As exportações reais da XP ficam fora do git; sem elas, os goldens delas são pulados e só o da
  * planilha sintética roda.
@@ -65,14 +69,14 @@ for (const nome of nomes) {
       const golden = JSON.parse(readFileSync(caminho(`./golden/${nome}.${modo.nome}.json`), 'utf8'));
 
       it(`${modo.nome}: mensagem idêntica à do motor original`, () => {
-        expect(montarTexto(processRows(rows, modo.secundario, hoje))).toBe(golden.texto);
+        expect(montarTexto(processRows(rows, modo.secundario, hoje, regrasDoOriginal(modo.nome)), regrasDoOriginal(modo.nome))).toBe(golden.texto);
       });
 
       // `dias` entrou em 21/10/2026, para a equivalência dos isentos, e não existe no motor original:
       // o resto do resultado continua idêntico ao dele.
       it(`${modo.nome}: funil, descartes, bloqueados e seções idênticos`, () => {
         const semDias = (chave, valor) => (chave === 'dias' ? undefined : valor);
-        const resultado = JSON.parse(JSON.stringify(processRows(rows, modo.secundario, hoje)), semDias);
+        const resultado = JSON.parse(JSON.stringify(processRows(rows, modo.secundario, hoje, regrasDoOriginal(modo.nome))), semDias);
         expect(resultado).toEqual(golden.resultado);
       });
 

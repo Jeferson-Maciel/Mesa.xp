@@ -22,7 +22,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.313 testes (`npm test`), o build e 320
+- A última verificação passou inteira (21/10, noite): 1.340 testes (`npm test`), o build e 336
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -33,6 +33,19 @@ cada sessão.
   limpo antes, ver abaixo), com o workflow semanal dos tickers da B3. Os colegas precisam copiar o
   robô 1.13.0 uma vez ("Instalar robô" → Instalar, no Tampermonkey) e recarregar a aba do Outlook e a
   do Hub; daí em diante ele se atualiza sozinho.
+
+## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
+
+Decidido na sessão de perguntas (Q5–Q7, Q18–Q20, Q24–Q30). Detalhe em `docs/rendafixa.md`, "As
+regras configuráveis".
+
+- **Tudo o que faz a aba funcionar é editável na gaveta "Regras"** (atalho R), uma configuração por
+  mercado, no navegador: filtros, prazos, isentos, bancos, a mensagem inteira (cabeçalho, títulos,
+  modelo de cada linha com marcadores, emissor, casas, ordem, rodapé) e, no Avançado, como a planilha
+  é lida. O inválido fica em vermelho e não vale; "Copiar / Colar configuração" passa a um colega.
+- **A taxa só nas colunas de taxa** é o padrão novo (o ROA não vira mais taxa). Os goldens rodam com as
+  regras do original (`regrasDoOriginal`) e continuam idênticos, inclusive nas três planilhas reais.
+- **Fase 2b** (o robô buscar os dados no Hub, sem a planilha) espera o usuário mostrar a tela no Hub.
 
 ## 21/10 (noite, fim): a Fase 1 do roadmap — a base
 

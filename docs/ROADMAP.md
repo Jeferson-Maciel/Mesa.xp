@@ -17,7 +17,7 @@ fase sai publicada quando os testes, o build e o verificador passam.
    verificador); o robô que se atualiza sozinho (1.13.0, o arquivo `robo-hub.user.js` no site e a
    versão mínima compatível na Mesa); a limpeza deste roadmap e do CSS sem uso; o post "Como a Mesa
    funciona" no Operacional.
-2. **Renda Fixa configurável** — tudo o que faz a aba funcionar vira regra editável na própria tela,
+2. ~~**Renda Fixa configurável**~~ — **feita em 21/10/2026** (ver `docs/rendafixa.md`). Tudo o que faz a aba funcionar virou regra editável na própria tela,
    **uma configuração para cada mercado** (primário e secundário), guardada no navegador de cada um,
    sem login: o PU máximo, os prazos exibidos por categoria e os dos isentos, os tipos isentos, o
    descarte de liquidez diária e de público qualificado e profissional, os bancos, a linha sem Tax.Mín
@@ -110,11 +110,9 @@ Ideias, com o custo grosseiro:
 
 ## Renda Fixa
 
-- Na Fase 2 (acima): a linha sem Tax.Mín nem Tax.Máx (hoje o motor usa o ROA como taxa; o golden da
-  planilha sintética registra isso na linha `CDB SO ROA`), e as regras hoje fixas em `motor.js`.
-- **A seção de isentos diz "LCAs/LCIs"** mesmo quando o vencedor é uma LCD: o título da seção vira
-  editável na Fase 2.
 - **Lê só a primeira aba** da planilha.
+- **A imagem para baixar** segue o formato padrão da taxa e do prazo (as casas e o texto do prazo das
+  regras valem só para a mensagem).
 
 ## Calendário
 

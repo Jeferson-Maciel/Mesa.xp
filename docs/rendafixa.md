@@ -15,13 +15,49 @@ atualize o README junto.
 - **O texto de `montarTexto` é o produto**: o assessor cola direto no WhatsApp do cliente.
   Asteriscos, `-> `, o travessão `–` nos isentos, `a.a.` e `% CDI` são formato visível ao cliente.
   Altere só quando pedido e mostre o antes/depois.
-- **Toda regra de negócio fica em `motor.js`** (funções puras, sem DOM). `index.js` só apresenta.
+- **Toda regra de negócio fica em `motor.js`** (funções puras, sem DOM), **lendo as regras de
+  `regras.js`**. `index.js` só apresenta.
 - **A planilha nunca sai do navegador.** Esse sigilo é a promessa do produto; um teste confere que
   nenhum arquivo do módulo faz chamada de rede.
 - Texto vindo da planilha ou do histórico que vai para `innerHTML` passa por `esc` (ou
   `mensagemEmHTML`, para o negrito do WhatsApp).
 - Registros antigos do histórico (`rendafixa_history`, até 20) não têm `modo`, `arquivo` nem
   `itens`. Leia esses campos com reserva.
+
+## As regras configuráveis (21/10/2026)
+
+Pedido do usuário: "todas as configurações e regras que utilizamos modificáveis no site, sem login, no
+navegador de cada um". **Uma configuração para cada mercado** (primário e secundário), guardada no
+`localStorage` (`regrasSalvas.js`, chave `mesa_rendafixa_regras_v1`; não há dado de cliente nela).
+
+- **`regras.js`** (puro, testado): o padrão de cada mercado, a validação, as diferenças para o padrão
+  e o texto de copiar e colar. O que é configurável:
+  - os **filtros**: o PU máximo, descartar o investidor qualificado, o profissional e a liquidez
+    diária, e onde procurar a taxa quando a primeira coluna de taxa vem vazia;
+  - os **prazos** exibidos de cada seção e os dos isentos (pré, % do CDI/CDI+, IPCA+), e os **tipos**
+    tratados como isentos;
+  - os **bancos** conhecidos (o emissor tirado do nome do título);
+  - a **mensagem**: o cabeçalho, o título de cada seção, o modelo de cada linha (com `{prazo}`,
+    `{tipo}`, `{taxa}` e `{emissor}`), mostrar o emissor ou não, as casas da taxa, tirar o ",00", o
+    texto do prazo, a ordem das seções e um rodapé;
+  - no **Avançado**: o tipo pelo nome por extenso, as siglas, os nomes das colunas (`trecho`, `=igual`,
+    `^começa`, `trecho -exceto`) e as palavras que acham o cabeçalho.
+- **O padrão reproduz o original**, com uma diferença decidida pelo usuário: com a primeira coluna de
+  taxa vazia, a taxa é procurada **só nas outras colunas de taxa** (a Tax.Máx vale); o original lia
+  qualquer célula com "%", e o ROA virava taxa. O jeito antigo é a opção `qualquer-celula`, e é com
+  ele (`regrasDoOriginal`) que os goldens provam o porte fiel. Conferido em 21/10: nas três
+  planilhas reais da XP, nos dois mercados, a mensagem com o padrão novo é idêntica à de ouro, e nem o
+  funil muda; na sintética, só o funil ganha um "sem taxa" (a linha que só tinha o ROA).
+- **A tela** (`telaDasRegras.js`): o botão **Regras** (atalho R) abre uma gaveta com as partes, os
+  campos e, ao lado, a mensagem da planilha carregada com as regras de agora. O que muda vale na hora;
+  um valor inválido fica em vermelho com o motivo, e **vale a última regra boa** — nada é trocado em
+  silêncio. "Restaurar o padrão" por parte e geral; "Copiar do outro mercado" (o cabeçalho e o emissor
+  ficam os do mercado); **"Copiar / Colar configuração"** para passar a um colega (os dois mercados;
+  ao colar, a tela mostra o que vai mudar e pede "Aplicar"). Fora do padrão, o selo **"regras
+  personalizadas · N"** aparece no painel do mercado, com o que mudou no título.
+- **A mensagem sai por partes** (`montarMensagem`: o cabeçalho, um bloco por seção, o rodapé): o
+  "copiar uma seção" junta o cabeçalho, o bloco dela e o rodapé. Uma particularidade do original fica:
+  a mensagem termina com uma linha em branco, a menos que a última seção seja a dos isentos.
 
 ## Mapa
 

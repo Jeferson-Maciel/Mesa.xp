@@ -361,12 +361,13 @@ export const htmlFunil = (r) => {
 /**
  * @param {object} r o resultado do motor
  * @param {boolean[]} abertos quais dos dois quadros estavam abertos, para não fechá-los ao reprocessar
+ * @param {Record<string, string>} [textos] o texto de cada descarte, com o PU das regras do mercado
  */
-export const htmlDetalhesFunil = (r, abertos) => {
+export const htmlDetalhesFunil = (r, abertos, textos = MOTIVOS_DESCARTE) => {
   const t = r.totais;
   const motivos = Object.entries(r.descartes)
     .filter(([, n]) => n > 0)
-    .map(([motivo, n]) => [MOTIVOS_DESCARTE[motivo], n])
+    .map(([motivo, n]) => [textos[motivo], n])
     .sort((a, b) => b[1] - a[1]);
   const disputa = [
     ['Superadas por taxa maior', t.elegiveis - t.vencedores],

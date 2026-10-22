@@ -11,13 +11,15 @@ import * as motor from './motor.js';
 const caminho = (relativo) => fileURLToPath(new URL(relativo, import.meta.url));
 
 describe('motor do Renda Fixa', () => {
-  // Mais o diasAteOVencimento, acrescentado na Mesa XP em 21/10/2026 (a equivalência dos isentos).
-  it('expõe a mesma API do motor original, mais os dias até o vencimento', () => {
+  // Mais o diasAteOVencimento, acrescentado na Mesa XP em 21/10/2026 (a equivalência dos isentos), e as
+  // peças das regras configuráveis (21/10/2026): a mensagem por partes, os motivos com o PU das regras e
+  // o mapa das colunas.
+  it('expõe a mesma API do motor original, mais os dias até o vencimento e as peças das regras', () => {
     expect(Object.keys(motor).sort()).toEqual(
       [
         'processRows', 'montarTexto', 'partesDaTaxa', 'parseTaxaLocal', 'parsePULocal', 'parsePrazoLocal', 'diasAteOVencimento',
         'classificarDiasEmAnos', 'normalizeTipoLocal', 'detectarIndexador', 'extrairEmissor', 'parseNumero',
-        'fmtT', 'fmtP', 'MOTIVOS_DESCARTE', 'PRAZOS_EXIBIDOS'
+        'fmtT', 'fmtP', 'MOTIVOS_DESCARTE', 'PRAZOS_EXIBIDOS', 'montarMensagem', 'motivosDoDescarte', 'mapearColunas'
       ].sort()
     );
   });

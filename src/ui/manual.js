@@ -82,20 +82,36 @@ export const HTML_DO_MANUAL = `
       <!-- Capítulo 2: Como Instalar a Extensão (Guia Para Leigos) -->
       <section id="cap-instalacao-robo" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>2. Como Instalar a Extensão e o Robô (Guia Passo a Passo)</h3>
+          <h3>2. Como Instalar a Extensão e o Robô (Guia Passo a Passo para Iniciantes)</h3>
         </div>
         <p>
-          Para que a Mesa XP consiga falar com o <strong>Hub XP</strong> (consultar preços de cotas, posições e boletas) e com o <strong>Outlook na Web</strong> (vigiar respostas de e-mail), você precisa de uma extensão chamada <strong>Tampermonkey</strong>. O processo leva menos de 2 minutos e só precisa ser feito uma única vez.
+          Para que a Mesa XP consiga consultar preços de cotas no <strong>Hub XP</strong>, abrir boletas de compra/venda, vigiar respostas no <strong>Outlook na Web</strong> e puxar planilhas de Renda Fixa sem download, você precisa de um pequeno programa assistente no navegador chamado <strong>Tampermonkey</strong>.
         </p>
+
+        <div class="manual-callout destaque">
+          <strong>O que é o Tampermonkey em linguagem simples?</strong>
+          Pense no Tampermonkey como um "ajudante invisível" que roda com segurança dentro do seu próprio navegador. Ele não salva senhas nem envia nada para a internet: ele apenas executa as tarefas repetitivas do dia a dia (como ler cotações de fundos e verificar se o cliente respondeu ao e-mail).
+        </div>
 
         <!-- Banner Modo Desenvolvedor -->
         <div class="banner-modo-dev">
           <div class="banner-modo-dev-titulo">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Passo Essencial: Ativar o Modo do Desenvolvedor no Navegador
+            Requisito Obrigatório 1: Ativar o "Modo do Desenvolvedor"
           </div>
           <p>
-            As versões atuais do Google Chrome e do Microsoft Edge exigem que o <strong>"Modo do desenvolvedor"</strong> esteja ativado para permitir extensões locais de scripts. Se você não fizer isso, o navegador pode bloquear o robô.
+            Desde as atualizações recentes de segurança do Google Chrome e Microsoft Edge (Manifest V3), extensões com scripts locais <strong>só funcionam se o Modo do Desenvolvedor estiver ativado</strong>. O processo é rápido e seguro (veja no Passo 2 abaixo).
+          </p>
+        </div>
+
+        <!-- Banner Acesso a Arquivos Locais -->
+        <div class="banner-arquivo-url">
+          <div class="banner-arquivo-url-titulo">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Requisito Obrigatório 2 (Para quem abre a Mesa do computador com 2 cliques):
+          </div>
+          <p>
+            Se você abre a Mesa XP direto de uma pasta no seu computador (o endereço começa com <code>file:///...</code>), você <strong>obrigatoriamente deve ativar a opção "Permitir acesso a URLs de arquivo"</strong> nos Detalhes do Tampermonkey (veja no Passo 4 abaixo). Sem isso, o Chrome bloqueia a comunicação com o robô!
           </p>
         </div>
 
@@ -104,15 +120,15 @@ export const HTML_DO_MANUAL = `
           <div class="passo-card">
             <div class="passo-numero">1</div>
             <div class="passo-conteudo">
-              <strong>Instalar o Tampermonkey na Loja de Extensões</strong>
+              <strong>Instalar o Tampermonkey na Loja Oficial</strong>
               <p>
-                Abra o Google Chrome ou Microsoft Edge e acesse a página oficial do Tampermonkey na loja:
+                Abra o Google Chrome ou Microsoft Edge e clique no link abaixo para ir direto à página da extensão:
               </p>
               <p>
                 👉 <a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener"><strong>Clique aqui para abrir o Tampermonkey na Chrome Web Store</strong></a>
               </p>
               <p>
-                Clique no botão azul <strong>"Usar no Chrome"</strong> (ou <em>"Obter"</em> no Edge) e confirme clicando em <em>"Adicionar extensão"</em>.
+                Na página que abrir, clique no botão azul <strong>"Usar no Chrome"</strong> (ou <em>"Obter"</em> no Edge) e confirme clicando em <strong>"Adicionar extensão"</strong>.
               </p>
             </div>
           </div>
@@ -121,19 +137,16 @@ export const HTML_DO_MANUAL = `
           <div class="passo-card">
             <div class="passo-numero">2</div>
             <div class="passo-conteudo">
-              <strong>Ativar o "Modo do Desenvolvedor"</strong>
+              <strong>Ativar a chave "Modo do desenvolvedor"</strong>
               <p>
-                No topo do seu navegador, na barra onde você digita os sites:
+                1. Na barra onde você digita os sites (no topo do navegador), digite: <kbd>chrome://extensions</kbd> (ou <kbd>edge://extensions</kbd> no Edge) e aperte <kbd>Enter</kbd>.<br>
+                <em>(Se preferir usar o mouse: clique nos 3 pontinhos ⋮ no canto superior direito do navegador ➔ <strong>Extensões</strong> ➔ <strong>Gerenciar extensões</strong>).</em>
               </p>
               <p>
-                1. Digite exatamente: <kbd>chrome://extensions</kbd> (ou <kbd>edge://extensions</kbd> se estiver usando o Microsoft Edge) e aperte <kbd>Enter</kbd>.<br>
-                <em>(Dica: você também pode clicar nos três pontinhos ⋮ no canto superior direito do navegador ➔ Extensões ➔ Gerenciar extensões).</em>
+                2. No <strong>canto superior direito da tela</strong>, procure por uma chave seletora com o texto <strong>"Modo do desenvolvedor"</strong>.
               </p>
               <p>
-                2. No <strong>canto superior direito da tela de extensões</strong>, você verá uma chave chamada <strong>"Modo do desenvolvedor"</strong>.
-              </p>
-              <p>
-                3. <strong>Clique nessa chave para ligar</strong> (ela ficará azul/ativada). Pronto!
+                3. Clique na chave para <strong>LIGAR</strong> <span class="simulacao-toggle"><span class="simulacao-toggle-chave"></span> Ativado</span>. A chave ficará azul.
               </p>
             </div>
           </div>
@@ -142,12 +155,16 @@ export const HTML_DO_MANUAL = `
           <div class="passo-card">
             <div class="passo-numero">3</div>
             <div class="passo-conteudo">
-              <strong>Fixar o Tampermonkey na Barra do Navegador</strong>
+              <strong>Fixar o Ícone do Tampermonkey na Barra do Navegador</strong>
               <p>
-                1. No topo do Chrome/Edge, ao lado da barra de endereço, clique no ícone que se parece com uma <strong>peça de quebra-cabeça 🧩</strong>.
+                Para você sempre saber se o robô está ativo e vigiando:
               </p>
               <p>
-                2. Na lista que abrir, procure por <strong>Tampermonkey</strong> e clique no ícone do <strong>alfinete 📌</strong> para fixá-lo. O ícone preto com dois olhinhos aparecerá visível na sua barra.
+                1. No topo do navegador (ao lado da barra de endereço), clique no ícone de <strong>peça de quebra-cabeça 🧩</strong>.
+              </p>
+              <p>
+                2. Localize o <strong>Tampermonkey</strong> na lista e clique no ícone do <strong>alfinete 📌</strong> ao lado dele.<br>
+                O ícone preto do Tampermonkey ficará fixo e sempre visível ao lado da barra de navegação.
               </p>
             </div>
           </div>
@@ -156,18 +173,21 @@ export const HTML_DO_MANUAL = `
           <div class="passo-card">
             <div class="passo-numero">4</div>
             <div class="passo-conteudo">
-              <strong>Instalar o Robô da Mesa XP</strong>
+              <strong>Ativar "Permitir acesso a URLs de arquivo" (Muito Importante!)</strong>
               <p>
-                1. Com o Tampermonkey instalado e o Modo Dev ativo, volte aqui para a Mesa XP na aba <strong>Ordens</strong>.
+                Se você usa a Mesa XP abrindo o arquivo do computador com dois cliques:
               </p>
               <p>
-                2. No painel inferior esquerdo, clique no botão azul <kbd>Instalar robô</kbd>.
+                1. Na mesma página de extensões (<kbd>chrome://extensions</kbd>), localize o quadro do <strong>Tampermonkey</strong>.
               </p>
               <p>
-                3. O Tampermonkey abrirá uma nova aba mostrando o código do script chamado <code>robo-hub.user.js</code> (versão <strong>1.14.0</strong>).
+                2. Clique no botão <strong>"Detalhes"</strong> dentro do quadro do Tampermonkey.
               </p>
               <p>
-                4. Clique no botão azul <strong>"Instalar"</strong> (ou <em>"Reinstalar"</em> se já tinha uma versão antiga).
+                3. Role a página um pouco para baixo até achar a opção: <strong>"Permitir acesso a URLs de arquivo"</strong>.
+              </p>
+              <p>
+                4. <strong>Ligue a chave</strong> ao lado dessa opção para deixá-la ativada.
               </p>
             </div>
           </div>
@@ -176,53 +196,93 @@ export const HTML_DO_MANUAL = `
           <div class="passo-card">
             <div class="passo-numero">5</div>
             <div class="passo-conteudo">
-              <strong>Conferir se está Tudo Funcionando!</strong>
+              <strong>Instalar o Robô da Mesa XP (1 Clique)</strong>
               <p>
-                Recarregue a página da Mesa XP pressionando <kbd>F5</kbd>.
+                1. Volte para a aba da Mesa XP e vá na ferramenta <strong>Ordens</strong> (Alt + 1).
               </p>
               <p>
-                Olhe no rodapé esquerdo da tela: o indicador de status deve exibir uma bolinha verde com o texto: <strong>"Robô: pronto"</strong>. Parabéns! A sua máquina está 100% pronta para operar.
+                2. No painel inferior esquerdo, clique no botão azul com o texto <kbd>Instalar robô</kbd>.
+              </p>
+              <p>
+                3. O Tampermonkey abrirá uma aba com o código do script <code>robo-hub.user.js</code> (versão <strong>1.14.0</strong>). Você <strong>não precisa mexer em nada no texto</strong>.
+              </p>
+              <p>
+                4. Basta clicar no botão azul <strong>"Instalar"</strong> (ou <em>"Reinstalar"</em> se você já tinha o robô antigo).
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 6 -->
+          <div class="passo-card">
+            <div class="passo-numero">6</div>
+            <div class="passo-conteudo">
+              <strong>Permissões: "Sempre permitir este domínio"</strong>
+              <p>
+                Quando você usar a Mesa pela primeira vez, o Tampermonkey pode exibir um aviso no canto perguntando se você autoriza a conexão entre as abas.
+              </p>
+              <p>
+                👉 <strong>Sempre clique em: "Sempre permitir este domínio"</strong> (ou <em>Always allow this domain</em>). Nunca clique em Bloquear!
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 7 -->
+          <div class="passo-card">
+            <div class="passo-numero">7</div>
+            <div class="passo-conteudo">
+              <strong>Como Conferir se está Tudo Funcionando!</strong>
+              <p>
+                Pressione <kbd>F5</kbd> na aba da Mesa XP para recarregar a página e confira dois detalhes simples:
+              </p>
+              <p>
+                ✅ <strong>No rodapé da Mesa XP:</strong> O indicador no canto inferior esquerdo exibirá uma bolinha verde com o texto: <strong>"Robô: pronto"</strong>.<br>
+                ✅ <strong>No ícone do Tampermonkey (no topo do navegador):</strong> Aparecerá um quadradinho vermelho com o número <span class="simulacao-badge-tm">TM <span class="simulacao-badge-numero">1</span></span>, indicando que o robô está ativo e rodando na página.
               </p>
             </div>
           </div>
         </div>
 
+        <!-- Guia Especial para Usuários do Microsoft Edge -->
+        <h4>Dica Especial: Usa o Microsoft Edge na sua máquina corporativa?</h4>
+        <p>
+          O Microsoft Edge funciona exatamente igual ao Chrome, pois ambos usam o mesmo motor (Chromium):
+        </p>
+        <ul>
+          <li>Para abrir as extensões no Edge, digite: <kbd>edge://extensions</kbd>.</li>
+          <li>No menu lateral esquerdo do Edge, ative a chave <strong>"Modo de desenvolvedor"</strong>.</li>
+          <li>Se você abrir a loja do Chrome no Edge, ele exibirá uma faixa azul no topo: clique em <strong>"Permitir extensões de outras lojas"</strong> e depois em "Instalar".</li>
+          <li>Clique em <strong>Detalhes</strong> no Tampermonkey e ligue a opção <strong>"Permitir acesso a URLs de arquivo"</strong>.</li>
+        </ul>
+
         <!-- Fluxograma Visual de Instalação -->
         <div class="manual-fluxograma">
           <svg viewBox="0 0 760 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Box 1 -->
             <rect x="10" y="20" width="130" height="70" rx="8" fill="#222939" stroke="#323b4f" stroke-width="2"/>
             <text x="75" y="48" fill="#eaeef6" font-size="12" font-weight="700" text-anchor="middle">1. Tampermonkey</text>
             <text x="75" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Instalar na Loja</text>
             
-            <!-- Seta 1 -->
             <path d="M145 55 H 175" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
             <polygon points="175,50 185,55 175,60" fill="#7eaaf6"/>
 
-            <!-- Box 2 -->
             <rect x="190" y="20" width="140" height="70" rx="8" fill="#222939" stroke="#eeb259" stroke-width="2"/>
-            <text x="260" y="48" fill="#eeb259" font-size="12" font-weight="700" text-anchor="middle">2. Modo Dev</text>
-            <text x="260" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Ativar chave no Chrome</text>
+            <text x="260" y="48" fill="#eeb259" font-size="12" font-weight="700" text-anchor="middle">2. Modo Dev & URLs</text>
+            <text x="260" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Ativar chaves no Chrome</text>
 
-            <!-- Seta 2 -->
             <path d="M335 55 H 365" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
             <polygon points="365,50 375,55 365,60" fill="#7eaaf6"/>
 
-            <!-- Box 3 -->
             <rect x="380" y="20" width="130" height="70" rx="8" fill="#222939" stroke="#323b4f" stroke-width="2"/>
             <text x="445" y="48" fill="#eaeef6" font-size="12" font-weight="700" text-anchor="middle">3. Instalar Robô</text>
-            <text x="445" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Clicar no botão azul</text>
+            <text x="445" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Botão azul (v1.14.0)</text>
 
-            <!-- Seta 3 -->
             <path d="M515 55 H 545" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
             <polygon points="545,50 555,55 545,60" fill="#7eaaf6"/>
 
-            <!-- Box 4 -->
             <rect x="560" y="20" width="180" height="70" rx="8" fill="#222939" stroke="#5ccb97" stroke-width="2"/>
             <text x="650" y="48" fill="#5ccb97" font-size="12" font-weight="700" text-anchor="middle">4. Pronto para Operar!</text>
             <text x="650" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Bolinha verde "Robô: pronto"</text>
           </svg>
-          <div class="manual-fluxograma-legenda">Figura 1: Fluxo de preparação e ativação da máquina do operador.</div>
+          <div class="manual-fluxograma-legenda">Figura 1: Fluxo completo de instalação e ativação da máquina do operador.</div>
         </div>
       </section>
 

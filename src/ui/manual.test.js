@@ -25,6 +25,8 @@ describe('Manual da Mesa XP', () => {
     expect(HTML_DO_MANUAL).toContain('Tampermonkey');
     expect(HTML_DO_MANUAL).toContain('chrome://extensions');
     expect(HTML_DO_MANUAL).toContain('Modo do Desenvolvedor');
+    expect(HTML_DO_MANUAL).toContain('Permitir acesso a URLs de arquivo');
+    expect(HTML_DO_MANUAL).toContain('Microsoft Edge');
     expect(HTML_DO_MANUAL).toContain('quebra-cabeça');
     expect(HTML_DO_MANUAL).toContain('alfinete');
     expect(HTML_DO_MANUAL).toContain('Instalar robô');

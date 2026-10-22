@@ -144,6 +144,7 @@
   gap: 2px;
   margin-left: var(--esp-4);
   padding: 3px;
+  container-type: inline-size;
 }
 
 /* A pílula da aba ativa. Fica atrás dos links e desliza entre eles. Antes da primeira medida ela
@@ -200,17 +201,16 @@
   transition: color var(--t-medio) var(--curva), background-color var(--t-rapido) var(--curva);
 }
 
-/* Se ainda assim faltar lugar, as abas encolhem e o nome ganha reticências, em vez de empurrar o
-   topo para fora da tela. */
+/* Quando o espaço for compacto, o nome da aba se oculta e exibe apenas o ícone centralizado,
+   evitando reticências feias (...) na barra de navegação. */
 .abas,
 .aba {
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .aba-nome {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .aba svg {
@@ -652,6 +652,30 @@
     min-width: 0;
     padding: 0;
     justify-content: center;
+  }
+}
+
+/* Ao encolher a tela ou a barra de ferramentas, as abas viram somente os ícones,
+   sem reticências (...) e com alinhamento perfeito. */
+@container (max-width: 760px) {
+  .aba-nome {
+    display: none !important;
+  }
+
+  .aba {
+    padding: 0.28rem 0.65rem !important;
+    gap: 0 !important;
+  }
+}
+
+@media (max-width: 1380px) {
+  .aba-nome {
+    display: none;
+  }
+
+  .aba {
+    padding: 0.28rem 0.65rem;
+    gap: 0;
   }
 }
 

@@ -1,5 +1,4 @@
 import { abrirJanela } from './janela.js';
-import { esc } from './html.js';
 import './manual.css';
 
 /**
@@ -19,7 +18,7 @@ export const HTML_DO_MANUAL = `
       </svg>
       <div>
         <h2>Manual da Mesa XP <span class="manual-badge-versao">v1.14.0</span></h2>
-        <p class="manual-subtitulo">Guia Completo de Operação, Robô Tampermonkey, Fluxos e Boletas</p>
+        <p class="manual-subtitulo">Guia Completo para Novos Colaboradores, Robô Tampermonkey e Boletas</p>
       </div>
     </div>
     <div class="manual-acoes-topo">
@@ -40,14 +39,15 @@ export const HTML_DO_MANUAL = `
       <div class="manual-sidebar-titulo">Capítulos</div>
       <ul class="manual-nav-lista">
         <li><a href="#cap-visao-geral" class="manual-nav-link ativo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> 1. Visão Geral</a></li>
-        <li><a href="#cap-instalacao-robo" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> 2. Robô & Extensão</a></li>
+        <li><a href="#cap-instalacao-robo" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> 2. Como Instalar a Extensão</a></li>
         <li><a href="#cap-trio-de-abas" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> 3. As 3 Abas Abertas</a></li>
         <li><a href="#cap-ordens" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5"/></svg> 4. Ordens & Boletas</a></li>
-        <li><a href="#cap-fila" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="4" width="4.5" height="16" rx="1.5"/><rect x="9.75" y="4" width="4.5" height="11" rx="1.5"/><rect x="16" y="4" width="4.5" height="7" rx="1.5"/></svg> 5. Fila do Dia</a></li>
-        <li><a href="#cap-rendafixa" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17.5 9 11.5l4 4 8-8M15 7.5h6v6"/></svg> 6. Renda Fixa</a></li>
-        <li><a href="#cap-fundos" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg> 7. Prateleira de Fundos</a></li>
-        <li><a href="#cap-outros-modulos" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg> 8. Outros Módulos</a></li>
-        <li><a href="#cap-troubleshooting" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 9. Dúvidas Frequentes</a></li>
+        <li><a href="#cap-exemplos-ordens" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> 5. Exemplos de Mensagens</a></li>
+        <li><a href="#cap-fila" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="4" width="4.5" height="16" rx="1.5"/><rect x="9.75" y="4" width="4.5" height="11" rx="1.5"/><rect x="16" y="4" width="4.5" height="7" rx="1.5"/></svg> 6. Fila do Dia & Outlook</a></li>
+        <li><a href="#cap-rendafixa" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17.5 9 11.5l4 4 8-8M15 7.5h6v6"/></svg> 7. Renda Fixa Pro</a></li>
+        <li><a href="#cap-fundos" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg> 8. Fundos & Secundário</a></li>
+        <li><a href="#cap-outros-modulos" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg> 9. Outros Módulos</a></li>
+        <li><a href="#cap-troubleshooting" class="manual-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 10. Dúvidas Frequentes</a></li>
       </ul>
     </nav>
 
@@ -58,78 +58,233 @@ export const HTML_DO_MANUAL = `
           <h3>1. Visão Geral da Mesa XP</h3>
         </div>
         <p>
-          A <strong>Mesa XP</strong> é a suíte operacional de alta performance desenvolvida para os assessores e operadores de back office de escritórios credenciados à XP Investimentos. Ela centraliza a emissão de ordens, auditoria de e-mails, controle de prazos e esteira de execução em uma interface única e veloz.
+          A <strong>Mesa XP</strong> é o sistema de apoio operacional para assessores de investimentos e operadores de back office. Ela reúne em uma única tela de alta performance:
         </p>
+        <ul>
+          <li>Transformação instantânea de solicitações informais de WhatsApp/Slack em e-mails oficiais de auditoria;</li>
+          <li>Cálculo rigoroso de cotas, deságio, ROA Máximo e boletas do Mercado Secundário da XP;</li>
+          <li>Vigia automático do Outlook na Web para detectar confirmações de clientes sem precisar abrir a caixa de e-mails o dia todo;</li>
+          <li>Motor de Renda Fixa com importação direta do Hub (botão <em>Puxar do Hub</em>), sem baixar planilhas;</li>
+          <li>Controle de presença no escritório e base de procedimentos internos sincronizados em tempo real.</li>
+        </ul>
 
         <div class="manual-callout destaque">
-          <strong>Segurança e Sigilo Bancário Total</strong>
-          A Mesa XP roda 100% no navegador (Client-side). Dados cadastrais de clientes, contas, patrimônio, CPF, limites e comprovantes <strong>nunca são enviados para servidores externos</strong> nem salvos em nuvem de terceiros. Tudo é processado estritamente na memória da sua máquina.
+          <strong>Segurança e Sigilo Bancário Total (Client-Side)</strong>
+          A Mesa XP roda 100% no navegador da sua máquina. Dados cadastrais de clientes, números de conta, CPFs, e-mails, patrimônio e comprovantes <strong>nunca são transmitidos para servidores externos</strong>. Todas as análises acontecem localmente na memória do seu navegador.
         </div>
 
-        <h4>A Regra de Ouro da Mesa: "Nada é Adivinhado"</h4>
+        <h4>A Regra Central: "Nada é Adivinhado"</h4>
         <p>
-          O sistema opera com rigor financeiro estrito. Quando falta uma informação essencial (conta ausente, ticker ambíguo, saldo insuficiente ou falta de cotação), a Mesa <strong>bloqueia a saída</strong> com alerta vermelho e apresenta um botão de conserto rápido à vista. Nenhuma taxa ou quantidade é arredondada por inferência.
+          O sistema trabalha com rigor financeiro estrito. Quando falta uma informação (número de conta ausente, ativo ambíguo, saldo insuficiente ou falta de cotação do Hub), a Mesa <strong>não inventa valores nem arredonda quantidades</strong>: ela bloqueia o envio com um aviso em vermelho e apresenta um botão direto para consertar o dado faltante.
         </p>
       </section>
 
-      <!-- Capítulo 2: Robô & Extensão -->
+      <!-- Capítulo 2: Como Instalar a Extensão (Guia Para Leigos) -->
       <section id="cap-instalacao-robo" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>2. Instalação da Extensão e do Robô do Hub</h3>
+          <h3>2. Como Instalar a Extensão e o Robô (Guia Passo a Passo)</h3>
         </div>
         <p>
-          Para que a Mesa XP consiga consultar o preço exato das cotas, abrir boletas, buscar dados do cliente no Hub, vigiar respostas no Outlook e puxar planilhas de Renda Fixa automaticamente, ela utiliza um script complementar via <strong>Tampermonkey</strong>.
+          Para que a Mesa XP consiga falar com o <strong>Hub XP</strong> (consultar preços de cotas, posições e boletas) e com o <strong>Outlook na Web</strong> (vigiar respostas de e-mail), você precisa de uma extensão chamada <strong>Tampermonkey</strong>. O processo leva menos de 2 minutos e só precisa ser feito uma única vez.
         </p>
 
-        <div class="manual-callout atencao">
-          <strong>Por que usamos o Tampermonkey?</strong>
-          Como as máquinas de trabalho são gerenciadas e não permitem extensões de desenvolvedor arbitrárias, o Tampermonkey executa um script seguro local que se comunica com a Mesa pelo armazenamento interno do próprio navegador (sem tocar em senhas nem credenciais).
+        <!-- Banner Modo Desenvolvedor -->
+        <div class="banner-modo-dev">
+          <div class="banner-modo-dev-titulo">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Passo Essencial: Ativar o Modo do Desenvolvedor no Navegador
+          </div>
+          <p>
+            As versões atuais do Google Chrome e do Microsoft Edge exigem que o <strong>"Modo do desenvolvedor"</strong> esteja ativado para permitir extensões locais de scripts. Se você não fizer isso, o navegador pode bloquear o robô.
+          </p>
         </div>
 
-        <h4>Passo a Passo de Instalação (para Novos Colegas):</h4>
-        <ol class="manual-passos">
-          <li>
-            <strong>Instale o Tampermonkey:</strong><br>
-            Acesse a loja oficial de extensões do seu navegador (<a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">Chrome Web Store</a> ou loja do Microsoft Edge) e clique em <em>Usar no Chrome / Obter</em>.
-          </li>
-          <li>
-            <strong>Instale o Robô da Mesa XP:</strong><br>
-            Com a Mesa XP aberta, na aba <strong>Ordens</strong>, clique no botão <kbd>Instalar robô</kbd> (ou acesse o link de instalação). O Tampermonkey abrirá uma aba com o código do script. Basta clicar no botão azul <strong>"Instalar"</strong>.
-          </li>
-          <li>
-            <strong>Atualizações Automáticas:</strong><br>
-            O robô possui atualização automática configurada (versão atual: <strong>1.14.0</strong>). Conforme melhorias são publicadas na Mesa, o script se atualiza sozinho sem você precisar reinstalar.
-          </li>
-        </ol>
+        <div class="manual-passos-container">
+          <!-- Passo 1 -->
+          <div class="passo-card">
+            <div class="passo-numero">1</div>
+            <div class="passo-conteudo">
+              <strong>Instalar o Tampermonkey na Loja de Extensões</strong>
+              <p>
+                Abra o Google Chrome ou Microsoft Edge e acesse a página oficial do Tampermonkey na loja:
+              </p>
+              <p>
+                👉 <a href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener"><strong>Clique aqui para abrir o Tampermonkey na Chrome Web Store</strong></a>
+              </p>
+              <p>
+                Clique no botão azul <strong>"Usar no Chrome"</strong> (ou <em>"Obter"</em> no Edge) e confirme clicando em <em>"Adicionar extensão"</em>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 2 -->
+          <div class="passo-card">
+            <div class="passo-numero">2</div>
+            <div class="passo-conteudo">
+              <strong>Ativar o "Modo do Desenvolvedor"</strong>
+              <p>
+                No topo do seu navegador, na barra onde você digita os sites:
+              </p>
+              <p>
+                1. Digite exatamente: <kbd>chrome://extensions</kbd> (ou <kbd>edge://extensions</kbd> se estiver usando o Microsoft Edge) e aperte <kbd>Enter</kbd>.<br>
+                <em>(Dica: você também pode clicar nos três pontinhos ⋮ no canto superior direito do navegador ➔ Extensões ➔ Gerenciar extensões).</em>
+              </p>
+              <p>
+                2. No <strong>canto superior direito da tela de extensões</strong>, você verá uma chave chamada <strong>"Modo do desenvolvedor"</strong>.
+              </p>
+              <p>
+                3. <strong>Clique nessa chave para ligar</strong> (ela ficará azul/ativada). Pronto!
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 3 -->
+          <div class="passo-card">
+            <div class="passo-numero">3</div>
+            <div class="passo-conteudo">
+              <strong>Fixar o Tampermonkey na Barra do Navegador</strong>
+              <p>
+                1. No topo do Chrome/Edge, ao lado da barra de endereço, clique no ícone que se parece com uma <strong>peça de quebra-cabeça 🧩</strong>.
+              </p>
+              <p>
+                2. Na lista que abrir, procure por <strong>Tampermonkey</strong> e clique no ícone do <strong>alfinete 📌</strong> para fixá-lo. O ícone preto com dois olhinhos aparecerá visível na sua barra.
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 4 -->
+          <div class="passo-card">
+            <div class="passo-numero">4</div>
+            <div class="passo-conteudo">
+              <strong>Instalar o Robô da Mesa XP</strong>
+              <p>
+                1. Com o Tampermonkey instalado e o Modo Dev ativo, volte aqui para a Mesa XP na aba <strong>Ordens</strong>.
+              </p>
+              <p>
+                2. No painel inferior esquerdo, clique no botão azul <kbd>Instalar robô</kbd>.
+              </p>
+              <p>
+                3. O Tampermonkey abrirá uma nova aba mostrando o código do script chamado <code>robo-hub.user.js</code> (versão <strong>1.14.0</strong>).
+              </p>
+              <p>
+                4. Clique no botão azul <strong>"Instalar"</strong> (ou <em>"Reinstalar"</em> se já tinha uma versão antiga).
+              </p>
+            </div>
+          </div>
+
+          <!-- Passo 5 -->
+          <div class="passo-card">
+            <div class="passo-numero">5</div>
+            <div class="passo-conteudo">
+              <strong>Conferir se está Tudo Funcionando!</strong>
+              <p>
+                Recarregue a página da Mesa XP pressionando <kbd>F5</kbd>.
+              </p>
+              <p>
+                Olhe no rodapé esquerdo da tela: o indicador de status deve exibir uma bolinha verde com o texto: <strong>"Robô: pronto"</strong>. Parabéns! A sua máquina está 100% pronta para operar.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fluxograma Visual de Instalação -->
+        <div class="manual-fluxograma">
+          <svg viewBox="0 0 760 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Box 1 -->
+            <rect x="10" y="20" width="130" height="70" rx="8" fill="#222939" stroke="#323b4f" stroke-width="2"/>
+            <text x="75" y="48" fill="#eaeef6" font-size="12" font-weight="700" text-anchor="middle">1. Tampermonkey</text>
+            <text x="75" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Instalar na Loja</text>
+            
+            <!-- Seta 1 -->
+            <path d="M145 55 H 175" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
+            <polygon points="175,50 185,55 175,60" fill="#7eaaf6"/>
+
+            <!-- Box 2 -->
+            <rect x="190" y="20" width="140" height="70" rx="8" fill="#222939" stroke="#eeb259" stroke-width="2"/>
+            <text x="260" y="48" fill="#eeb259" font-size="12" font-weight="700" text-anchor="middle">2. Modo Dev</text>
+            <text x="260" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Ativar chave no Chrome</text>
+
+            <!-- Seta 2 -->
+            <path d="M335 55 H 365" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
+            <polygon points="365,50 375,55 365,60" fill="#7eaaf6"/>
+
+            <!-- Box 3 -->
+            <rect x="380" y="20" width="130" height="70" rx="8" fill="#222939" stroke="#323b4f" stroke-width="2"/>
+            <text x="445" y="48" fill="#eaeef6" font-size="12" font-weight="700" text-anchor="middle">3. Instalar Robô</text>
+            <text x="445" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Clicar no botão azul</text>
+
+            <!-- Seta 3 -->
+            <path d="M515 55 H 545" stroke="#7eaaf6" stroke-width="2" stroke-linecap="round"/>
+            <polygon points="545,50 555,55 545,60" fill="#7eaaf6"/>
+
+            <!-- Box 4 -->
+            <rect x="560" y="20" width="180" height="70" rx="8" fill="#222939" stroke="#5ccb97" stroke-width="2"/>
+            <text x="650" y="48" fill="#5ccb97" font-size="12" font-weight="700" text-anchor="middle">4. Pronto para Operar!</text>
+            <text x="650" y="68" fill="#97a2b6" font-size="10" text-anchor="middle">Bolinha verde "Robô: pronto"</text>
+          </svg>
+          <div class="manual-fluxograma-legenda">Figura 1: Fluxo de preparação e ativação da máquina do operador.</div>
+        </div>
       </section>
 
       <!-- Capítulo 3: Trio de Abas -->
       <section id="cap-trio-de-abas" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>3. As 3 Abas que Devem Ficar Abertas</h3>
+          <h3>3. As 3 Abas que Devem Ficar Abertas no Navegador</h3>
         </div>
         <p>
-          Para que todas as automações operem em perfeita sincronia durante o expediente, cada operador deve manter abertas as seguintes três abas no navegador:
+          Para que o sistema trabalhe sozinho em segundo plano (puxando cotações, abrindo boletas e vigiando a chegada de e-mails), <strong>cada operador deve manter três abas abertas durante o horário de trabalho</strong>:
         </p>
 
         <div class="manual-grid-abas">
           <div class="manual-card-aba">
             <strong>🌐 Aba 1: Mesa XP (Pivô Central)</strong>
-            <p>Onde você cola os pedidos, confere diagnósticos, gera e-mails, analisa Renda Fixa e controla a Fila.</p>
+            <p>Onde você cola os pedidos de WhatsApp, confere diagnósticos, gera os e-mails, analisa Renda Fixa e acompanha a esteira de pedidos.</p>
           </div>
-          <div class="manual-card-aba">
-            <strong>🤖 Aba 2: Hub XP Logado</strong>
-            <p>Aba em <code>hub.xpi.com.br</code> com seu login corporativo ativo. O robô usará uma janela auxiliar silenciosa para boletas e cotações.</p>
+          <div class="manual-card-aba hub">
+            <strong>🤖 Aba 2: Hub XP Logado (hub.xpi.com.br)</strong>
+            <p>Deixe uma aba aberta no Hub com seu login corporativo ativo. O robô usará essa sessão para ler preços de cotas, deságio e abrir boletas.</p>
           </div>
-          <div class="manual-card-aba">
-            <strong>✉️ Aba 3: Outlook na Web</strong>
-            <p>Aba em <code>outlook.office.com</code> com o e-mail da assessoria aberto. O vigia lê novas respostas de clientes a cada 2s.</p>
+          <div class="manual-card-aba outlook">
+            <strong>✉️ Aba 3: Outlook na Web (outlook.office.com)</strong>
+            <p>Deixe o e-mail corporativo aberto. O vigia da Mesa monitora a chegada de respostas de clientes a cada 2 segundos sem você precisar abrir a caixa.</p>
           </div>
         </div>
 
-        <div class="manual-callout sucesso">
-          <strong>Importante sobre o Hub XP:</strong>
-          Nunca digite parâmetros manuais no endereço da URL do Hub (ex: <code>?teste=1</code>), pois isso desativa o carregamento dos componentes do Mercado Secundário.
+        <!-- Fluxograma da Tríade -->
+        <div class="manual-fluxograma">
+          <svg viewBox="0 0 760 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Mesa XP (Centro) -->
+            <rect x="270" y="20" width="220" height="110" rx="10" fill="#222939" stroke="#7eaaf6" stroke-width="2.5"/>
+            <text x="380" y="55" fill="#7eaaf6" font-size="14" font-weight="700" text-anchor="middle">Mesa XP (Pivô Central)</text>
+            <text x="380" y="80" fill="#eaeef6" font-size="11" text-anchor="middle">Orquestra Ordens, Fila e RF</text>
+            <text x="380" y="105" fill="#5ccb97" font-size="11" font-weight="600" text-anchor="middle">● Comunicação Local Segura</text>
+
+            <!-- Hub XP (Esquerda) -->
+            <rect x="20" y="35" width="180" height="85" rx="8" fill="#222939" stroke="#e3b664" stroke-width="2"/>
+            <text x="110" y="65" fill="#e3b664" font-size="13" font-weight="700" text-anchor="middle">Hub XP (Logado)</text>
+            <text x="110" y="90" fill="#97a2b6" font-size="10" text-anchor="middle">Preços de cotas, boletas e RF</text>
+
+            <!-- Setas Hub <-> Mesa -->
+            <path d="M205 70 H 265" stroke="#e3b664" stroke-width="2"/>
+            <polygon points="265,65 275,70 265,75" fill="#e3b664"/>
+            <polygon points="215,65 205,70 215,75" fill="#e3b664"/>
+
+            <!-- Outlook Web (Direita) -->
+            <rect x="560" y="35" width="180" height="85" rx="8" fill="#222939" stroke="#78b1f0" stroke-width="2"/>
+            <text x="650" y="65" fill="#78b1f0" font-size="13" font-weight="700" text-anchor="middle">Outlook na Web</text>
+            <text x="650" y="90" fill="#97a2b6" font-size="10" text-anchor="middle">Vigia automático de respostas</text>
+
+            <!-- Setas Mesa <-> Outlook -->
+            <path d="M495 70 H 555" stroke="#78b1f0" stroke-width="2"/>
+            <polygon points="555,65 565,70 555,75" fill="#78b1f0"/>
+            <polygon points="505,65 495,70 505,75" fill="#78b1f0"/>
+          </svg>
+          <div class="manual-fluxograma-legenda">Figura 2: A Tríade Operacional — As 3 abas trabalhando em conjunto via armazenamento seguro local.</div>
+        </div>
+
+        <div class="manual-callout atencao">
+          <strong>Regra de Ouro no Hub XP:</strong>
+          Nunca adicione parâmetros de teste manuais na barra de endereço do Hub (como <code>?teste=1</code>). Isso impede o carregamento dos componentes do Mercado Secundário. Deixe a página carregar em sua URL limpa.
         </div>
       </section>
 
@@ -139,76 +294,134 @@ export const HTML_DO_MANUAL = `
           <h3>4. Assistente de Ordens (Atalho Alt + 1)</h3>
         </div>
         <p>
-          Transforma pedidos bagunçados recebidos via WhatsApp, Slack ou e-mail nos formatos oficiais de auditoria e lotes operacionais da XP.
+          O Assistente de Ordens transforma mensagens informais enviadas pelos assessores em e-mails padronizados de auditoria e boletas prontas no Hub.
         </p>
 
-        <h4>Fluxo Operacional:</h4>
-        <ol class="manual-passos">
-          <li><strong>Colar o pedido:</strong> Cole a mensagem na caixa de texto superior. O parser identifica automaticamente a conta XP (5 a 8 dígitos) e os ativos.</li>
-          <li><strong>Analisar:</strong> Pressione <kbd>Ctrl + Enter</kbd> ou clique em <em>Analisar ordens</em>.</li>
-          <li><strong>Tabela de conferência:</strong> Ajuste ativo, quantidade, compra/venda (C/V) ou preço limite se necessário.</li>
-          <li><strong>Secundário de Fundos:</strong> O robô consulta a prateleira em tempo real. Se o pedido veio em R$, ele converte automaticamente em cotas. Você pode alternar entre <em>ROA Máximo</em> e <em>Sem ROA</em> com um clique.</li>
-          <li><strong>Venda no Secundário:</strong> O robô lê a posição disponível exata do cliente (com até 8 casas). Se o Estoque XP estiver fechado no dia, clique em <kbd>Vender no Estoque clientes</kbd>.</li>
-          <li><strong>Tirar Prints:</strong> Clique em <kbd>Tirar prints</kbd> para o robô capturar a boleta física no Hub (ou gerar o comprovante determinístico oficial).</li>
-          <li><strong>Abrir no Outlook:</strong> O botão <kbd>Abrir no Outlook</kbd> abre a janela de envio preenchida com o cliente, assessor em cópia e injeta os prints no corpo.</li>
-        </ol>
+        <!-- Fluxograma da Ordem -->
+        <div class="manual-fluxograma">
+          <svg viewBox="0 0 760 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="25" width="130" height="65" rx="8" fill="#222939" stroke="#323b4f" stroke-width="1.8"/>
+            <text x="75" y="52" fill="#eaeef6" font-size="11" font-weight="700" text-anchor="middle">1. Colar Mensagem</text>
+            <text x="75" y="70" fill="#97a2b6" font-size="10" text-anchor="middle">WhatsApp / Slack</text>
 
-        <h4>Grupos de Saída:</h4>
-        <table class="manual-tabela">
-          <thead>
-            <tr><th>Grupo</th><th>O que contém</th><th>Como sai</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>Bolsa</strong></td><td>Ações, FIIs listados, BDRs, ETFs</td><td>E-mail modelo padrão, Lote Simples ou TWAP</td></tr>
-            <tr><td><strong>Fundos · Compra</strong></td><td>Fundos cetipados comprados</td><td>E-mail com PU exato, deságio e cotas</td></tr>
-            <tr><td><strong>Fundos · Venda</strong></td><td>Fundos cetipados vendidos</td><td>E-mail de auditoria com prints abaixo de "Condições:"</td></tr>
-            <tr><td><strong>Tesouro Direto</strong></td><td>Aplicação e Resgate de títulos públicos</td><td>E-mail com taxas oficiais do dia lidas do Hub</td></tr>
-          </tbody>
-        </table>
+            <path d="M145 57 H 170" stroke="#7eaaf6" stroke-width="2"/>
+            <polygon points="170,52 180,57 170,62" fill="#7eaaf6"/>
+
+            <rect x="185" y="25" width="130" height="65" rx="8" fill="#222939" stroke="#323b4f" stroke-width="1.8"/>
+            <text x="250" y="52" fill="#eaeef6" font-size="11" font-weight="700" text-anchor="middle">2. Analisar Ordens</text>
+            <text x="250" y="70" fill="#97a2b6" font-size="10" text-anchor="middle">Ctrl + Enter</text>
+
+            <path d="M320 57 H 345" stroke="#7eaaf6" stroke-width="2"/>
+            <polygon points="345,52 355,57 345,62" fill="#7eaaf6"/>
+
+            <rect x="360" y="25" width="130" height="65" rx="8" fill="#222939" stroke="#e3b664" stroke-width="1.8"/>
+            <text x="425" y="52" fill="#e3b664" font-size="11" font-weight="700" text-anchor="middle">3. Robô no Hub</text>
+            <text x="425" y="70" fill="#97a2b6" font-size="10" text-anchor="middle">Cotação & Prints</text>
+
+            <path d="M495 57 H 520" stroke="#7eaaf6" stroke-width="2"/>
+            <polygon points="520,52 530,57 520,62" fill="#7eaaf6"/>
+
+            <rect x="535" y="25" width="130" height="65" rx="8" fill="#222939" stroke="#5ccb97" stroke-width="1.8"/>
+            <text x="600" y="52" fill="#5ccb97" font-size="11" font-weight="700" text-anchor="middle">4. Abrir no Outlook</text>
+            <text x="600" y="70" fill="#97a2b6" font-size="10" text-anchor="middle">E-mail preenchido</text>
+
+            <path d="M670 57 H 695" stroke="#7eaaf6" stroke-width="2"/>
+            <polygon points="695,52 705,57 695,62" fill="#7eaaf6"/>
+
+            <circle cx="725" cy="57" r="16" fill="#7eaaf6"/>
+            <text x="725" y="62" fill="#fff" font-size="10" font-weight="700" text-anchor="middle">Fila</text>
+          </svg>
+          <div class="manual-fluxograma-legenda">Figura 3: Esteira operacional de processamento de solicitações.</div>
+        </div>
+
+        <h4>Passo a Passo de Emissão de uma Ordem:</h4>
+        <ol class="manual-passos">
+          <li><strong>Cole o texto bruto:</strong> Cole na caixa superior da tela o texto que você recebeu do assessor. O parser reconhece automaticamente contas de 5 a 8 dígitos e múltiplos ativos.</li>
+          <li><strong>Clique em Analisar:</strong> Pressione <kbd>Ctrl + Enter</kbd> ou clique no botão azul <em>Analisar ordens</em>.</li>
+          <li><strong>Conferência Inteligente:</strong> A tabela inferior exibirá os ativos identificados, a operação (Compra ou Venda), a quantidade e o preço limite.</li>
+          <li><strong>Secundário de Fundos:</strong> O robô consulta o Hub em tempo real. Se o pedido veio em R$ (ex: <em>"aplica 50k no Riza"</em>), a Mesa converte para a quantidade exata de cotas e permite escolher entre <em>ROA Máximo</em> ou <em>Sem ROA</em>.</li>
+          <li><strong>Tirar Prints (Venda de Fundos):</strong> Clique em <kbd>Tirar prints</kbd>. O robô abre a boleta no Hub e captura o comprovante oficial determinístico.</li>
+          <li><strong>Abrir no Outlook:</strong> Clique em <kbd>Abrir no Outlook</kbd>. A janela de novo e-mail abre já preenchida com o endereço do cliente, o assessor em cópia, o assunto formatado e os prints colados no corpo.</li>
+        </ol>
       </section>
 
-      <!-- Capítulo 5: Fila -->
-      <section id="cap-fila" class="manual-secao">
+      <!-- Capítulo 5: Exemplos de Mensagens -->
+      <section id="cap-exemplos-ordens" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>5. Fila do Dia (Atalho Alt + 2)</h3>
+          <h3>5. Exemplos Reais de Solicitações (Antes vs. Depois)</h3>
         </div>
         <p>
-          A Fila é a sua caixa de entrada operacional. Cada e-mail copiado ou disparado entra automaticamente na Fila e fica guardado no navegador por até 90 dias.
+          A Mesa XP é flexível e entende diversos dialetos operacionais. Veja exemplos práticos de mensagens que você pode colar diretamente na caixa de entrada:
+        </p>
+
+        <!-- Exemplo 1: Bolsa -->
+        <div class="manual-exemplo-card">
+          <div class="exemplo-bloco">
+            <div class="exemplo-rotulo entrada">Mensagem recebida no WhatsApp (Antes)</div>
+            <div class="exemplo-caixa">Favor comprar 1000 PETR4 a mercado e vender 500 VALE3 a 62,50 na conta 1234567 do Fulano</div>
+          </div>
+          <div class="exemplo-bloco">
+            <div class="exemplo-rotulo saida">Resultado Gerado pela Mesa XP (Depois)</div>
+            <div class="exemplo-caixa">Conta: 1234567 · FULANO DE TAL
+• COMPRA: 1.000 PETR4 @ Mercado
+• VENDA: 500 VALE3 @ R$ 62,50 Limite
+➡️ E-mail de auditoria montado e lote pronto.</div>
+          </div>
+        </div>
+
+        <!-- Exemplo 2: Secundário -->
+        <div class="manual-exemplo-card">
+          <div class="exemplo-bloco">
+            <div class="exemplo-rotulo entrada">Mensagem recebida de Fundo Cetipado (Antes)</div>
+            <div class="exemplo-caixa">Resgatar 150 mil do Riza Terrax na conta 7654321</div>
+          </div>
+          <div class="exemplo-bloco">
+            <div class="exemplo-rotulo saida">Resultado Gerado pela Mesa XP (Depois)</div>
+            <div class="exemplo-caixa">Conta: 7654321 · RIZA TERRAX FII (RZTR11)
+PU Hub: R$ 98,42 · Deságio: 4,50%
+Quantidade calculada: 1.524 cotas
+Prints das boletas anexados abaixo de "Condições:"</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Capítulo 6: Fila do Dia -->
+      <section id="cap-fila" class="manual-secao">
+        <div class="manual-secao-topo">
+          <h3>6. Fila do Dia & Vigia do Outlook (Atalho Alt + 2)</h3>
+        </div>
+        <p>
+          A <strong>Fila do Dia</strong> é o seu painel de acompanhamento e esteira de execução. Cada e-mail copiado ou aberto no Outlook entra automaticamente na Fila e fica registrado na memória do navegador.
         </p>
 
         <h4>Pastas de Trabalho:</h4>
         <ul>
-          <li><strong>Aprovação e Execução:</strong> Onde ficam os pedidos que o cliente já respondeu aprovando, ou ordens prontas para gerar lote.</li>
-          <li><strong>Enviados:</strong> Pedidos aguardando retorno do investidor.</li>
-          <li><strong>Executados:</strong> Ordens já concluídas no sistema.</li>
+          <li><strong>Enviados:</strong> Pedidos disparados aguardando o cliente responder aprovando.</li>
+          <li><strong>Aprovação e Execução:</strong> Pedidos que o cliente já aprovou por e-mail, prontos para você boletar ou enviar para a mesa de operações.</li>
+          <li><strong>Executados:</strong> Pedidos com boleta confirmada e concluída.</li>
         </ul>
 
         <h4>Vigia Automático do Outlook:</h4>
         <p>
-          Com a aba do Outlook na Web aberta, o robô monitora a chegada de novas respostas:
+          Com a aba do Outlook aberta, o robô monitora a chegada de novas respostas:
         </p>
         <ul>
-          <li><strong>Casamento Inteligente:</strong> Lê a conta XP citada na resposta do cliente e move o pedido para <em>Aprovação e Execução</em> com som discreto.</li>
-          <li><strong>Desambiguação Compra vs. Venda:</strong> Se foram disparados dois e-mails para o mesmo cliente (ex: uma compra e uma venda), o vigia lê os termos da resposta para casar com o cartão exato, sem misturar.</li>
-          <li><strong>Proteção Anti-Avalanche:</strong> Notificações duplicadas são barradas na raiz; o sistema exibe no máximo 3 avisos simultâneos para nunca travar a sua tela.</li>
+          <li><strong>Casamento por Conta XP:</strong> Quando o cliente responde com <em>"Ok, aprovado"</em> ou <em>"Pode executar"</em>, o vigia localiza o número da conta XP no histórico e move o cartão para <em>Aprovação e Execução</em> com som discreto de aviso.</li>
+          <li><strong>Proteção Anti-Avalanche:</strong> O sistema possui teto máximo de 3 notificações na tela para nunca travar a sua máquina.</li>
+          <li><strong>Alarme do Leilão da B3 (16:25):</strong> 30 minutos antes do leilão das 16:55, a Mesa emite um alerta se ainda houver ordens de bolsa na pasta <em>Enviados</em> sem aprovação.</li>
         </ul>
-
-        <h4>Alarme do Leilão da B3 (16:55):</h4>
-        <p>
-          Às 16:25 (30 minutos antes do leilão), a Mesa emite um alerta sonoro e destaca a aba Fila em tom âmbar se ainda houver ordens de bolsa na pasta <em>Enviados</em> aguardando o cliente.
-        </p>
       </section>
 
-      <!-- Capítulo 6: Renda Fixa -->
+      <!-- Capítulo 7: Renda Fixa -->
       <section id="cap-rendafixa" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>6. Renda Fixa Pro (Atalho Alt + 4)</h3>
+          <h3>7. Renda Fixa Pro (Atalho Alt + 4)</h3>
         </div>
         <p>
-          Motor de análise de oportunidades de Renda Fixa bancária (CDB, LCI, LCA, CRI, CRA) para envio aos clientes no WhatsApp.
+          Motor para identificar as melhores oportunidades de CDBs, LCIs, LCAs, CRIs e CRAs e disparar vitrines formatadas para o WhatsApp dos clientes.
         </p>
 
-        <h4>Funcionalidades Principais:</h4>
+        <h4>Principais Funcionalidades:</h4>
         <ul>
           <li>
             <strong>Puxar do Hub (Atalho P):</strong><br>
@@ -219,71 +432,70 @@ export const HTML_DO_MANUAL = `
             Alterna entre as taxas da emissão matinal e as oportunidades de mercado secundário da tarde.
           </li>
           <li>
+            <strong>Baixar Imagem WhatsApp (Atalho I):</strong><br>
+            Gera na hora uma imagem PNG de alta resolução (1080px de largura) com os cartões coloridos dos ativos selecionados, pronta para anexar no WhatsApp Web.
+          </li>
+          <li>
             <strong>Configuração de Regras (Atalho R):</strong><br>
-            Abra a gaveta de regras para ajustar limites de PU, prazos desejados, bancos autorizados e modelos de texto.
-          </li>
-          <li>
-            <strong>Baixar Imagem (Atalho I):</strong><br>
-            Gera na hora uma imagem PNG em alta resolução (1080px) com os cards coloridos dos ativos selecionados, pronta para anexar no WhatsApp.
-          </li>
-          <li>
-            <strong>Simulador de Pré-fixados:</strong><br>
-            Localizado abaixo dos cartões: simula o rendimento bruto, alíquota regressiva de IR e valor líquido na data do vencimento.
+            Permite ajustar filtros por banco emissor, rating mínimo e prazos de vencimento desejados.
           </li>
         </ul>
       </section>
 
-      <!-- Capítulo 7: Fundos -->
+      <!-- Capítulo 8: Fundos -->
       <section id="cap-fundos" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>7. Prateleira de Fundos (Atalho Alt + 3)</h3>
+          <h3>8. Prateleira de Fundos (Atalho Alt + 3)</h3>
         </div>
         <p>
-          Visualização panorâmica de todos os fundos cetipados do Mercado Secundário da XP:
+          Visão panorâmica de todos os fundos cetipados do Mercado Secundário da XP:
         </p>
         <ul>
-          <li>Ordenação por maior deságio para encontrar as melhores oportunidades de entrada.</li>
-          <li>Filtro em tempo real por ticker (ex: <code>IMOV11</code>, <code>VGPR11</code>).</li>
-          <li>Comparativo diário: exibe em destaque fundos novos que entraram na grade hoje ou cuja taxa variou.</li>
+          <li>Ordenação dinâmica por maior deságio para encontrar as melhores taxas de entrada;</li>
+          <li>Filtro em tempo real por ticker (ex: <code>IMOV11</code>, <code>VGPR11</code>, <code>RZTR11</code>);</li>
+          <li>Comparativo do que mudou em relação ao dia anterior (novos fundos que entraram na grade ou que tiveram variação de deságio).</li>
         </ul>
       </section>
 
-      <!-- Capítulo 8: Outros Módulos -->
+      <!-- Capítulo 9: Outros Módulos -->
       <section id="cap-outros-modulos" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>8. Calendário, Operacional e Anotações</h3>
+          <h3>9. Calendário, Operacional e Anotações</h3>
         </div>
         <ul>
-          <li><strong>Calendário (Alt + 5):</strong> Quadro semanal de escalas e presença física da equipe no escritório, sincronizado em tempo real via Supabase.</li>
-          <li><strong>Operacional (Alt + 6):</strong> Base de procedimentos internos da mesa (espelho do Slab). Pressione <kbd>Ctrl + K</kbd> para buscar qualquer modelo ou instrução pelo título ou conteúdo.</li>
-          <li><strong>Anotações (Alt + 7):</strong> Bloco de notas com suporte a prints colados, links e lembretes programados que disparam avisos visuais no topo da tela quando o horário chega.</li>
+          <li><strong>Calendário (Alt + 5):</strong> Escala semanal de presença física da equipe no escritório, sincronizada via banco Supabase.</li>
+          <li><strong>Operacional (Alt + 6):</strong> Base de procedimentos internos e documentações de compliance (espelho do Slab). Pressione <kbd>Ctrl + K</kbd> para buscar qualquer tópico.</li>
+          <li><strong>Anotações (Alt + 7):</strong> Bloco de notas rápido com suporte a lembretes agendados que avisam no topo da tela quando o horário de uma tarefa chega.</li>
         </ul>
       </section>
 
-      <!-- Capítulo 9: Dúvidas Frequentes -->
+      <!-- Capítulo 10: Dúvidas Frequentes -->
       <section id="cap-troubleshooting" class="manual-secao">
         <div class="manual-secao-topo">
-          <h3>9. Dúvidas Frequentes & Resolução de Problemas</h3>
+          <h3>10. Dúvidas Frequentes & Resolução de Problemas</h3>
         </div>
 
-        <h4>O robô aparece como "não instalado" ou com aviso vermelho</h4>
+        <h4>O robô aparece com aviso de "não instalado" ou bolinha cinza</h4>
         <p>
-          Verifique se a extensão Tampermonkey está ativada no Chrome/Edge e clique em <kbd>Instalar robô</kbd>. Se já estiver instalado, recarregue a aba da Mesa XP com <kbd>F5</kbd>.
+          1. Verifique se o <strong>Modo do Desenvolvedor</strong> está ativo em <kbd>chrome://extensions</kbd>.<br>
+          2. Verifique se o Tampermonkey está ativado.<br>
+          3. Na aba Ordens da Mesa, clique em <kbd>Instalar robô</kbd> e confirme na aba do Tampermonkey.<br>
+          4. Pressione <kbd>F5</kbd> na Mesa XP para recarregar.
         </p>
 
-        <h4>A cotação do fundo não atualizou</h4>
+        <h4>A cotação do fundo ou o botão "Puxar do Hub" não respondem</h4>
         <p>
-          Certifique-se de que a sua aba do <strong>Hub XP</strong> está aberta e com login ativo. O robô precisa que o Hub esteja logado para conseguir ler as cotações oficiais.
+          Certifique-se de que a aba do <strong>Hub XP</strong> está aberta e com seu login corporativo ativo. O robô precisa que você esteja logado para conseguir ler as informações.
         </p>
 
-        <h4>O cliente respondeu o e-mail mas o pedido não foi para "Aprovação"</h4>
+        <h4>O cliente respondeu o e-mail mas o cartão não se moveu na Fila</h4>
         <p>
-          Confira se a aba do <strong>Outlook na Web</strong> está aberta no seu navegador. O vigia precisa da página do Outlook rodando para ler a chegada de novas mensagens.
+          Confira se a aba do <strong>Outlook na Web</strong> está aberta no navegador. O vigia precisa da página do Outlook rodando para ler os e-mails recebidos.
         </p>
 
         <h4>Como salvar este manual como arquivo PDF no meu computador?</h4>
         <p>
-          Basta clicar no botão superior <strong>"Salvar como PDF / Imprimir"</strong> (ou pressionar <kbd>Ctrl + P</kbd>). Na janela de impressão do seu navegador, escolha a impressora <em>"Salvar como PDF"</em> e clique em Salvar. O manual será gerado com formatação de livro, sem elementos de tela desnecessários.
+          Basta clicar no botão superior <strong>"Salvar como PDF / Imprimir"</strong> (ou pressionar <kbd>Ctrl + P</kbd>). Na janela de impressão do seu navegador, escolha a impressora <em>"Salvar como PDF"</em> e clique em Salvar.
         </p>
       </section>
     </main>
@@ -299,6 +511,7 @@ export const ligarManual = (botaoAbrir) => {
   if (typeof document === 'undefined') {
     return { abrir: () => {}, fechar: () => {}, dialogo: null };
   }
+
   let dialogo = document.getElementById('modal-manual');
   if (!dialogo) {
     const container = document.createElement('div');
@@ -313,7 +526,6 @@ export const ligarManual = (botaoAbrir) => {
 
   const abrir = (origem = botaoAbrir) => {
     abrirJanela(dialogo, origem);
-    // Ativa o primeiro link do sumário
     marcarLinkAtivo('#cap-visao-geral');
   };
 
@@ -345,10 +557,10 @@ export const ligarManual = (botaoAbrir) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const id = link.getAttribute('href').slice(1);
-      const secao = dialogo.querySelector(`#${id}`);
+      const secao = dialogo.querySelector('#' + id);
       if (secao) {
         secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        marcarLinkAtivo(`#${id}`);
+        marcarLinkAtivo('#' + id);
       }
     });
   });
@@ -365,11 +577,20 @@ export const ligarManual = (botaoAbrir) => {
       }
     });
 
-    if (secaoAtiva) marcarLinkAtivo(`#${secaoAtiva}`);
+    if (secaoAtiva) marcarLinkAtivo('#' + secaoAtiva);
   });
 
   // Ligar ao botão de abertura no cabeçalho
   botaoAbrir?.addEventListener('click', (e) => abrir(e.currentTarget));
+
+  // Suporte a abrir caso o hash seja #manual
+  const checarHash = () => {
+    if (location.hash === '#manual') {
+      abrir();
+    }
+  };
+  window.addEventListener('hashchange', checarHash);
+  checarHash();
 
   return { abrir, fechar, dialogo };
 };

@@ -2,9 +2,9 @@ import { aviso } from '../../ui/avisos.js';
 import { esc } from '../../ui/html.js';
 import { criarRepositorioLocal } from './adaptadores/local.js';
 import { criarRepositorioSupabase } from './adaptadores/supabase.js';
-import { conexaoDoBanco } from '../../dados/banco.js';
+import { aoFalharTentativa, conexaoDoBanco } from '../../dados/banco.js';
 import { DIAS, MESES, diaDaChave, intervaloDaSemana, intervaloDoMes, rotuloDaSemana, segundaDaSemana, somarDias } from './datas.js';
-import { CORES, htmlHistorico, htmlHorarios, htmlSemana, indexar } from './render.js';
+import { CORES, htmlHistorico, htmlHorarios, htmlSemana, indexar, textoTentando, validarHorario } from './render.js';
 import { ehErroDeRede } from './repositorio.js';
 import { criarCena } from '../../ui/cena.js';
 import { abrirJanela } from '../../ui/janela.js';
@@ -52,7 +52,9 @@ export const iniciarCalendario = (secao) => {
     sequencia: 0, // cada carga numerada: uma resposta atrasada de uma navegação antiga é descartada
     carregou: false,
     falhou: false, // a última carga deu erro
-    tempoReal: null // null enquanto conecta, 'AO_VIVO' ou 'ERRO'
+    tempoReal: null, // null enquanto conecta, 'AO_VIVO' ou 'ERRO'
+    esperando: false, // uma carga em andamento
+    tentando: false // uma leitura caiu na rede e o supabase-js está tentando de novo
   };
 
   const dia = { colaborador: null, data: null, horarios: [] };
@@ -69,6 +71,7 @@ export const iniciarCalendario = (secao) => {
   // costuma ficar pronto antes da primeira carga terminar, e "ao vivo" só vale com a semana lida.
   const atualizarConexao = () => {
     if (repo.modo === 'local') mostrarConexao('modo local: dados só neste navegador', 'cal-aviso');
+    else if (estado.tentando) mostrarConexao('tentando conectar…', 'cal-aviso');
     else if (!estado.carregou) mostrarConexao(estado.falhou ? 'sem conexão' : 'carregando…', estado.falhou ? 'cal-aviso' : '');
     else if (estado.tempoReal === 'ERRO') mostrarConexao('sem atualização ao vivo', 'cal-aviso');
     else if (estado.tempoReal === 'AO_VIVO') mostrarConexao('ao vivo', 'cal-vivo');
@@ -92,16 +95,31 @@ export const iniciarCalendario = (secao) => {
     el('erro').innerHTML = '';
   };
 
+  // A queda de rede aparece na primeira tentativa que falha, com a contagem, e não só quando o
+  // supabase-js desiste, uns 12 s depois. Só as leituras do Calendário, e só com a carga esperando.
+  if (repo.modo !== 'local') {
+    aoFalharTentativa((tentativa) => {
+      if (!/\/rest\/v1\/(collaborators|daily_entries|unavailable_slots)\b/.test(tentativa.url) || !estado.esperando) return;
+      const texto = textoTentando(tentativa);
+      if (!texto) return;
+      estado.tentando = true;
+      el('erro').innerHTML = `<div class="alert alert-warning" role="status">${esc(texto)}</div>`;
+      atualizarConexao();
+    });
+  }
+
   /* ── Carga ────────────────────────────────────────────────────────────────────────── */
 
   const intervalo = () => (estado.visao === 'semana' ? intervaloDaSemana(estado.segunda) : intervaloDoMes(estado.ano, estado.mes));
 
   async function carregar() {
     const numero = ++estado.sequencia;
+    estado.esperando = true;
     try {
       const { inicio, fim } = intervalo();
       const [colaboradores, registros] = await Promise.all([repo.listarColaboradores(), repo.listarRegistros(inicio, fim)]);
       if (numero !== estado.sequencia) return;
+      Object.assign(estado, { esperando: false, tentando: false });
       estado.colaboradores = colaboradores;
       estado.registros = indexar(registros);
       Object.assign(estado, { carregou: true, falhou: false });
@@ -111,7 +129,7 @@ export const iniciarCalendario = (secao) => {
     } catch (erro) {
       if (numero !== estado.sequencia) return;
       console.error(erro);
-      estado.falhou = true;
+      Object.assign(estado, { esperando: false, tentando: false, falhou: true });
       mostrarErro(erro);
       render();
       atualizarConexao();
@@ -219,6 +237,7 @@ export const iniciarCalendario = (secao) => {
     el('observacao').value = registro?.observacao ?? '';
     el('motivo').value = '';
     el('erro-dialogo').innerHTML = '';
+    el('erro-horario').innerHTML = '';
     renderHorarios();
     abrirJanela(dialogo, origem);
   }
@@ -231,8 +250,9 @@ export const iniciarCalendario = (secao) => {
     const inicio = el('inicio').value;
     const fim = el('fim').value;
     const motivo = el('motivo').value.trim();
-    if (!inicio || !fim) return aviso('Preencha os dois horários.', { tipo: 'erro' });
-    if (inicio >= fim) return aviso('O horário final deve ser depois do inicial.', { tipo: 'erro' });
+    const problema = validarHorario(inicio, fim);
+    el('erro-horario').innerHTML = problema ? `<div class="alert alert-danger" role="alert">${esc(problema)}</div>` : '';
+    if (problema) return el(inicio ? 'fim' : 'inicio').focus();
     dia.horarios.push({ inicio, fim, motivo });
     el('motivo').value = '';
     renderHorarios();
@@ -448,6 +468,7 @@ const MARCACAO = `
           <input type="text" data-cal="motivo" maxlength="60" placeholder="Motivo (ex.: médico)" aria-label="Motivo" />
           <button type="button" class="copy-btn" data-cal="adicionar-horario">Adicionar</button>
         </div>
+        <div data-cal="erro-horario"></div>
       </fieldset>
 
       <div data-cal="erro-dialogo"></div>

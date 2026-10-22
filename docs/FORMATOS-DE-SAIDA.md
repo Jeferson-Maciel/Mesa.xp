@@ -286,6 +286,12 @@ O Lote Simples **não tem coluna de financeiro**: uma ordem por financeiro não 
 porque a planilha da XP não tem a coluna. A tabela do e-mail (formato 2) ganha `Financeiro`; este
 TSV, não.
 
+**Baixar** (F9, 22/10/2026): o Lote Simples e o Lote TWAP também saem como arquivo, ao lado do
+Copiar, e no "Juntos". O arquivo é **o mesmo texto do Copiar, byte a byte**: UTF-8 sem marca de ordem
+de bytes, TAB e `\n` (decisão do usuário: "TSV, igual ao copiado"). O nome:
+`lote-simples-<conta>-AAAA-MM-DD.tsv`, `lote-twap-<conta>-AAAA-MM-DD.tsv` e, no Juntos,
+`lote-simples-<n>-contas-AAAA-MM-DD.tsv`, com o dia local (`chaveDoDia`).
+
 ## 4. Lote TWAP (TSV)
 
 Cabeçalho:

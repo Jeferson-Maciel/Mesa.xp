@@ -23,10 +23,14 @@ concurrency:
 
 jobs:
   verificar:
-    runs-on: ubuntu-latest
+    # O ubuntu-latest passa ao Ubuntu 26 desde 19/10/2026; o Chromium do Playwright é feito para o 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+
+      - name: O sistema da máquina
+        run: echo "::notice title=Máquina::$(. /etc/os-release; echo "$PRETTY_NAME")"
 
       - uses: actions/setup-node@v5
         with:
@@ -49,8 +53,11 @@ jobs:
         run: npm run verificar 2>&1 | tee verificar.log; exit ${PIPESTATUS[0]}
 
       # O log do passo só o administrador do repositório vê; as anotações, qualquer um. Cada falha já sai
-      # como anotação; aqui, o fim da saída, para o caso de o verificador parar por um erro.
+      # como anotação; aqui, o fim da saída, para o caso de o verificador parar por um erro. Numa
+      # anotação só (as quebras viram %0A): o GitHub guarda no máximo 10 anotações por passo, e uma por
+      # linha escondia justamente o erro, que vem por último.
       - name: O fim da saída, se falhou
         if: failure()
-        shell: bash
-        run: tail -n 25 verificar.log | sed 's/^/::warning title=Fim do verificar::/'
+        run: >-
+          node -e "const l = require('fs').readFileSync('verificar.log', 'utf8').trimEnd().split('\n').slice(-40).join('\n');
+          console.log('::warning title=Fim do verificar::' + l.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'))"

@@ -373,3 +373,13 @@ deduzi-lo.
 mudaram só três coisas: o tema e os avisos de tela vêm de `src/ui/`, e os atalhos (Ctrl+Enter,
 Alt+H, Esc) só valem com a aba à vista. O botão Histórico mora no topo e só aparece na aba Ordens
 (`data-so-na-aba="ordens"`).
+
+**O lote baixado como arquivo** (F9, 22/10/2026): o Lote Simples e o Lote TWAP têm Baixar ao lado do
+Copiar, e o "Juntos" tem Baixar ao lado do "Copiar todos". O arquivo é o texto do Copiar, em `.tsv`
+(o nome e o formato em `FORMATOS-DE-SAIDA.md`), e baixar entra no histórico como o Copiar (decidido
+com o usuário). O lote não vai para a Fila do dia, nem antes. Código em `ui/arquivo.js`.
+
+**Os atalhos estão à vista** (F20, 22/10/2026): abaixo de Analisar, Colar e analisar e Limpar, uma
+linha com as teclas — `Ctrl`+`Enter` analisa · `Alt`+`H` histórico. O `title` do Limpar dizia "Esc",
+mas o Esc do Ordens só fecha o histórico: saiu. `atalhos.test.js` confere que a dica só promete o que
+o `keydown` faz.

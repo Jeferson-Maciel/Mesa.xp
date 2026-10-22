@@ -82,11 +82,9 @@ Ideias, com o custo grosseiro:
 | --- | --- | --- |
 | F5 | Colar a ordem enviada junto do pedido e receber as divergências | alto |
 | F6 | Um clique põe a cesta inteira em Venda | baixo |
-| F9 | Baixar o lote como arquivo, além de copiar | baixo |
 | F12 | Fila do dia: trabalhar o despejo da conversa solicitação por solicitação | médio |
 | F15 | Pedido por print (OCR) — só como sugestão que obriga conferir campo a campo: OCR troca dígito de conta | alto |
 | F16 | Cestas favoritas, depois de o uso mostrar quais se repetem | médio |
-| F20 | Atalhos visíveis (`Ctrl+Enter`, `Alt+H` só estão no `title`) | baixo |
 | F21 | Segmentados como `radiogroup`: duas paradas de tabulação por linha em vez de seis | baixo |
 
 ## Robô do Hub e secundário
@@ -113,13 +111,6 @@ Ideias, com o custo grosseiro:
 - **Lê só a primeira aba** da planilha.
 - **A imagem para baixar** segue o formato padrão da taxa e do prazo (as casas e o texto do prazo das
   regras valem só para a mensagem).
-
-## Calendário
-
-- **O erro de rede demora ~12 s para aparecer** (o supabase-js tenta de novo). Um "tentando
-  conectar…" com contagem, ou menos tentativas, deixaria claro que a rede caiu.
-- **O aviso de horário inválido aparece atrás do véu da janela do dia**: mostrar dentro da janela,
-  como o erro ao salvar.
 
 ## Operacional
 

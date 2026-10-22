@@ -26,6 +26,7 @@ import { aplicarEdicao, renderCartao } from './ui/preview.js';
 import { formatarTempos } from './ui/tempos.js';
 import { renderTextoLido } from './ui/textoLido.js';
 import { ROTULOS, chaveDaConfirmacao, esc, gerar, renderSaidas } from './ui/saidas.js';
+import { arquivoDoLote, baixarArquivo, nomeDoArquivoDoLote } from './ui/arquivo.js';
 import { aviso } from '../../ui/avisos.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
 import { contasConhecidas, diaDe, registrarEnvio, repetidosHoje } from '../../comum/fila/regras.js';
@@ -464,7 +465,11 @@ export const iniciarOrdens = (secao) => {
   function renderLotesJuntos() {
     const caixa = $('lotes-juntos');
     const botoes = LOTES.filter((f) => contasComLote(f).length > 1)
-      .map((f) => `<button type="button" class="preset-btn" data-lotes="${f}" title="Um TSV só, com um cabeçalho, com o ${ROTULOS[f]} de cada conta">Copiar todos os ${ROTULOS[f]} (${contasComLote(f).length} contas)</button>`)
+      .map(
+        (f) =>
+          `<button type="button" class="preset-btn" data-lotes="${f}" title="Um TSV só, com um cabeçalho, com o ${ROTULOS[f]} de cada conta">Copiar todos os ${ROTULOS[f]} (${contasComLote(f).length} contas)</button>` +
+          `<button type="button" class="preset-btn" data-lotes="${f}" data-baixar-lotes title="O mesmo TSV, num arquivo .tsv">Baixar</button>`
+      )
       .join('');
     caixa.hidden = !botoes;
     caixa.innerHTML = botoes ? `<span class="presets-label">Juntos</span>${botoes}` : '';
@@ -483,9 +488,15 @@ export const iniciarOrdens = (secao) => {
     }
     const [primeiro, ...resto] = textos;
     const texto = primeiro + resto.map((t) => t.split('\n').slice(1).join('\n')).join('');
-    const ok = await copiar(texto, null);
-    aviso(ok ? `${ROTULOS[formato]} de ${textos.length} contas copiados, com um cabeçalho só.` : 'Não consegui copiar.', { tipo: ok ? 'info' : 'erro' });
-    if (!ok) return;
+    if ('baixarLotes' in botao.dataset) {
+      const nome = nomeDoArquivoDoLote({ formato, contas: contasComLote(formato).map(([s]) => String(s.conta)) });
+      baixarArquivo(arquivoDoLote(texto), nome);
+      aviso(`${ROTULOS[formato]} de ${textos.length} contas baixados, com um cabeçalho só: ${nome}.`);
+    } else {
+      const ok = await copiar(texto, null);
+      aviso(ok ? `${ROTULOS[formato]} de ${textos.length} contas copiados, com um cabeçalho só.` : 'Não consegui copiar.', { tipo: ok ? 'info' : 'erro' });
+      if (!ok) return;
+    }
     for (const [s] of contasComLote(formato)) {
       historico.registrar({ conta: s.conta, ativos: recorte(s, 'bolsa', formato).ordens.map((o) => o.ativo), formato: ROTULOS[formato], textoOriginal: estado.textoOriginal });
       estado.contasDoHistorico.add(String(s.conta));
@@ -730,6 +741,25 @@ export const iniciarOrdens = (secao) => {
       });
       estado.contasDoHistorico.add(String(solicitacao.conta));
       registrarNaFila(solicitacao, iSolicitacao, formato, grupo, saida.texto);
+      return atualizarContadorHistorico();
+    }
+
+    // O lote como arquivo (F9): o mesmo texto do Copiar, e entra no histórico como o Copiar.
+    const baixarBotao = e.target.closest('[data-baixar]');
+    if (baixarBotao) {
+      const formato = baixarBotao.dataset.baixar;
+      const saida = gerar(solicitacao, formato, estado.confirmados[iSolicitacao], { grupo: 'bolsa' });
+      if (!saida) return aviso('Resolva os bloqueios antes de baixar.');
+      const nome = nomeDoArquivoDoLote({ formato, contas: [String(solicitacao.conta)] });
+      baixarArquivo(arquivoDoLote(saida.texto), nome);
+      aviso(`${ROTULOS[formato]} baixado: ${nome}.`);
+      historico.registrar({
+        conta: solicitacao.conta,
+        ativos: recorte(solicitacao, 'bolsa', formato).ordens.map((o) => o.ativo),
+        formato: ROTULOS[formato],
+        textoOriginal: estado.textoOriginal
+      });
+      estado.contasDoHistorico.add(String(solicitacao.conta));
       return atualizarContadorHistorico();
     }
 

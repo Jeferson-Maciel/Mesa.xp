@@ -1,6 +1,6 @@
 # Contexto — onde paramos
 
-**Última atualização: 21/10/2026.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 22/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
 regras estão no [`CLAUDE.md`](../CLAUDE.md) (o que vale sempre, e o mapa) e nos documentos de cada
 módulo, aqui em `docs/`; o
@@ -57,6 +57,30 @@ Se o usuário não tiver respondido, pergunte de novo antes de construir. Depois
 **Na nuvem, não há**: as exportações reais da XP (`src/modulos/rendafixa/fixtures/*.xlsx`, fora do git
 — os goldens delas são pulados), o Hub e o Outlook de verdade, o Tampermonkey nem o Chrome do usuário.
 O resto — testes, build, verificador com o Hub e o Outlook de mentira — roda igual.
+
+## 22/10: Calendário (a queda de rede e o horário inválido), F20 e F9 — na nuvem
+
+Pedido do usuário, numa sessão na nuvem, ao mesmo tempo que outra fazia a Fase 3 (a Fila e o
+histórico do Ordens não foram tocados). Branch `claude/bold-knuth-t4cj2w`, um commit por item.
+
+- **Calendário**: a queda de rede aparece na primeira tentativa que falha, "Tentando conectar de novo
+  (2 de 4)…", com "tentando conectar…" no status, e não mais calada uns 12 s (`aoFalharTentativa`, em
+  `src/dados/banco.js`; as tentativas do supabase-js ficaram). O horário indisponível inválido avisa
+  dentro da janela do dia. Sem login, como estava. Detalhe em `docs/calendario.md`.
+- **F20**: "Ctrl+Enter analisa · Alt+H histórico" em teclas, abaixo dos botões do Ordens. O `title` do
+  Limpar prometia um Esc que não existe: saiu.
+- **F9**: Baixar o Lote Simples e o Lote TWAP (e o "Juntos") num `.tsv`, o mesmo texto do Copiar, byte a
+  byte; conta no histórico como o Copiar. As três decisões (TSV igual ao copiado, conta no histórico,
+  nos dois lugares) foram perguntadas ao usuário.
+- **Verificado**: 1.334 testes (18 pulados, sem as planilhas reais), o build, e o `verificar` com as
+  conferências novas (a rede caída com a rota do Supabase cortada; o horário inválido dentro da janela;
+  a dica dos atalhos; os dois downloads comparados com o copiado). Na nuvem, o `verificar` deu 6 falhas
+  de "sem rolagem lateral" a 360px (Fila Enviados, Calendário semana e histórico), **iguais no código de
+  antes** (rodado com `git stash`): o Chromium daqui é o 1194, emprestado no lugar do 1243 que o
+  Playwright do projeto pede (o download é bloqueado), e o GitHub, com o navegador certo, passa. Uma
+  conferência do robô no Outlook falhou uma vez em cada rodada, cada vez uma diferente, e não na seguinte.
+- **O push foi recusado** (403: o app do Claude no GitHub sem acesso ao repositório); os commits ficaram
+  na branch local da sessão até o acesso ser refeito.
 
 ## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
 

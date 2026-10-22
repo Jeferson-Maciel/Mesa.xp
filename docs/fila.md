@@ -16,6 +16,7 @@ src/comum/fila/eventos.js      "a Fila mudou", na página e entre abas do navega
 src/comum/horarios.js          os horários de mercado: o pregão, o Estoque clientes, o secundário, o Tesouro
 src/comum/anotarDeFora.js      o "Anotar" que leva às Anotações com o pedido escrito
 src/modulos/fila/              a aba: as pastas, a ficha de execução, o resumo do dia
+src/modulos/fila/vigiaPrazos.js  o aviso de prazo, em qualquer aba (Fase 3)
 ```
 
 As regras moram em `src/comum/` porque dois módulos as usam: o Ordens grava o cartão e confere o
@@ -55,7 +56,19 @@ pastas**, e não um quadro de colunas:
 - **Cancelados** — só aparece quando há algum; **Reabrir** volta para os Enviados.
 
 Toda mudança que tira um pedido da pasta aberta avisa para onde ele foi, com **Desfazer**. O
-contador da aba Fila conta o que está em Aprovação e execução, em qualquer aba. No celular, as pastas
+contador da aba Fila conta o que está em Aprovação e execução, em qualquer aba, na cor da Fila; com um
+prazo perto (ver "O aviso de prazo"), fica **âmbar** e conta também o e-mail sem resposta de prazo perto.
+
+**Em cartões ou em tabela** (Fase 3, Q34, 21/10/2026): Aprovação e execução tem a chave **Cartões /
+Tabela**, lembrada neste navegador (`mesa_fila_vista`). Na tabela, uma linha por pedido — a conta, o
+cliente, o grupo, as ordens com as cotas, a resposta, o prazo —, com **Aprovou**, **Gerar lote** ou
+**Ficha**, a **Boleta** e **Executado** à vista; ver o e-mail, anotar, "não aprovou" e cancelar ficam
+no menu **…** da linha (fecha com um clique fora ou Esc; o redesenho de 30 s espera ele fechar). A
+mesma ordem dos cartões. No celular, a tabela rola dentro dela.
+
+**O pedido aberto de fora** (a busca Ctrl+K, o "Ver na Fila" do aviso de prazo, o selo do histórico
+do Ordens): a Fila vai ao dia e à pasta dele, filtrada pela conta, e o cartão fica aceso (contornado na
+cor da aba) até a pessoa mudar de pasta ou de busca. No celular, as pastas
 viram uma linha de fichas acima da lista. Os estados por baixo continuam os mesmos — enviado,
 respondeu, aprovado, executado, cancelado —, e cada pasta mostra os seus.
 
@@ -89,6 +102,36 @@ Vêm do que o pedido é, pelos horários de `src/comum/horarios.js` (conferidos 
 Depois da hora, o prazo é o do próximo dia útil. O prazo a uma hora ou menos fica **âmbar**; o que
 passou, **vermelho**. Em Aprovação e execução, o pedido com prazo perto vem primeiro e acende uma
 vez; nos Enviados, a pasta ganha o ponto âmbar.
+
+## O aviso de prazo (Fase 3)
+
+Decidido com o usuário em 21/10/2026 (Q31 a Q33). Em **qualquer aba** — como os lembretes das
+Anotações: quem passa o dia no Ordens também é avisado —, o vigia (`vigiaPrazos.js`, começa com a
+página) mostra o aviso de prazo:
+
+- **15 min antes** de um prazo de pedido em Aprovação e execução ("Falta executar"), e **30 min antes**
+  de um e-mail que espera o cliente ("O cliente ainda não respondeu": dá tempo de ligar);
+- âmbar, com o relógio, **com som** e **Ver na Fila**, que leva ao cartão;
+- **uma vez por pedido e por prazo**: o avisado fica gravado no cartão (`prazosAvisados`) antes do
+  aviso — recarregar a página, mudar de pasta ou refazer o e-mail não avisa de novo; o pedido com dois
+  prazos (o Estoque clientes às 14h e o secundário às 16h30) avisa de cada um;
+- o cartão é relido do banco antes de gravar a marca: o vigia do Outlook pode ter acabado de gravar a
+  resposta do cliente, que o cartão regravado apagaria;
+- confere a cada 30 s, a cada mudança na Fila e ao voltar para a aba do navegador (escondida, o Chrome
+  só roda o relógio uma vez por minuto). O prazo que já passou não avisa: fica vermelho no cartão.
+
+**O som e os avisos à vista** (valem para a Mesa inteira, `src/ui/avisos.js`): o som toca só na
+**resposta do cliente**, no **erro** e no **aviso de prazo** — o "copiado", o "salvo" e o Desfazer
+ficam em silêncio. O botão de som do topo continua ligado por padrão. **No máximo 3 avisos à vista**: o
+quarto tira o mais antigo, menos o de erro, que fica até sair sozinho.
+
+## O histórico do Ordens e a Fila (Fase 3)
+
+Decidido com o usuário em 21/10/2026 (Q35). Cada entrada do histórico do Ordens (Alt+H) guarda os
+cartões da Fila que o e-mail criou (só os ids), e a gaveta mostra um **selo por cartão** — esperando o
+cliente, o cliente respondeu, aprovado, executado, cancelado —, que leva ao cartão na Fila. Sem cartão
+(um lote, ou apagado depois dos 90 dias), sem selo. O **Reabrir** volta com as correções do cartão do
+Ordens: ver [`ordens.md`](ordens.md), "O histórico e o Reabrir".
 
 ## O pedido repetido e a conta nova (no Ordens)
 

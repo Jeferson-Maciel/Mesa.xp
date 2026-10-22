@@ -291,6 +291,25 @@ Os textos e cabeçalhos exatos das 4 saídas estão em [`docs/FORMATOS-DE-SAIDA.
 Leia esse arquivo antes de alterar qualquer formatter ou template — ele é a fonte da verdade dos
 literais, e um caractere fora do lugar quebra a colagem no Excel ou o padrão do e-mail.
 
+
+## O histórico e o Reabrir
+
+O histórico (Alt+H, no `localStorage`, 50 entradas) guarda o que foi **usado** — copiado ou aberto no
+Outlook —, com o texto colado. **Reabrir** passa o texto pelas regras de agora, de novo, nunca uma saída
+congelada. Desde a Fase 3 (21/10/2026, Q35):
+
+- **As correções do cartão voltam junto** (`ui/correcoes.js`): o histórico guarda a diferença entre o
+  cartão e o texto lido — o valor editado, a troca entre quantidade e R$, a linha removida ou
+  acrescentada, a conta, o horário do TWAP, o ROA zerado, as confirmações dos bloqueios —, e o Reabrir
+  a aplica sobre o texto lido de novo. O botão diz "Reabrir com as correções" quando há.
+- **Nada é adivinhado**: cada correção está presa à posição da linha no texto e ao ativo que estava lá.
+  Se o texto agora é lido de outro jeito (o ativo não está no mesmo lugar, a solicitação tem outra
+  conta), a correção **não entra** e o aviso, em vermelho, diz qual faltou para refazer à mão — corrigir
+  a linha errada seria pior que não corrigir.
+- **O selo da Fila** em cada entrada que gerou e-mail: em que pé ele está, e o clique leva ao cartão
+  (`docs/fila.md`).
+- Copiar a mesma saída de novo não duplica a entrada, mas a deixa com as correções de agora.
+
 ## O que acompanha o trabalho (21/10/2026)
 
 - **O que foi lido do texto**: embaixo da caixa da solicitação, cada linha colada com o que aconteceu

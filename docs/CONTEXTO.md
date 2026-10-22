@@ -1,6 +1,6 @@
 # Contexto — onde paramos
 
-**Última atualização: 21/10/2026.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 22/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
 regras estão no [`CLAUDE.md`](../CLAUDE.md) (o que vale sempre, e o mapa) e nos documentos de cada
 módulo, aqui em `docs/`; o
@@ -22,8 +22,9 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.340 testes (`npm test`), o build e 336
-  conferências no navegador (`npm run verificar`). O Hub de mentira
+- A última verificação (22/10, na nuvem): 1.364 testes (`npm test`), o build e o verificador, com as
+  conferências da Fase 3 passando; as que falham ali falham igual na base (ver "Para quem continuar").
+  Antes (21/10, noite), inteira: 1.340 testes e 336 conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
@@ -36,27 +37,43 @@ cada sessão.
 
 ## Para quem continuar (a sessão na nuvem, ou outra)
 
-**Próximo passo: a Fase 3 (Fila e avisos).** As decisões grandes estão no `docs/ROADMAP.md`. A rodada
-de perguntas de detalhe foi feita ao usuário em 21/10 e **esperava as respostas**:
-
-- **Q31** — o aviso de prazo (15 min antes para Aprovação e execução, 30 min para Enviados sem
-  resposta) aparece em qualquer aba, como os lembretes das Anotações, com som e "Ver na Fila", uma vez
-  por pedido e por prazo, e o contador da aba Fila fica âmbar? (recomendado: sim)
-- **Q32** — o som segue ligado por padrão, agora que só toca na resposta do cliente, no erro e no
-  aviso de prazo? (recomendado: sim)
-- **Q33** — no máximo 3 avisos à vista; o quarto tira o mais antigo, menos o de erro? (recomendado: sim)
-- **Q34** — a vista em tabela na Fila: à vista Aprovou, Lote ou Ficha, Boleta e Executado; o resto num
-  menu "…" na linha? (recomendado: sim)
-- **Q35** — o histórico do Ordens mostra o estado do e-mail na Fila, com o selo levando ao cartão, e o
-  "Reabrir" volta com as correções do cartão (valores editados, linhas removidas, confirmações), com
-  aviso das que não couberem? (recomendado: sim)
-
-Se o usuário não tiver respondido, pergunte de novo antes de construir. Depois da Fase 3: a Fase 4
-(Ordens) e a 2b (o robô buscar os dados de Renda Fixa no Hub — precisa do usuário mostrando a tela).
+**A Fase 3 (Fila e avisos) está feita** (22/10, na sessão da nuvem), na branch
+`claude/nice-ptolemy-dk7gpi`, com um pull request para a `main`. **Próximo passo: a Fase 4 (Ordens)**,
+com a rodada de perguntas antes; e a 2b (o robô buscar os dados de Renda Fixa no Hub — precisa do
+usuário mostrando a tela). Outra sessão fazia, ao mesmo tempo, o Calendário e os itens F20 e F9.
 
 **Na nuvem, não há**: as exportações reais da XP (`src/modulos/rendafixa/fixtures/*.xlsx`, fora do git
 — os goldens delas são pulados), o Hub e o Outlook de verdade, o Tampermonkey nem o Chrome do usuário.
-O resto — testes, build, verificador com o Hub e o Outlook de mentira — roda igual.
+O resto — testes, build, verificador com o Hub e o Outlook de mentira — roda igual. Duas coisas da
+máquina da nuvem de 22/10: o Playwright 1.63 pede um Chromium que não baixa ali (o
+`npx playwright install` falha), e o que existe é o 1194 — o verificador rodou com ele, por um atalho
+fora do repositório; e com ele e as fontes do Linux, quatro conferências do Calendário a 360px falham
+igual na base (no GitHub passam). Alguns passos do verificador falham de vez em quando nessa máquina,
+na base também (o robô no Outlook, e o que depende do `localStorage` depois de recarregar a página —
+o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
+vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
+
+## 22/10: a Fase 3 — a Fila e os avisos
+
+Decidido na rodada de perguntas Q31 a Q35 (o usuário aceitou todas as recomendações). Detalhe em
+`docs/fila.md` ("O aviso de prazo", "O histórico do Ordens e a Fila") e `docs/ordens.md` ("O histórico e
+o Reabrir").
+
+- **O som** só na resposta do cliente, no erro e no aviso de prazo; o botão segue ligado por padrão.
+  **No máximo 3 avisos à vista**: o quarto tira o mais antigo, menos o de erro.
+- **O aviso de prazo**, em qualquer aba: 15 min antes em Aprovação e execução, 30 min antes nos
+  Enviados; âmbar, com som e "Ver na Fila" (que abre o cartão, aceso); uma vez por pedido e por prazo,
+  gravado no cartão. O contador da aba Fila tem a cor da aba e fica âmbar com um prazo perto.
+- **Aprovação e execução em tabela**, com a chave Cartões / Tabela lembrada no navegador; à vista
+  Aprovou, Lote ou Ficha, Boleta e Executado, o resto no menu "…".
+- **O histórico do Ordens** mostra o estado de cada e-mail na Fila, com o selo levando ao cartão; o
+  **Reabrir** volta com as correções do cartão e avisa, em vermelho, das que não couberem.
+- De quebra: o topo da Fila quebra a linha a 360px em vez de passar da tela com uma fonte mais larga.
+  Anotado no roadmap: editar um campo do Ordens e clicar direto no Copiar perde o clique.
+- **Verificação**: 1.364 testes, o build, e o verificador com as conferências novas da Fase 3 (o aviso
+  no Ordens, o som só nele, os 3 avisos, recarregar sem avisar de novo, "Ver na Fila", a tabela, o menu,
+  a vista lembrada, o selo do histórico e o Reabrir com a correção).
+- **Nada de robô novo**: a Fase 3 é só da página; ninguém precisa reinstalar.
 
 ## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
 

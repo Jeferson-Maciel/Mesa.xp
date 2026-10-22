@@ -27,10 +27,11 @@ fase sai publicada quando os testes, o build e o verificador passam.
    - **2b. O robô buscar os dados no Hub** em vez da planilha baixada todo dia (Renda Fixa → emissão
      bancária, e o secundário): estudo na tela de verdade, que o usuário mostra pelo Claude in Chrome.
      A planilha fica como reserva. A troca do SheetJS pelo menor (sem `.xls`) espera esse estudo.
-3. **Fila e avisos** — som só na resposta do cliente, no erro e no aviso de prazo, e no máximo 3
-   avisos à vista; o aviso de prazo (15 min antes para Aprovação e execução, 30 min antes para os
-   Enviados sem resposta); a vista em tabela em Aprovação e execução; o histórico do Ordens ligado à
-   Fila (o estado de cada item, e o "Reabrir" com as correções).
+3. ~~**Fila e avisos**~~ — **feita em 22/10/2026** (ver `docs/fila.md`, "O aviso de prazo" e "O
+   histórico do Ordens e a Fila"): o som só na resposta do cliente, no erro e no aviso de prazo; no
+   máximo 3 avisos à vista; o aviso de prazo em qualquer aba (15 min antes em Aprovação e execução, 30
+   min antes nos Enviados), com o contador âmbar; Aprovação e execução em tabela; o histórico do Ordens
+   com o estado na Fila e o Reabrir com as correções do cartão.
 4. **Ordens** — a tabela de posições colada (`Ativo / Qtd. Teórica / Qtd. Atual`) não é pedido de
    ordem: não gera nada e diz isso; o fracionário (`PETR4F`); os exemplos num menu; os emoji dos
    atalhos de formato viram ícones de traço; o favorito 📥 sai depois de o robô passar no Hub de
@@ -72,6 +73,9 @@ O passo a passo está em [`CONTEXTO.md`](CONTEXTO.md), "A testar no Hub e no Out
 - **Conta escrita depois das ordens** deixa as ordens numa solicitação sem conta. Bloqueia (não é
   perigoso), mas obriga a reescrever.
 - **Linhas de conversa** ("Bom dia!") que a limpeza não pega aparecem nos descartes.
+- **Editar um campo e clicar direto num Copiar**: o `change` do campo, que dispara no clique, refaz as
+  saídas debaixo do mouse, e o clique se perde (achado pelo `verificar` na Fase 3; contornado lá com um
+  Tab). Um clique que some é um clique a mais, não uma ordem errada, mas confunde.
 - **Separar o `index.js` do Ordens** (1.521 linhas): aos poucos, quando cada parte for mexida.
 - **A Fila guardar as quantidades aprovadas como dado** na hora do envio, em vez de relê-las do texto
   do e-mail (hoje presa aos modelos do `FORMATOS-DE-SAIDA.md`).

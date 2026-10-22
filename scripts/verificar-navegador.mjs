@@ -118,14 +118,17 @@ const abrir = async ({ arquivo = distLocal, hash = '', largura = 1400, tema = 'e
 };
 
 /*
- * Recarregar para conferir o que ficou no localStorage. A gravação chega ao navegador depois da página:
- * recarregar no mesmo instante, numa máquina carregada (o GitHub, 22/10/2026), às vezes voltava sem ela
- * — o post editado, o conflito do Operacional, as regras do Renda Fixa. Gente não recarrega no mesmo
- * milissegundo em que salvou; o verificador, sim. (O IndexedDB não precisa: a transação só termina
- * gravada.)
+ * Recarregar para conferir o que ficou no localStorage. No GitHub (Linux, 22/10/2026), recarregar logo
+ * depois de gravar às vezes voltava com o localStorage vazio — o post editado e o conflito do
+ * Operacional, as regras do Renda Fixa; o Operacional mostrava a semente, que é o que ele lê sem nada
+ * gravado. Meio segundo de espera não bastou. O mais provável é o Chromium, que passa o localStorage ao
+ * banco dele em lotes de alguns segundos e, numa máquina apertada, solta a área da página que
+ * recarrega antes disso. Na máquina do usuário nunca aconteceu, e gente não recarrega no mesmo
+ * instante em que salvou. Por isso 6 s antes da recarga. (O IndexedDB não precisa: a transação só
+ * termina gravada.)
  */
 const recarregar = async (pagina) => {
-  await pagina.waitForTimeout(500);
+  await pagina.waitForTimeout(6_000);
   await pagina.reload();
 };
 

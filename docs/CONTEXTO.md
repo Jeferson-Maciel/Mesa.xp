@@ -67,7 +67,9 @@ em todas as abas espera as respostas das perguntas Q36 a Q42.
   da nuvem): o post editado e o conflito do Operacional, as regras do Renda Fixa — cinco rodadas
   seguidas falharam assim, cada vez numa dessas, no Ubuntu 26 e no 24.04. Gente não recarrega no mesmo
   milissegundo em que salvou; o verificador, sim. As recargas que conferem o `localStorage` passam por
-  `recarregar`, com meio segundo antes (o IndexedDB não precisa: a transação só termina gravada). A
+  `recarregar`, com 6 s antes — meio segundo não bastou: a página recarregada via o localStorage vazio,
+  provavelmente porque o Chromium passa o localStorage ao banco dele em lotes de alguns segundos (o
+  IndexedDB não precisa: a transação só termina gravada). A
   máquina do GitHub ficou fixa no Ubuntu 24.04, o que o Playwright suporta, e uma anotação diz qual rodou.
 - **O fim da saída do verificador sai numa anotação só**, com as 40 últimas linhas: o GitHub guarda 10
   anotações por passo, e o erro que parava o verificador ficava de fora.

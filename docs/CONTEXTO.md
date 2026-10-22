@@ -29,9 +29,9 @@ cada sessão.
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 41 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
-  o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo: agora a 1.12.0, e recarregar a aba do Outlook).
+- **Publicado em 21/10/2026 (noite), com o OK do usuário**: os commits de 20 e 21/10 (o histórico
+  limpo antes, ver abaixo), com o workflow semanal dos tickers da B3. Os colegas precisam copiar o
+  robô 1.12.0 ("Copiar robô" → Tampermonkey) e recarregar a aba do Outlook e a do Hub.
 
 ## 21/10 (noite, depois): o print numa aba à vista (robô 1.12.0)
 
@@ -164,10 +164,12 @@ para a resposta do cliente aparecer no sistema já formatada para executar. Feit
   pré-fixado (bruto, IR, líquido).
 - **O que mora em `src/comum/`**: o que dois módulos usam fora da tela — dias úteis, horários,
   Outlook, a Fila, a busca, os serviços (a ponte do robô e a prateleira) e o "Anotar".
-- **Um número de 20/10**: a quantidade de cotas de 8 casas dos exemplos e testes da venda
-  (a cota de 20/10) parecia uma posição lida de uma boleta; foi trocada por uma fictícia. Ela ainda está
-  nos commits locais de 20/10 (`ddab4a1`, `f8110f7`, `888d7db`), que não foram para o GitHub: se o
-  número for de um cliente, os commits podem ser reescritos antes do push.
+- **Dois números de cliente, tirados do histórico antes do push (21/10/2026)**: a quantidade de cotas
+  de 8 casas dos exemplos e testes da venda, de 20/10, era a posição de um cliente real (confirmado
+  pela conversa do usuário com o Antigravity), e um teste do valor por extenso usava o líquido real
+  daquele cliente. Os 41 commits locais foram reescritos com os valores fictícios antes do primeiro
+  push: nenhum dos dois chegou ao GitHub. Nunca usar número lido de boleta, posição ou e-mail de
+  cliente em teste, exemplo ou documento.
 
 ## 21/10: o Renda Fixa repaginado
 

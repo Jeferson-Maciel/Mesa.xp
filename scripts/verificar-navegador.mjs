@@ -516,7 +516,8 @@ try {
     await pagina.reload();
     await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
     await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
-    ok((await pagina.textContent('[data-rf="selo-regras"]')) === 'regras personalizadas · 2', 'recarregada a página, as regras continuam (no navegador)');
+    const seloDepois = await pagina.textContent('[data-rf="selo-regras"]');
+    ok(seloDepois === 'regras personalizadas · 2', `recarregada a página, as regras continuam (no navegador) ("${seloDepois}")`);
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }
@@ -830,7 +831,8 @@ try {
     ok((await pagina.inputValue('[data-op="editor"] textarea')) === 'versão desta aba', 'conflito: o texto de quem foi recusado continua no editor');
     await outra.reload();
     await outra.waitForSelector('.op-texto');
-    ok((await outra.textContent('.op-texto')) === 'versão da outra aba', 'conflito: a versão salva primeiro não foi sobrescrita');
+    const textoDaOutra = await outra.textContent('.op-texto');
+    ok(textoDaOutra === 'versão da outra aba', `conflito: a versão salva primeiro não foi sobrescrita ("${textoDaOutra.slice(0, 60)}")`);
     await outra.close();
 
     ok(rede.length === 0, `o modo local não faz requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);

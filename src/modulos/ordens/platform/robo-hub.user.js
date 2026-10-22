@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.13.4
+// @version      1.14.0
 // @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js
 // @downloadURL  https://mesa-xp.vercel.app/robo-hub.user.js
-// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
+// @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, no Renda Fixa a lista do Tesouro Direto, a posição do cliente nele e a planilha de produtos de emissão bancária, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
 // @match        https://outlook.cloud.microsoft/*
@@ -121,7 +121,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.13.4';
+  const VERSAO = '1.14.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -134,6 +134,11 @@
   const TESOURO = 'https://hub.xpi.com.br/new/renda-fixa/#/produtos/tesouro-direto';
   const ROTA_DO_TESOURO = '#/produtos/tesouro-direto';
   const LISTA_DO_TESOURO = /\/rede-treasury\/v\d+\/customers\/(\d+)\/available-assets(\?|$)/;
+  // A aba de Renda Fixa (1.14.0): Produtos → Emissão Bancária, no módulo Renda Fixa. Não exige cliente.
+  const RENDA_FIXA = 'https://hub.xpi.com.br/new/renda-fixa/#/produtos/emissao-bancaria';
+  const ROTA_DA_EMISSAO_BANCARIA = '#/produtos/emissao-bancaria';
+  const LISTA_DA_RENDA_FIXA = /\/rf-fixedincome-hub-apim\/v\d+\/available-assets(\?|$)/;
+  const EXPORT_DA_RENDA_FIXA = /\/rf-fixedincome-hub-apim\/v\d+\/available-assets\/export(\?|$)/;
   // A posição do cliente no Tesouro (1.7.0), para o resgate: Posições → Posição por cliente, que abre
   // na aba Renda Fixa; a do Tesouro Direto é aberta no clique.
   const ROTA_DA_RENDA_FIXA = '#/posicoes/cliente/renda-fixa';
@@ -147,6 +152,7 @@
     prateleira: { nome: NOME_DA_ABA, bilhete: 'abaPedida', atendendo: 'atendendo', abriuEm: 'abriuHubEm' },
     clientes: { nome: NOME_DA_ABA_DE_CLIENTES, bilhete: 'abaPedidaClientes', atendendo: 'atendendoClientes', abriuEm: 'abriuClientesEm' },
     tesouro: { nome: 'mesa-xp-tesouro', bilhete: 'abaPedidaTesouro', atendendo: 'atendendoTesouro', abriuEm: 'abriuTesouroEm' },
+    rendafixa: { nome: 'mesa-xp-rendafixa', bilhete: 'abaPedidaRendaFixa', atendendo: 'atendendoRendaFixa', abriuEm: 'abriuRendaFixaEm' },
     // A aba do print (1.12.0): aberta à vista para cada pedido de prints, fechada no fim.
     print: { nome: 'mesa-xp-print', bilhete: 'abaPedidaPrint', atendendo: 'atendendoPrint', abriuEm: 'abriuPrintEm' }
   };
@@ -243,12 +249,18 @@
     }
 
     const papelDoNome = () => Object.keys(PAPEIS).find((p) => PAPEIS[p].nome === pagina.name) ?? null;
+    const bilheteValido = (p) => {
+      const b = GM_getValue(PAPEIS[p]?.bilhete, null);
+      return b && Date.now() - b.em < 30000;
+    };
     const papelPossivel = location.pathname.startsWith('/new/posicao-consolidada')
       ? 'clientes'
       : location.pathname.startsWith('/new/fundos-de-investimento')
         ? 'prateleira'
         : location.pathname.startsWith('/new/renda-fixa')
-          ? 'tesouro'
+          ? bilheteValido('rendafixa') || location.hash.startsWith(ROTA_DA_EMISSAO_BANCARIA)
+            ? 'rendafixa'
+            : 'tesouro'
           : null;
     if (!destinoDeExecucao && !papelDoNome() && papelPossivel && visibilidadeReal() === 'hidden') {
       const { bilhete: chave, nome } = PAPEIS[papelPossivel];
@@ -268,6 +280,45 @@
         marcarTitulo();
       }
     };
+
+    // Segura o download da planilha de Renda Fixa (1.14.0): só nesta aba e só para o blob do produtos-renda-fixa.
+    if (papel === 'rendafixa') {
+      try {
+        const protoAnchor = pagina.HTMLAnchorElement.prototype;
+        const clickOriginal = protoAnchor.click;
+        protoAnchor.click = function (...args) {
+          const href = String(this.href || '');
+          const download = String(this.getAttribute('download') || this.download || '');
+          if (href.startsWith('blob:') && download.startsWith('produtos-renda-fixa')) {
+            registrar('segurou o download da planilha');
+            try {
+              pagina.URL.revokeObjectURL(href);
+            } catch {}
+            return;
+          }
+          return clickOriginal.apply(this, args);
+        };
+      } catch {}
+
+      pagina.addEventListener(
+        'click',
+        (evento) => {
+          const el = evento.target?.closest?.('a');
+          if (!el) return;
+          const href = String(el.href || '');
+          const download = String(el.getAttribute('download') || el.download || '');
+          if (href.startsWith('blob:') && download.startsWith('produtos-renda-fixa')) {
+            evento.preventDefault();
+            evento.stopImmediatePropagation();
+            registrar('segurou o download da planilha no ouvinte');
+            try {
+              pagina.URL.revokeObjectURL(href);
+            } catch {}
+          }
+        },
+        true
+      );
+    }
 
     /*
      * A aba do robô age como se estivesse à vista. O Chrome não desenha aba em segundo plano: não
@@ -318,14 +369,16 @@
     const naRotaDoRobo = () =>
       papel === 'clientes'
         ? location.pathname.startsWith('/new/posicao-consolidada')
-        : papel === 'tesouro'
+        : papel === 'tesouro' || papel === 'rendafixa'
           ? location.pathname.startsWith('/new/renda-fixa')
           : naPrateleira() || /^#\/secundario\/(comprar|vender)\//.test(location.hash);
     const botao = () => document.querySelector('soma-button[aria-label="atualizar"]');
 
     // O título diz, na barra de abas, que esta é a aba do robô.
     const marcarTitulo = () => {
-      if (doRobo && !document.title.startsWith('🤖')) document.title = `🤖 ${{ clientes: 'Clientes', tesouro: 'Tesouro', print: 'Print' }[papel] || 'Robô'} · ${document.title}`;
+      if (doRobo && !document.title.startsWith('🤖')) {
+        document.title = `🤖 ${{ clientes: 'Clientes', tesouro: 'Tesouro', print: 'Print', rendafixa: 'Renda Fixa' }[papel] || 'Robô'} · ${document.title}`;
+      }
     };
 
     // O registro de tempos: o que a aba do robô fez e o que o Hub chamou, com a hora. Sem nada do
@@ -421,9 +474,13 @@
     };
     const doTesouro = (endereco) => LISTA_DO_TESOURO.test(endereco) || POSICOES_DO_TESOURO.test(endereco);
 
-    // A ficha chega por XHR, não por fetch: o gancho no XHR só entra nas abas de clientes e do
-    // Tesouro do robô.
-    if (papel === 'clientes' || papel === 'tesouro') {
+    let listaRendaFixaNaCarga = false;
+    let esperaListaRendaFixa = null;
+    let exportRendaFixaPendente = null;
+
+    // A ficha chega por XHR, não por fetch: o gancho no XHR só entra nas abas de clientes, do
+    // Tesouro e de Renda Fixa do robô.
+    if (papel === 'clientes' || papel === 'tesouro' || papel === 'rendafixa') {
       const prototipo = pagina.XMLHttpRequest.prototype;
       const abrirXhr = prototipo.open;
       const enviarXhr = prototipo.send;
@@ -439,6 +496,50 @@
               anotarTesouro(endereco, JSON.parse(this.responseText));
             } catch {
               /* a página segue com a resposta dela */
+            }
+          });
+        }
+        if (papel === 'rendafixa' && LISTA_DA_RENDA_FIXA.test(endereco)) {
+          this.addEventListener('load', () => {
+            listaRendaFixaNaCarga = true;
+            if (esperaListaRendaFixa) esperaListaRendaFixa();
+            registrar('a lista da renda fixa chegou');
+          });
+        }
+        if (papel === 'rendafixa' && EXPORT_DA_RENDA_FIXA.test(endereco)) {
+          this.addEventListener('load', async () => {
+            try {
+              if (this.status !== 200) {
+                if (exportRendaFixaPendente) exportRendaFixaPendente({ erro: 'status-invalido' });
+                return;
+              }
+              const resp = this.response;
+              const buffer =
+                resp instanceof pagina.Blob
+                  ? await resp.arrayBuffer()
+                  : resp instanceof ArrayBuffer
+                    ? resp
+                    : null;
+              if (!buffer) {
+                if (exportRendaFixaPendente) exportRendaFixaPendente({ erro: 'sem-buffer' });
+                return;
+              }
+              const bytes = new Uint8Array(buffer);
+              if (bytes.length < 2 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+                if (exportRendaFixaPendente) exportRendaFixaPendente({ erro: 'corpo-invalido' });
+                return;
+              }
+              let bin = '';
+              const tam = bytes.length;
+              const bloco = 8192;
+              for (let i = 0; i < tam; i += bloco) {
+                bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + bloco, tam)));
+              }
+              const base64 = btoa(bin);
+              registrar('a planilha da renda fixa foi exportada e convertida');
+              if (exportRendaFixaPendente) exportRendaFixaPendente({ base64, tamanho: tam });
+            } catch {
+              if (exportRendaFixaPendente) exportRendaFixaPendente({ erro: 'falha-leitura' });
             }
           });
         }
@@ -684,10 +785,14 @@
     // O robô só clica no que está nesta lista — e no que estiver em volta do rótulo, para o clique
     // chegar ao componente. Próximo, Cancelar, Vender e a caixa de notificação ficam de fora.
     const CLIQUES_PERMITIDOS = ['Estoque XP', 'Estoque clientes', 'Total de cotas', 'Visualizar mais detalhes da operação'];
+    const CLIQUES_POR_ROTULO = ['Exportar'];
+    const rotuloAria = (el) => (el && typeof el.getAttribute === 'function' ? String(el.getAttribute('aria-label') || '').trim() : '');
     const textoInteiro = (el) => String(el.textContent || '').replace(/\s+/g, ' ').trim();
     const clicarSo = (el, extras = []) => {
       const texto = el ? textoProprio(el) || textoInteiro(el) : '';
-      if (!el || ![...CLIQUES_PERMITIDOS, ...extras].includes(texto)) return false;
+      const aria = rotuloAria(el);
+      const permitido = [...CLIQUES_PERMITIDOS, ...extras].includes(texto) || CLIQUES_POR_ROTULO.includes(aria);
+      if (!el || !permitido) return false;
       el.click();
       return true;
     };
@@ -1024,6 +1129,77 @@
       GM_setValue('tesouro', lista ? { id, leitura: tipo, ...campos } : { id, conta, leitura: tipo, erro: posicoes ? 'sem-posicoes' : 'sem-lista' });
     };
 
+    const acharBotaoExportar = () => {
+      const todos = elementosDe(document);
+      return (
+        todos.find((el) => el.tagName === 'SOMA-ICON-BUTTON' && el.getAttribute('aria-label') === 'Exportar') ||
+        todos.find((el) => el.getAttribute('aria-label') === 'Exportar') ||
+        null
+      );
+    };
+
+    const lerPlanilhaRendaFixa = async ({ id }) => {
+      if (!location.hash.startsWith(ROTA_DA_EMISSAO_BANCARIA)) {
+        await trocarDeTela(ROTA_DA_EMISSAO_BANCARIA);
+      }
+      registrar('esperando lista de renda fixa');
+      if (!listaRendaFixaNaCarga) {
+        await new Promise((resolver) => {
+          const relogio = setTimeout(() => {
+            esperaListaRendaFixa = null;
+            resolver();
+          }, 30000);
+          esperaListaRendaFixa = () => {
+            clearTimeout(relogio);
+            esperaListaRendaFixa = null;
+            resolver();
+          };
+        });
+      }
+
+      const botaoExportar = await esperar(acharBotaoExportar, 15000);
+      if (!botaoExportar) {
+        registrar('não achou o botão Exportar');
+        GM_setValue('pedidoPlanilhaRendaFixa', null);
+        gravarRegistro();
+        GM_setValue('planilhaRendaFixa', { id, erro: 'sem-planilha' });
+        return;
+      }
+
+      let resolverExport = null;
+      const esperando = new Promise((resolver) => {
+        const relogio = setTimeout(() => {
+          exportRendaFixaPendente = null;
+          resolver(null);
+        }, 20000);
+        resolverExport = (res) => {
+          clearTimeout(relogio);
+          exportRendaFixaPendente = null;
+          resolver(res);
+        };
+      });
+      exportRendaFixaPendente = resolverExport;
+
+      const clicou = clicarSo(botaoExportar);
+      if (clicou) registrar('clicou em Exportar');
+      else registrar('falhou ao clicar em Exportar');
+
+      let respostaExport = await ate(esperando, 5000);
+      if (!respostaExport) {
+        registrar('sem XHR do export em 5s, tentando segundo clique');
+        clicarSo(botaoExportar);
+        respostaExport = await esperando;
+      }
+
+      GM_setValue('pedidoPlanilhaRendaFixa', null);
+      gravarRegistro();
+      if (respostaExport && respostaExport.base64) {
+        GM_setValue('planilhaRendaFixa', { id, base64: respostaExport.base64, tamanho: respostaExport.tamanho, em: Date.now() });
+      } else {
+        GM_setValue('planilhaRendaFixa', { id, erro: 'sem-planilha' });
+      }
+    };
+
     // As tarefas do robô, uma por vez.
 
     // A cotação. A Prateleira que acaba de montar — a aba recém-aberta, a volta de uma boleta — pede
@@ -1162,7 +1338,7 @@
       if (visibilidadeReal() === 'visible' && !naRotaDoRobo()) {
         doRobo = false;
         pagina.name = '';
-        document.title = document.title.replace(/^🤖 (Robô|Clientes|Tesouro|Print) · /, '');
+        document.title = document.title.replace(/^🤖 (Robô|Clientes|Tesouro|Print|Renda Fixa) · /, '');
         darSinal();
         return;
       }
@@ -1178,7 +1354,17 @@
       vistos.add(pedido.id);
       GM_setValue(atendendo, { id: pedido.id, em: Date.now() });
       const tipo =
-        trabalho === atualizar ? 'cotação' : trabalho === lerCliente ? 'cliente' : trabalho === lerPrints ? 'prints' : trabalho === lerTesouro ? 'tesouro' : 'preços exatos';
+        trabalho === atualizar
+          ? 'cotação'
+          : trabalho === lerCliente
+            ? 'cliente'
+            : trabalho === lerPrints
+              ? 'prints'
+              : trabalho === lerTesouro
+                ? 'tesouro'
+                : trabalho === lerPlanilhaRendaFixa
+                  ? 'rendafixa'
+                  : 'preços exatos';
       registrar('pedido recebido', { tipo });
       fila = fila
         .then(() => {
@@ -1230,6 +1416,11 @@
       receber({ ...pedido, conta: String(pedido.conta) }, lerTesouro);
     };
 
+    const receberPlanilhaRendaFixa = (pedido) => {
+      if (papel !== 'rendafixa' || !pedido) return;
+      receber(pedido, lerPlanilhaRendaFixa);
+    };
+
     const receberCliente = (pedido) => {
       if (papel !== 'clientes' || !pedido || !CONTA.test(String(pedido.conta))) return;
       receber({ ...pedido, conta: String(pedido.conta) }, lerCliente);
@@ -1267,6 +1458,7 @@
       receberCotas(GM_getValue('pedidoCotas', null));
       receberCliente(GM_getValue('pedidoCliente', null));
       receberTesouro(GM_getValue('pedidoTesouro', null));
+      receberPlanilhaRendaFixa(GM_getValue('pedidoPlanilhaRendaFixa', null));
       receberPrints(GM_getValue('pedidoPrints', null));
     };
 
@@ -1274,6 +1466,7 @@
     GM_addValueChangeListener('pedidoCotas', (_chave, _antigo, novo) => receberCotas(novo));
     GM_addValueChangeListener('pedidoCliente', (_chave, _antigo, novo) => receberCliente(novo));
     GM_addValueChangeListener('pedidoTesouro', (_chave, _antigo, novo) => receberTesouro(novo));
+    GM_addValueChangeListener('pedidoPlanilhaRendaFixa', (_chave, _antigo, novo) => receberPlanilhaRendaFixa(novo));
     GM_addValueChangeListener('pedidoPrints', (_chave, _antigo, novo) => receberPrints(novo));
     document.addEventListener('DOMContentLoaded', () => {
       darSinal();
@@ -1568,7 +1761,8 @@
         robo: doRobo('prateleira').length > 0,
         prateleira: doRobo('prateleira').some((sinal) => sinal.prateleira),
         clientes: doRobo('clientes').length > 0,
-        tesouro: doRobo('tesouro').length > 0
+        tesouro: doRobo('tesouro').length > 0,
+        rendafixa: doRobo('rendafixa').length > 0
       };
     };
 
@@ -1608,7 +1802,7 @@
     const encaminhar = (chave, pedido, papel = 'prateleira', endereco = ABA_DO_ROBO) => {
       GM_setValue(chave, pedido);
       const abrir = () => abrirAba(papel, endereco);
-      if (!estadoDoHub()[{ clientes: 'clientes', tesouro: 'tesouro' }[papel] || 'robo']) return abrir();
+      if (!estadoDoHub()[{ clientes: 'clientes', tesouro: 'tesouro', rendafixa: 'rendafixa' }[papel] || 'robo']) return abrir();
       // Só se este pedido ainda espera e ninguém o pegou (1.7.0): o que já terminou, ou foi trocado por
       // um mais novo — que tem a conferência dele —, não abre aba. Até a 1.6.0, um pedido atendido em
       // menos de 3 s, seguido de outro, abria uma aba à toa: a marca de atendimento já era a do outro.
@@ -1750,10 +1944,24 @@
         const abriuHub = encaminhar('pedidoCliente', { id, conta, em: Date.now() }, 'clientes', POSICAO + rotaDoCliente(conta));
         enviar({ tipo: 'pedido-recebido', id, abriuHub });
       }
+
+      // A planilha de Renda Fixa (1.14.0).
+      if (mensagem.tipo === 'pedir-planilha-renda-fixa') {
+        const { id } = mensagem;
+        const abriuHub = encaminhar('pedidoPlanilhaRendaFixa', { id, em: Date.now() }, 'rendafixa', RENDA_FIXA);
+        enviar({ tipo: 'pedido-recebido', id, abriuHub });
+      }
     });
 
     // O cliente lido na ficha segue para a Mesa e sai do armazenamento na hora, com o pedido dele.
     // A lista do Tesouro segue para a Mesa e sai do armazenamento na hora, com o pedido.
+    GM_addValueChangeListener('planilhaRendaFixa', (_chave, _antiga, nova) => {
+      if (!nova) return;
+      enviar({ tipo: 'planilha-renda-fixa', ...nova });
+      GM_setValue('planilhaRendaFixa', null);
+      if (GM_getValue('pedidoPlanilhaRendaFixa', null)?.id === nova.id) GM_setValue('pedidoPlanilhaRendaFixa', null);
+    });
+
     GM_addValueChangeListener('tesouro', (_chave, _antigo, novo) => {
       if (!novo) return;
       enviar({ tipo: 'tesouro', ...novo });

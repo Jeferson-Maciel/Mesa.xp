@@ -38,7 +38,7 @@ export const VERSAO_DO_ROBO = fonte.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? nul
  * a depender de algo que só o robô novo faz** — até a 1.12.0, a Mesa exigia a versão exata, e cada
  * versão nova desligava o robô de todo mundo até cada um colar o script de novo.
  */
-export const VERSAO_MINIMA_DO_ROBO = '1.12.0';
+export const VERSAO_MINIMA_DO_ROBO = '1.14.0';
 
 /** Compara duas versões pelo número de cada parte: 1.9.1 vem antes de 1.10.0. */
 export const compararVersoes = (a, b) => {
@@ -75,7 +75,8 @@ const MENSAGENS = {
   'print-demorou': 'a foto da boleta passou de 30 s na aba do robô — clique em "Tirar prints" de novo',
   'sem-print': 'o robô não trouxe o print',
   'sem-tesouro': 'o Hub não mostrou a lista do Tesouro para essa conta — a conta é de um cliente seu?',
-  'sem-posicoes-tesouro': 'o Hub não mostrou a posição no Tesouro dessa conta — a conta é de um cliente seu?'
+  'sem-posicoes-tesouro': 'o Hub não mostrou a posição no Tesouro dessa conta — a conta é de um cliente seu?',
+  'sem-planilha': 'o Hub não entregou a planilha de Renda Fixa — confira se o Hub está aberto e logado e tente de novo'
 };
 
 export class ErroDoRobo extends Error {
@@ -177,6 +178,30 @@ export const criarRoboHub = ({ janela = window } = {}) => {
           posicoes: Array.isArray(mensagem.posicoes) ? mensagem.posicoes : null,
           erro: mensagem.erro ?? null
         });
+    }
+
+    // A planilha de Renda Fixa (1.14.0): o .xlsx decodificado em memória como Uint8Array.
+    if (mensagem.tipo === 'planilha-renda-fixa') {
+      const pendente = mensagem.id ? pendentes.get(mensagem.id) : null;
+      if (!pendente) return;
+      clearTimeout(pendente.relogio);
+      pendentes.delete(mensagem.id);
+      if (mensagem.erro) {
+        pendente.rejeitar(new ErroDoRobo(mensagem.erro));
+      } else {
+        try {
+          const bin = atob(String(mensagem.base64 || ''));
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          pendente.resolver({
+            dados: bytes,
+            tamanho: typeof mensagem.tamanho === 'number' ? mensagem.tamanho : bytes.length,
+            em: typeof mensagem.em === 'number' ? mensagem.em : Date.now()
+          });
+        } catch {
+          pendente.rejeitar(new ErroDoRobo('sem-planilha'));
+        }
+      }
     }
 
     // O cliente pedido: os campos da ficha que o robô leu, ou o motivo de não ter lido.
@@ -352,6 +377,17 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     pedirTesouro(conta, { leitura = 'lista', prazo = 60000 } = {}) {
       if (!CONTA.test(String(conta ?? ''))) return Promise.reject(new ErroDoRobo('invalido'));
       return pedir({ tipo: 'pedir-tesouro', conta: String(conta), leitura: leitura === 'posicoes' ? 'posicoes' : 'lista' }, prazo);
+    },
+
+    /**
+     * Pede ao robô (1.14.0) a planilha de produtos de Renda Fixa (Emissão Bancária): ele clica em
+     * Exportar na aba do Hub de Renda Fixa, segura o download no navegador e entrega o .xlsx em memória.
+     *
+     * @param {{prazo?: number}} [opcoes]
+     * @returns {Promise<{dados: Uint8Array, tamanho: number, em: number}>}
+     */
+    pedirPlanilhaRendaFixa({ prazo = 60000 } = {}) {
+      return pedir({ tipo: 'pedir-planilha-renda-fixa' }, prazo);
     },
 
     pedirCliente(conta, { prazo = 30000 } = {}) {

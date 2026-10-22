@@ -6,7 +6,7 @@ import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, co
  * Uma janela de mentira com um robô de mentira: o que a página manda pelo postMessage chega ao
  * robô, e o que o robô manda chega à página, como acontece com o Tampermonkey na aba de verdade.
  */
-const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', hub = { abas: 1, prateleira: true }, versao = VERSAO_DO_ROBO } = {}) => {
+const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', planilha = 'responde', hub = { abas: 1, prateleira: true }, versao = VERSAO_DO_ROBO } = {}) => {
   const janela = new EventTarget();
   const recebidas = [];
   const entregar = (data) => janela.dispatchEvent(Object.assign(new Event('message'), { data, source: janela }));
@@ -20,6 +20,10 @@ const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', h
     }
     if (m.tipo === 'pedir-registro') {
       entregar({ origem: 'robo-hub', tipo: 'registro', id: m.id, entradas: [{ em: m.desde + 10, passo: 'clicou em Atualizar' }] });
+    }
+    if (m.tipo === 'pedir-planilha-renda-fixa' && responde) {
+      if (planilha === 'falha') entregar({ origem: 'robo-hub', tipo: 'planilha-renda-fixa', id: m.id, erro: 'sem-planilha' });
+      else if (planilha !== 'mudo') entregar({ origem: 'robo-hub', tipo: 'planilha-renda-fixa', id: m.id, base64: btoa('PKconteudo-de-teste'), tamanho: 19, em: 1729600000000 });
     }
     // O robô lê as boletas uma atrás da outra e entrega cada preço assim que o lê. Com 'falha', a
     // segunda boleta não carrega; com 'mudo', ele entrega a primeira e para de responder.
@@ -314,11 +318,60 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
 
   it('nunca clica em Próximo: os cliques do print estão numa lista fechada', () => {
     expect(fonteDoRobo).toContain("const CLIQUES_PERMITIDOS = ['Estoque XP', 'Estoque clientes', 'Total de cotas', 'Visualizar mais detalhes da operação'];");
+    expect(fonteDoRobo).toContain("const CLIQUES_POR_ROTULO = ['Exportar'];");
     // O código sem os comentários: fora do `clicarSo`, o robô só clica no Atualizar da Prateleira, e
     // nenhum botão de seguir adiante aparece nele.
     const codigo = fonteDoRobo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     expect(codigo.match(/\.click\(\)/g)).toHaveLength(2);
     expect(codigo).not.toMatch(/Próximo|Enviar|Confirmar|Vender/);
+  });
+
+  it('o único clique novo é no botão Exportar do Renda Fixa, por aria-label exato', () => {
+    expect(fonteDoRobo).toContain("const CLIQUES_POR_ROTULO = ['Exportar'];");
+    expect(fonteDoRobo).not.toMatch(/CLIQUES_POR_ROTULO\s*=\s*\[[^\]]*(?:Próximo|Enviar|Confirmar|Vender)/);
+  });
+});
+
+describe('a planilha de Renda Fixa do Hub (robô 1.14.0)', () => {
+  it('pede a planilha e recebe os bytes decodificados em Uint8Array', async () => {
+    const { janela, recebidas } = janelaComRobo();
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    const res = await robo.pedirPlanilhaRendaFixa();
+    expect(res).toMatchObject({ tamanho: 19, em: 1729600000000 });
+    expect(res.dados).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(res.dados)).toBe('PKconteudo-de-teste');
+    expect(recebidas.at(-1)).toMatchObject({ tipo: 'pedir-planilha-renda-fixa' });
+  });
+
+  it('com falha do robô ou Hub, rejeita com ErroDoRobo(sem-planilha)', async () => {
+    const { janela } = janelaComRobo({ planilha: 'falha' });
+    const robo = criarRoboHub({ janela });
+    await umInstante();
+    await expect(robo.pedirPlanilhaRendaFixa()).rejects.toMatchObject({
+      codigo: 'sem-planilha',
+      message: expect.stringContaining('Hub não entregou a planilha de Renda Fixa')
+    });
+  });
+
+  it('sem o robô instalado, rejeita com sem-robo', async () => {
+    const { janela } = janelaComRobo({ instalado: false });
+    const robo = criarRoboHub({ janela });
+    await expect(robo.pedirPlanilhaRendaFixa()).rejects.toMatchObject({ codigo: 'sem-robo' });
+  });
+
+  it('sem resposta no prazo, rejeita com sem-resposta', async () => {
+    vi.useFakeTimers();
+    try {
+      const { janela } = janelaComRobo({ planilha: 'mudo' });
+      const robo = criarRoboHub({ janela });
+      await vi.advanceTimersByTimeAsync(0);
+      const checagem = expect(robo.pedirPlanilhaRendaFixa({ prazo: 1000 })).rejects.toMatchObject({ codigo: 'sem-resposta' });
+      await vi.advanceTimersByTimeAsync(1001);
+      await checagem;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

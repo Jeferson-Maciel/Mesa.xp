@@ -1448,6 +1448,7 @@ try {
 
     await esperarTexto('#robo-status', 'pronto');
     ok(true, 'a Mesa acha o robô');
+    ok(await mesa.isHidden('#btn-instalar-robo'), 'com o robô em dia, o "Instalar robô" some');
 
     // A aba do robô abre junto com a Mesa, antes de qualquer pedido, e a Prateleira dela já traz a cotação.
     await esperarTexto('#robo-status', 'aba 🤖 do Hub aberta');
@@ -1938,6 +1939,10 @@ try {
     ok((await semRobo.pagina.textContent('#robo-status')) === 'não instalado', 'sem o robô, a Mesa diz que ele não está');
     ok(await semRobo.pagina.evaluate(() => document.querySelector('#secundario-manual').open), 'e deixa aberto o carregamento à mão');
     ok(await semRobo.pagina.isHidden('#btn-atualizar-cotacoes'), 'e esconde o "Atualizar cotações"');
+    ok(
+      (await semRobo.pagina.isVisible('#btn-instalar-robo')) && (await semRobo.pagina.textContent('#btn-instalar-robo')) === 'Instalar robô',
+      'sem o robô, a Mesa oferece "Instalar robô", que abre o robô no site para o Tampermonkey (1.13.0)'
+    );
     await semRobo.pagina.click('#btn-copiar-robo');
     ok((await semRobo.pagina.evaluate(() => navigator.clipboard.readText())).startsWith('// ==UserScript=='), '"Copiar robô" copia o script do Tampermonkey');
     await semRobo.contexto.close();

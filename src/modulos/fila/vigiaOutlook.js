@@ -44,12 +44,12 @@ const curto = (texto, n = 90) => {
 /**
  * @param {object} opcoes
  * @param {object} opcoes.robo  a ponte do robô (`aoReceberOutlook`, `vigiarOutlook`, `presente`, `versao`)
- * @param {string|null} [opcoes.versaoEsperada]  a versão do robô que esta Mesa espera
+ * @param {(versao: string) => boolean} [opcoes.atende]  o robô desta versão faz o que a Mesa pede (a versão mínima, ou mais nova)
  * @param {object} opcoes.repo  o repositório da Fila
  * @param {(mensagem: string, opcoes?: object) => void} [opcoes.avisar]
  * @param {() => number} [opcoes.agora]
  */
-export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar = () => {}, agora = () => Date.now() }) => {
+export const criarVigiaDoOutlook = ({ robo, atende = () => true, repo, avisar = () => {}, agora = () => Date.now() }) => {
   const estado = { caixaVistaEm: 0, itens: 0, esperando: 0, soltas: [], ignoradas: lerIgnoradas(diaDe(agora())) };
   const ouvintes = new Set();
   const mudou = () => ouvintes.forEach((fn) => fn());
@@ -133,9 +133,9 @@ export const criarVigiaDoOutlook = ({ robo, versaoEsperada = null, repo, avisar 
      * @returns {{tipo: string, texto: string, titulo: string}}
      */
     situacao() {
-      if (!robo.presente) return { tipo: 'sem-robo', texto: 'Outlook: sem o robô', titulo: 'Instale o robô do Hub (no Ordens, "Copiar robô") para ver as respostas dos clientes aqui.' };
-      if (versaoEsperada && robo.versao !== versaoEsperada) {
-        return { tipo: 'robo-velho', texto: 'Outlook: atualize o robô', titulo: `O robô instalado é a versão ${robo.versao}; as respostas no Outlook pedem a ${versaoEsperada}. No Ordens, use "Copiar robô".` };
+      if (!robo.presente) return { tipo: 'sem-robo', texto: 'Outlook: sem o robô', titulo: 'Instale o robô do Hub (no Ordens, "Instalar robô") para ver as respostas dos clientes aqui.' };
+      if (!atende(robo.versao)) {
+        return { tipo: 'robo-velho', texto: 'Outlook: atualize o robô', titulo: `O robô instalado é a versão ${robo.versao}, antiga demais para as respostas no Outlook. No Ordens, clique em "Atualizar robô".` };
       }
       if (estado.esperando === 0 && estado.soltas.length === 0) return { tipo: 'parado', texto: 'Outlook: nada esperando resposta', titulo: 'Quando um e-mail sair, o robô passa a olhar a caixa de entrada.' };
       if (agora() - estado.caixaVistaEm > CAIXA_VISTA_MS) {

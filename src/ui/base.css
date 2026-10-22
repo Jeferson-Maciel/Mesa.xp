@@ -711,34 +711,6 @@ dialog:not([open])::backdrop {
   background: var(--acento);
 }
 
-/* ── Flash visual de delta (cotações e dados atualizados em tempo real) ──────────────── */
-@keyframes flash-delta-positivo {
-  0% {
-    background-color: color-mix(in srgb, var(--positivo) 32%, transparent);
-  }
-  100% {
-    background-color: transparent;
-  }
-}
-
-@keyframes flash-delta-negativo {
-  0% {
-    background-color: color-mix(in srgb, var(--negativo) 32%, transparent);
-  }
-  100% {
-    background-color: transparent;
-  }
-}
-
-.delta-positivo {
-  animation: flash-delta-positivo 1.8s var(--curva-saida) both;
-}
-
-.delta-negativo {
-  animation: flash-delta-negativo 1.8s var(--curva-saida) both;
-}
-
-
 /* ── Movimento reduzido ─────────────────────────────────────────────────────────────────
    Quem pediu menos movimento no sistema recebe a interface sem nenhum. */
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -25,8 +26,18 @@ beforeAll(async () => {
 }, 60_000);
 
 describe('build de arquivo único', () => {
-  it('não gera JS nem CSS à parte: tudo mora no index.html', () => {
-    expect(saidas.map((s) => s.fileName)).toEqual(['index.html']);
+  // A única outra saída é o robô do Tampermonkey (1.13.0): o arquivo que o Tampermonkey de cada
+  // máquina busca para instalar e se atualizar. A página não o carrega.
+  it('não gera JS nem CSS à parte: tudo mora no index.html (e o robô, à parte, para o Tampermonkey)', () => {
+    expect(saidas.map((s) => s.fileName).sort()).toEqual(['index.html', 'robo-hub.user.js']);
+  });
+
+  it('o robô publicado é o script completo: a SnapDOM no marcador e o endereço de atualização', () => {
+    const robo = String(saidas.find((s) => s.fileName === 'robo-hub.user.js').source);
+    const fonte = readFileSync(fileURLToPath(new URL('./src/modulos/ordens/platform/robo-hub.user.js', import.meta.url)), 'utf8');
+    const snapdom = readFileSync(fileURLToPath(new URL('./src/vendor/snapdom.js', import.meta.url)), 'utf8');
+    expect(robo).toBe(fonte.replace('/*@@SNAPDOM@@*/', () => snapdom));
+    expect(robo).toContain('// @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js');
   });
 
   // Só a marcação: o JS embutido tem strings com `href="` (o SheetJS escreve HTML de planilha).

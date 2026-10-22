@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+import { montarRobo } from './src/modulos/ordens/platform/montarRobo.js';
 
 /**
  * O build sai num `index.html` só, com JS, CSS e ícone dentro dele.
@@ -11,9 +12,15 @@ import { defineConfig } from 'vite';
  *
  * O plugin falha o build em vez de deixar um arquivo para trás: um `import()` dinâmico criaria um
  * segundo pedaço de JS, e o `index.html` sairia dependendo dele sem ninguém perceber.
+ *
+ * A exceção, decidida com o usuário em 21/10/2026: o robô do Tampermonkey (`robo-hub.user.js`, 1.13.0)
+ * sai ao lado, completo (com a SnapDOM), para cada máquina instalar e se atualizar pelo site. A página
+ * não o carrega.
  */
+const ROBO = 'robo-hub.user.js';
 const arquivoUnico = () => {
   let pastaPublica;
+  let raizDoProjeto;
 
   return {
     name: 'arquivo-unico',
@@ -22,6 +29,7 @@ const arquivoUnico = () => {
 
     configResolved(config) {
       pastaPublica = config.publicDir;
+      raizDoProjeto = config.root;
     },
 
     generateBundle(_, bundle) {
@@ -66,7 +74,11 @@ const arquivoUnico = () => {
 
       // Conta pelo que foi embutido, não pelo bundle: o Rolldown só aplica o `delete` depois que o
       // hook termina, e até lá o arquivo apagado continua listado.
-      const sobras = Object.keys(bundle).filter((nome) => nome !== 'index.html' && !embutidos.has(nome));
+      // O robô do Tampermonkey, completo, ao lado da página.
+      const ler = (caminho) => readFileSync(resolve(raizDoProjeto, caminho), 'utf8');
+      this.emitFile({ type: 'asset', fileName: ROBO, source: montarRobo(ler('src/modulos/ordens/platform/robo-hub.user.js'), ler('src/vendor/snapdom.js')) });
+
+      const sobras = Object.keys(bundle).filter((nome) => nome !== 'index.html' && nome !== ROBO && !embutidos.has(nome));
       if (sobras.length > 0) this.error(`o build deixou arquivos fora do index.html: ${sobras.join(', ')}`);
 
       pagina.source = html;

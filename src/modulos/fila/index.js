@@ -182,7 +182,7 @@ export const iniciarFila = (secao) => {
     const destino = ordem ? destinoDaBoleta(ordem, pedido.conta, pedido.grupo) : null;
     if (!destino) return;
     const robo = servico('robo');
-    if (robo?.presente && robo.versao === servico('versaoDoRobo') && robo.abrirParaExecutar(destino)) {
+    if (robo?.presente && servico('roboAtende')?.(robo.versao) && robo.abrirParaExecutar(destino)) {
       aviso(destino.tipo === 'tesouro' ? 'O robô está abrindo o Tesouro Direto com o cliente da conta.' : 'O robô está abrindo a boleta no Hub.');
       return;
     }
@@ -298,7 +298,7 @@ export const iniciarFila = (secao) => {
  */
 export const iniciarVigiaDaFila = () => {
   quandoHouver('robo', (robo) => {
-    const vigia = criarVigiaDoOutlook({ robo, versaoEsperada: servico('versaoDoRobo'), repo: filaDaPagina(), avisar: aviso });
+    const vigia = criarVigiaDoOutlook({ robo, atende: (versao) => servico('roboAtende')?.(versao) ?? true, repo: filaDaPagina(), avisar: aviso });
     registrarServico('vigiaDoOutlook', vigia);
     aoMudarAFila(() => vigia.pedirSePrecisa());
     robo.aoMudar(() => vigia.pedirSePrecisa());

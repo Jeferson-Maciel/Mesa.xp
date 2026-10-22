@@ -34,7 +34,7 @@ const montar = async (pedidos, { versao = '1.8.0' } = {}) => {
     }
   };
   const avisos = [];
-  const vigia = criarVigiaDoOutlook({ robo, versaoEsperada: '1.8.0', repo, avisar: (m) => avisos.push(m), agora: () => AGORA });
+  const vigia = criarVigiaDoOutlook({ robo, atende: (v) => v >= '1.8.0', repo, avisar: (m) => avisos.push(m), agora: () => AGORA });
   const ler = async (respostas, extra = {}) => {
     robo.entregar({ em: AGORA, lista: true, itens: 30, respostas, ...extra });
     await vigia.pronto();

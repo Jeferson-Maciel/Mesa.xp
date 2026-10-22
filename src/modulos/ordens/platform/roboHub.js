@@ -1,5 +1,8 @@
 import fonte from './robo-hub.user.js?raw';
 import snapdom from '../../../vendor/snapdom.js?raw';
+import { ENDERECO_DO_ROBO, montarRobo } from './montarRobo.js';
+
+export { ENDERECO_DO_ROBO };
 
 /**
  * A ponte entre o Ordens e o robô do Hub (`robo-hub.user.js`, que roda no Tampermonkey).
@@ -20,14 +23,36 @@ import snapdom from '../../../vendor/snapdom.js?raw';
 export const fonteDoRobo = fonte;
 
 /**
- * O script que a Mesa oferece para copiar e colar no Tampermonkey: o robô, com a SnapDOM 3.2.0
- * (`src/vendor/snapdom.js`) no marcador do print. A troca é feita por uma função, e não por um texto,
- * para que um cifrão do código da biblioteca não seja lido como padrão de substituição.
+ * O script que a Mesa oferece para copiar e colar no Tampermonkey (a reserva do "Instalar robô"): o
+ * robô, com a SnapDOM no marcador do print — o mesmo arquivo que o site publica (`montarRobo.js`).
  */
-export const scriptDoRobo = fonte.replace('/*@@SNAPDOM@@*/', () => snapdom);
+export const scriptDoRobo = montarRobo(fonte, snapdom);
 
-/** A versão do robô que esta Mesa espera; outra versão instalada pede a cópia nova. */
+/** A versão mais nova do robô, a do repositório: é a que "Instalar / atualizar robô" instala. */
 export const VERSAO_DO_ROBO = fonte.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? null;
+
+/**
+ * A versão mais antiga do robô que faz tudo o que esta Mesa pede (desde a 1.13.0). Com a atualização
+ * automática, cada máquina chega à versão nova no seu tempo (o Tampermonkey confere uma vez por dia);
+ * até lá, o robô anterior segue valendo, e a Mesa só oferece a atualização. **Sobe quando a Mesa passa
+ * a depender de algo que só o robô novo faz** — até a 1.12.0, a Mesa exigia a versão exata, e cada
+ * versão nova desligava o robô de todo mundo até cada um colar o script de novo.
+ */
+export const VERSAO_MINIMA_DO_ROBO = '1.12.0';
+
+/** Compara duas versões pelo número de cada parte: 1.9.1 vem antes de 1.10.0. */
+export const compararVersoes = (a, b) => {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+};
+
+/** O robô desta versão faz tudo o que a Mesa pede (a versão mínima, ou mais nova). */
+export const roboAtende = (versao) => versao !== null && versao !== undefined && compararVersoes(versao, VERSAO_MINIMA_DO_ROBO) >= 0;
 
 const MENSAGENS = {
   'sem-robo': 'o robô do Hub não está instalado',
@@ -45,7 +70,7 @@ const MENSAGENS = {
   'sem-detalhe': 'o detalhe da operação não abriu na boleta',
   'quantidade-diferente': 'a quantidade da boleta não bateu com a do pedido — o print não foi tirado',
   'sem-regiao': 'não achei o painel do valor da operação na boleta',
-  'sem-snapdom': 'o robô veio sem a biblioteca do print — copie o robô de novo',
+  'sem-snapdom': 'o robô veio sem a biblioteca do print — clique em "Atualizar robô"',
   'falhou-o-print': 'o print falhou na aba do robô',
   'print-demorou': 'a foto da boleta passou de 30 s na aba do robô — clique em "Tirar prints" de novo',
   'sem-print': 'o robô não trouxe o print',
@@ -227,6 +252,14 @@ export const criarRoboHub = ({ janela = window } = {}) => {
     },
     get versao() {
       return versao;
+    },
+    /** O robô instalado faz tudo o que a Mesa pede (a versão mínima, ou mais nova). */
+    get compativel() {
+      return roboAtende(versao);
+    },
+    /** O robô instalado é o mais novo, o do repositório. */
+    get atualizado() {
+      return versao !== null && compararVersoes(versao, VERSAO_DO_ROBO) >= 0;
     },
     get hub() {
       return hub;

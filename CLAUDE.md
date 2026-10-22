@@ -75,7 +75,12 @@ a tela e para o código. No ar em **https://mesa-xp.vercel.app** (Vercel, ligada
 ### Push é deploy
 
 - Cada envio para a `main` publica na Vercel em cerca de um minuto. **Push, e SQL no banco da mesa,
-  só com o OK do usuário.**
+  só com o OK do usuário.** Desde 21/10/2026 ele autorizou publicar cada fase do `docs/ROADMAP.md`
+  quando os testes, o build e o verificador passam (mudança de robô que obrigue a reinstalar: avisar
+  antes).
+- **Os testes barram a publicação** (21/10/2026): a Vercel roda `npm test && npm run build`
+  (`vercel.json`) e não publica se um teste falhar. O GitHub roda testes, build e o verificador a cada
+  envio (`.github/workflows/verificar.yml`) e avisa o dono por e-mail quando falha: é o alarme.
 - A exceção, autorizada pelo usuário em 21/10/2026: o workflow semanal
   (`.github/workflows/atualizar-tickers.yml`) refaz a lista de tickers da B3, roda os testes e grava
   sozinho quando algum ticker mudou.
@@ -130,8 +135,11 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
   estrangulamento intensivo, 10 s depois de a página carregar escondida), e o print, feito de esperas
   curtas, não terminava. Trabalho que vive de relógio não vai para a aba escondida;
 - uma tarefa por vez, numa fila, e tudo com prazo: nada que trave numa aba prende os pedidos seguintes;
-- mudou o robô, sobe a `@version` **e** a constante `VERSAO`; a Mesa mostra "Copiar robô" até a
-  versão instalada ser a que ela espera.
+- mudou o robô, sobe a `@version` **e** a constante `VERSAO`. Desde a 1.13.0, cada máquina se
+  atualiza sozinha pelo site (`robo-hub.user.js`, com `@updateURL`), e a Mesa aceita o robô a partir
+  da `VERSAO_MINIMA_DO_ROBO` (`roboHub.js`), oferecendo a mais nova em "Atualizar robô". **Se a Mesa
+  passar a depender de algo que só o robô novo faz, suba também a `VERSAO_MINIMA_DO_ROBO`** — senão o
+  robô antigo seguiria valendo sem saber fazer.
 
 O Hub de verdade se comporta de jeitos que o Hub falso do `verificar` só imita depois de alguém ver
 (o Tesouro, por exemplo, pede a lista uma vez por carga da página). **Repita os passos do robô à mão
@@ -144,6 +152,9 @@ automático bloqueia, com razão; não contorne).
 `npm run build` gera **um único** `dist/index.html`, com JS, CSS e ícone dentro: é o que vai para o
 site e o que os colegas abrem com dois cliques, do disco. **Proibido**: recurso externo (fonte, CDN),
 `import()` dinâmico, `fetch` de arquivo local e service worker. O `vite.config.test.js` confere.
+A única outra saída é o **robô do Tampermonkey** (`dist/robo-hub.user.js`, completo, com a SnapDOM),
+que o site publica para cada máquina instalar e se atualizar; a página não o carrega (decidido com o
+usuário em 21/10/2026).
 Biblioteca pesada que só serve sob demanda entra **como texto** e vira código no primeiro uso, como o
 SheetJS (`src/vendor/sheetjs.js`, 21/10/2026): eram 41% do JS, compilados e executados a cada carga.
 
@@ -182,7 +193,7 @@ Até lá, trate o link como interno.
 
 ## Testes
 
-`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.308 testes; com as exportações
+`npm test` (Vitest, ambiente node, fuso `America/Sao_Paulo`). São 1.313 testes; com as exportações
 reais da XP fora de `fixtures/`, 18 goldens delas são pulados.
 
 - Ordens: o core é testado direto; da UI, só o render (preview, saídas e o bloco do secundário).

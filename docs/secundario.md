@@ -140,8 +140,13 @@ duas à ordem. Decidido com o operador em 05/10/2026, e revisto em 06/10 com a A
   - a Mesa o reconhece publicada em `https://mesa-xp.vercel.app` (desde a 1.3.2), aberta do disco
     em `…/mesa-xp/dist/index.html` e em `localhost`; outro endereço entra no `@match` e em
     `MESAS_NO_AR`, com a `@version` subindo.
-  A instalação é colar o script no Tampermonkey: o botão **Copiar robô** do painel o copia, e some
-  quando a versão instalada é a que a Mesa espera.
+  **A instalação e a atualização pelo site** (1.13.0, 21/10/2026): o build publica o robô completo em
+  `https://mesa-xp.vercel.app/robo-hub.user.js`, e o cabeçalho dele traz esse endereço em `@updateURL`
+  e `@downloadURL`. O botão **Instalar robô** (ou **Atualizar robô**) abre o endereço, e o Tampermonkey
+  mostra a tela dele: um clique. Depois, o Tampermonkey confere sozinho, uma vez por dia. A Mesa aceita
+  o robô a partir da `VERSAO_MINIMA_DO_ROBO` e só oferece a mais nova, sem desligar nada — até a 1.12.0
+  exigia a versão exata, e cada versão nova desligava o robô de todo mundo até cada um colar de novo.
+  O **Copiar robô** fica como reserva até 28/10/2026.
 - **O preço exato da cota** (robô 1.1.0, 06/10/2026). A prateleira manda o PU arredondado em duas
   casas ("8,34"), e a conta conservadora perde umas cotas por isso (VGPR11, R$ 40.000: 5.080 em vez
   de 5.085). O preço que a boleta usa vem no `pre-check` dela (`fund.quotaValue`: 8,337589), e o
@@ -332,8 +337,9 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
 byte — o pacote bateu com o shasum do registro, e um teste confere o sha256 —, com
 `LICENSE-snapdom.txt`. Ela tira o print da boleta, que é feita de web components (Soma) com shadow
 DOM: o html-to-image não copia shadow DOM, a SnapDOM copia. **Não vai para a Mesa**: entra só no
-script do robô, no marcador `/*@@SNAPDOM@@*/`, quando `roboHub.js` monta o "Copiar robô"
-(`scriptDoRobo`), e só é carregada na aba do robô, no primeiro print. Os testes de segurança do robô
+script do robô, no marcador `/*@@SNAPDOM@@*/`, por `montarRobo.js` — no "Copiar robô" (`scriptDoRobo`)
+e no arquivo que o build publica (`dist/robo-hub.user.js`) —, e só é carregada na aba do robô, no
+primeiro print. Os testes de segurança do robô
 (sem token, senha, cabeçalho, `fetch` nem API do Hub) leem o código dele sem a biblioteca
 (`fonteDoRobo`), e outro confere que o script copiado é o robô com a biblioteca no marcador, e nada
 mais. Injetar a biblioteca do CDN no Hub pelo Claude in Chrome foi bloqueado pelo modo automático do

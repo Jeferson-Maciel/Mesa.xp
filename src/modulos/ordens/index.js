@@ -17,7 +17,7 @@ import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
 import { copiar, colar } from './platform/clipboard.js';
 import { enderecoDoFavorito } from './platform/favoritoDoHub.js';
-import { ErroDoRobo, VERSAO_DO_ROBO, criarRoboHub, scriptDoRobo } from './platform/roboHub.js';
+import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, criarRoboHub, roboAtende, scriptDoRobo } from './platform/roboHub.js';
 import * as historico from './platform/historico.js';
 import { abrirNoOutlook, enderecoDoEmail } from '../../comum/outlook.js';
 import * as guardado from './platform/secundario.js';
@@ -389,10 +389,10 @@ export const iniciarOrdens = (secao) => {
     );
     if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
     // Sem o robô certo, o print não sai — e isso fica à vista em vermelho, não só no aviso do cartão.
-    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) {
+    if (!robo.compativel) {
       const motivo = !robo.presente
         ? 'o robô do Hub não está instalado nesta página'
-        : `o robô instalado é a versão ${robo.versao}, e a Mesa precisa da ${VERSAO_DO_ROBO} — use "Copiar robô" e cole no Tampermonkey`;
+        : `o robô instalado é a versão ${robo.versao}, e a Mesa precisa da ${VERSAO_MINIMA_DO_ROBO} ou mais nova — clique em "Atualizar robô"`;
       aviso(`Sem o print da venda: ${motivo}.`, { tipo: 'erro' });
       for (const o of faltam) o.printFalhou = motivo;
       return [motivo];
@@ -646,7 +646,7 @@ export const iniciarOrdens = (secao) => {
       // Com o robô, o corpo em HTML entra no e-mail aberto: os prints da venda (tirados agora, se
       // faltam) e a tabela em grade. A janela abre já, no clique — senão o navegador a bloqueia —, e o
       // robô no Outlook espera o HTML. Sem o robô, fica o corpo de texto do endereço.
-      const comRobo = robo.presente && robo.versao === VERSAO_DO_ROBO && comCorpo;
+      const comRobo = robo.compativel && comCorpo;
       const comPrints = comRobo && formato === 'email' && grupo === 'fundos-venda';
       const comGrade = comRobo && formato === 'auditoria' && saida.html;
       // A taxa do Tesouro lida há mais de 2 minutos: o e-mail abre já, e o robô põe nele o texto com a
@@ -884,7 +884,8 @@ export const iniciarOrdens = (secao) => {
   const robo = criarRoboHub();
   // A ponte é uma só na página: a Fila (as respostas no Outlook) e a Prateleira de fundos a pegam daqui.
   registrarServico('robo', robo);
-  registrarServico('versaoDoRobo', VERSAO_DO_ROBO);
+  // A Fila pergunta se o robô instalado atende, sem conhecer as versões (robô 1.13.0).
+  registrarServico('roboAtende', roboAtende);
   // Os lotes, para a Fila do dia gerar o de um pedido aprovado com as quantidades do e-mail: a regra
   // do formato mora aqui, num lugar só (core/format/formatadores.js).
   registrarServico('ordens.lotes', { simples: formatarLoteSimples, twap: formatarLoteTwap });
@@ -901,6 +902,7 @@ export const iniciarOrdens = (secao) => {
   const statusDoRobo = $('robo-status');
   const btnAtualizarCotacoes = $('btn-atualizar-cotacoes');
   const btnCopiarRobo = $('btn-copiar-robo');
+  const btnInstalarRobo = $('btn-instalar-robo');
   const btnCopiarTempos = $('btn-copiar-tempos');
 
   /*
@@ -934,16 +936,19 @@ export const iniciarOrdens = (secao) => {
   let roboVisto = null;
 
   function mostrarRobo() {
-    const desatualizado = robo.presente && robo.versao !== VERSAO_DO_ROBO;
+    // Antes da versão mínima, o robô não serve à Mesa; entre a mínima e a mais nova, serve, e a Mesa
+    // só oferece a atualização (o Tampermonkey também a busca sozinho, uma vez por dia).
+    const desatualizado = robo.presente && !robo.compativel;
+    const haNova = robo.presente && robo.compativel && !robo.atualizado;
     const [texto, estadoDoRobo] = !robo.presente
       ? ['não instalado', 'vazio']
       : buscando
         ? [buscando, 'buscando']
         : desatualizado
-          ? [`versão ${robo.versao} instalada — copie a ${VERSAO_DO_ROBO}`, 'atencao']
+          ? [`versão ${robo.versao} instalada — atualize para a ${VERSAO_DO_ROBO}`, 'atencao']
           : robo.hub?.robo
-            ? ['pronto · aba 🤖 do Hub aberta', 'pronto']
-            : ['pronto · abre a aba 🤖 do Hub quando precisar', 'vazio'];
+            ? [`pronto · aba 🤖 do Hub aberta${haNova ? ` · há a versão ${VERSAO_DO_ROBO}` : ''}`, 'pronto']
+            : [`pronto · abre a aba 🤖 do Hub quando precisar${haNova ? ` · há a versão ${VERSAO_DO_ROBO}` : ''}`, 'vazio'];
     statusDoRobo.textContent = texto;
     $('estado-robo').dataset.estado = estadoDoRobo;
     if (roboVisto !== robo.presente) {
@@ -955,6 +960,8 @@ export const iniciarOrdens = (secao) => {
     btnAtualizarCotacoes.hidden = !robo.presente;
     btnAtualizarCotacoes.disabled = Boolean(buscando);
     btnCopiarRobo.hidden = robo.presente && !desatualizado;
+    btnInstalarRobo.hidden = robo.presente && robo.atualizado;
+    btnInstalarRobo.textContent = robo.presente ? 'Atualizar robô' : 'Instalar robô';
   }
 
   /** Toda captura que o robô traz — pedida pela Mesa ou feita à mão no Hub — vira o estoque do dia. */
@@ -997,7 +1004,7 @@ export const iniciarOrdens = (secao) => {
    */
   async function buscarPrecosExatos() {
     // Robô de outra versão: o painel já pede a cópia nova, e um robô velho deixaria a Mesa esperando.
-    if (buscando || !robo.presente || robo.versao !== VERSAO_DO_ROBO || estado.estoque?.origem !== 'hub') return;
+    if (buscando || !robo.compativel || estado.estoque?.origem !== 'hub') return;
 
     const pedidos = [];
     const dispensados = new Set();
@@ -1060,7 +1067,7 @@ export const iniciarOrdens = (secao) => {
    * boleta").
    */
   async function buscarBoletas({ forcar = false } = {}) {
-    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO || !estado.estoque) return;
+    if (!robo.compativel || !estado.estoque) return;
     calcularSecundario(estado.solicitacoes);
 
     const pedidos = [];
@@ -1108,7 +1115,7 @@ export const iniciarOrdens = (secao) => {
   async function atualizarCotacoes({ automatico = false } = {}) {
     if (buscando) return;
     if (!robo.presente) {
-      if (!automatico) aviso('Sem o robô do Hub: instale-o (Copiar robô) ou carregue os fundos pelo 📥.');
+      if (!automatico) aviso('Sem o robô do Hub: clique em "Instalar robô", ou carregue os fundos pelo 📥.');
       return;
     }
 
@@ -1158,7 +1165,7 @@ export const iniciarOrdens = (secao) => {
   // Posições → Tesouro Direto e traz os títulos que o cliente tem, com o disponível.
   let filaDoTesouro = Promise.resolve();
   function buscarTesouro(contas, { forcar = false, idadeMaxima = 10, leitura = 'lista' } = {}) {
-    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) return Promise.resolve();
+    if (!robo.compativel) return Promise.resolve();
     const posicoes = leitura === 'posicoes';
     const lidas = posicoes ? estado.posicoesTesouro : estado.tesouro;
     const pedidas = [...new Set(contas.map((c) => String(c ?? '')))].filter((conta) => {
@@ -1223,7 +1230,7 @@ export const iniciarOrdens = (secao) => {
    */
   let filaDeClientes = Promise.resolve();
   function buscarClientes(contas) {
-    if (!robo.presente || robo.versao !== VERSAO_DO_ROBO) return;
+    if (!robo.compativel) return;
     for (const conta of new Set(contas.map((c) => String(c ?? '')))) {
       if (!/^\d{5,8}$/.test(conta) || ['buscando', 'achado'].includes(estado.clientes.get(conta)?.situacao)) continue;
       estado.clientes.set(conta, { situacao: 'buscando' });
@@ -1295,6 +1302,12 @@ export const iniciarOrdens = (secao) => {
   btnCopiarTempos.addEventListener('click', async () => {
     const ok = await copiar(ultimoRelatorio);
     aviso(ok ? 'Tempos copiados: é só colar na conversa.' : 'Não consegui copiar os tempos.');
+  });
+  // O robô no site (1.13.0): o Tampermonkey abre a tela de instalar ou atualizar, e depois busca as
+  // versões novas sozinho. O "Copiar robô" fica como reserva por uma semana.
+  btnInstalarRobo.addEventListener('click', () => {
+    window.open(ENDERECO_DO_ROBO, '_blank', 'noopener');
+    aviso('O Tampermonkey abre a tela do robô: clique em Instalar (ou Atualizar). Depois, recarregue as abas do Hub e do Outlook.');
   });
   btnCopiarRobo.addEventListener('click', async () => {
     const ok = await copiar(scriptDoRobo);

@@ -1,0 +1,48 @@
+# A cada envio para a main: os testes, o build e o verificador no navegador (Playwright), decidido
+# com o usuário em 21/10/2026. A Vercel também roda os testes antes do build (vercel.json) e não
+# publica se um falhar; o verificador, que precisa do Chromium, roda só aqui e avisa por e-mail o dono
+# do repositório quando falha — é o alarme, não a trava.
+#
+# As exportações reais da XP ficam fora do git: os goldens delas são pulados aqui, como em qualquer
+# máquina sem elas. O verificador lê o banco da mesa nos dois blocos do "build normal", sem gravar.
+
+name: Verificar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verificar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Verificar no navegador
+        run: npm run verificar

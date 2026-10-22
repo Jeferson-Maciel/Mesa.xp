@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ErroDoRobo, VERSAO_DO_ROBO, criarRoboHub, fonteDoRobo, scriptDoRobo } from './roboHub.js';
+import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, compararVersoes, criarRoboHub, fonteDoRobo, roboAtende, scriptDoRobo } from './roboHub.js';
 
 /**
  * Uma janela de mentira com um robô de mentira: o que a página manda pelo postMessage chega ao
  * robô, e o que o robô manda chega à página, como acontece com o Tampermonkey na aba de verdade.
  */
-const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', hub = { abas: 1, prateleira: true } } = {}) => {
+const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', hub = { abas: 1, prateleira: true }, versao = VERSAO_DO_ROBO } = {}) => {
   const janela = new EventTarget();
   const recebidas = [];
   const entregar = (data) => janela.dispatchEvent(Object.assign(new Event('message'), { data, source: janela }));
@@ -14,7 +14,7 @@ const janelaComRobo = ({ instalado = true, responde = true, cota = 'responde', h
   const robo = (m) => {
     if (m.origem !== 'mesa-xp' || !instalado) return;
     recebidas.push(m);
-    if (m.tipo === 'ola') entregar({ origem: 'robo-hub', tipo: 'presente', versao: VERSAO_DO_ROBO, hub });
+    if (m.tipo === 'ola') entregar({ origem: 'robo-hub', tipo: 'presente', versao, hub });
     if (m.tipo === 'pedir-cotacao' && responde) {
       entregar({ origem: 'robo-hub', tipo: 'captura', id: m.id, capturadaEm: '2026-10-06T15:09:48.602Z', resposta: { data: [] } });
     }
@@ -513,5 +513,41 @@ describe('a conta citada na resposta (robô 1.9.1)', () => {
       ['1234567', false],
       [null, false]
     ]);
+  });
+});
+
+// A atualização automática (robô 1.13.0, 21/10/2026): o Tampermonkey de cada máquina busca a versão
+// nova no site, cada uma no seu tempo. A Mesa aceita o robô a partir da versão mínima que faz tudo o
+// que ela pede, e só oferece a mais nova; antes, exigia a versão exata, e cada versão nova desligava o
+// robô de todo mundo até cada um colar de novo.
+describe('a versão do robô', () => {
+  it('compara pelo número de cada parte, não pelo texto: 1.9.1 vem antes de 1.10.0', () => {
+    expect(compararVersoes('1.9.1', '1.10.0')).toBeLessThan(0);
+    expect(compararVersoes('1.12.0', '1.12.0')).toBe(0);
+    expect(compararVersoes('1.13.0', '1.12.9')).toBeGreaterThan(0);
+  });
+
+  it('atende a partir da versão mínima; antes dela, ou sem robô, não', () => {
+    expect(roboAtende(VERSAO_MINIMA_DO_ROBO)).toBe(true);
+    expect(roboAtende(VERSAO_DO_ROBO)).toBe(true);
+    expect(roboAtende('1.11.0')).toBe(false);
+    expect(roboAtende(null)).toBe(false);
+    expect(compararVersoes(VERSAO_MINIMA_DO_ROBO, VERSAO_DO_ROBO)).toBeLessThanOrEqual(0);
+  });
+
+  it('o robô da versão mínima atende, mas não está atualizado; o da versão do repositório está', async () => {
+    const antigo = criarRoboHub({ janela: janelaComRobo({ versao: VERSAO_MINIMA_DO_ROBO }).janela });
+    const novo = criarRoboHub({ janela: janelaComRobo().janela });
+    const velho = criarRoboHub({ janela: janelaComRobo({ versao: '1.11.0' }).janela });
+    await umInstante();
+    expect([antigo.compativel, antigo.atualizado]).toEqual([true, VERSAO_MINIMA_DO_ROBO === VERSAO_DO_ROBO]);
+    expect([novo.compativel, novo.atualizado]).toEqual([true, true]);
+    expect([velho.compativel, velho.atualizado]).toEqual([false, false]);
+  });
+
+  it('o script diz ao Tampermonkey de onde buscar a versão nova: o arquivo do site', () => {
+    expect(ENDERECO_DO_ROBO).toBe('https://mesa-xp.vercel.app/robo-hub.user.js');
+    expect(scriptDoRobo).toContain(`// @updateURL    ${ENDERECO_DO_ROBO}`);
+    expect(scriptDoRobo).toContain(`// @downloadURL  ${ENDERECO_DO_ROBO}`);
   });
 });

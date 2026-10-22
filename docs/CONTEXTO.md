@@ -22,7 +22,7 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.308 testes (`npm test`), o build e 320
+- A última verificação passou inteira (21/10, noite): 1.313 testes (`npm test`), o build e 320
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -31,7 +31,24 @@ cada sessão.
   a condição.
 - **Publicado em 21/10/2026 (noite), com o OK do usuário**: os commits de 20 e 21/10 (o histórico
   limpo antes, ver abaixo), com o workflow semanal dos tickers da B3. Os colegas precisam copiar o
-  robô 1.12.0 ("Copiar robô" → Tampermonkey) e recarregar a aba do Outlook e a do Hub.
+  robô 1.13.0 uma vez ("Instalar robô" → Instalar, no Tampermonkey) e recarregar a aba do Outlook e a
+  do Hub; daí em diante ele se atualiza sozinho.
+
+## 21/10 (noite, fim): a Fase 1 do roadmap — a base
+
+As decisões da sessão de perguntas estão no `docs/ROADMAP.md`, "As fases decididas".
+
+- **Os testes barram a publicação**: a Vercel roda `npm test` antes do build; o GitHub roda testes,
+  build e verificador a cada envio (`.github/workflows/verificar.yml`).
+- **Robô 1.13.0 que se atualiza sozinho**: o build publica `robo-hub.user.js` ao lado da página (a
+  exceção à regra do arquivo único), com `@updateURL`; "Instalar robô" / "Atualizar robô" no painel. A
+  Mesa passou a aceitar o robô a partir de uma **versão mínima** (`VERSAO_MINIMA_DO_ROBO`, hoje a
+  1.12.0), em vez da versão exata: quem está na 1.12.0 segue funcionando até o Tampermonkey trazer a
+  nova. O "Copiar robô" fica até 28/10.
+- **Limpeza**: o roadmap reescrito com as fases e as decisões; o CSS de "piscar a mudança" sem uso,
+  apagado.
+- **O post "Como a Mesa funciona"** no Operacional, em Passo a Passo, gravado no banco da mesa com a
+  autorização do usuário.
 
 ## 21/10 (noite, depois): o print numa aba à vista (robô 1.12.0)
 
@@ -259,7 +276,11 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robôs 1.9.0 a 1.12.0)
+### A testar no Hub e no Outlook de verdade (robôs 1.9.0 a 1.13.0)
+
+**A instalação pelo site (1.13.0)**: na Mesa publicada, "Instalar robô" (ou "Atualizar robô") deve abrir
+a tela do Tampermonkey com o botão Instalar/Atualizar. Depois de instalar, o painel diz "pronto", e o
+botão some. No Tampermonkey, o script deve mostrar a fonte de atualização (o endereço do site).
 
 **O print da venda (1.12.0)**: copiar o robô novo; colar uma venda de um fundo seu; **Tirar prints**. Uma
 aba do Hub deve aparecer à vista, abrir a boleta de venda, escolher o estoque, preencher, abrir o

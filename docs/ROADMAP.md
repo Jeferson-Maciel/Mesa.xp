@@ -2,109 +2,119 @@
 
 O que está **em aberto**: defeitos conhecidos, ideias e decisões que esperam o operador. O que já foi
 feito sai daqui — a história fica no `git log`, e as regras no `CLAUDE.md` e nos documentos de cada
-módulo. Revisto em 21/10/2026.
+módulo. Revisto em 21/10/2026 (noite), depois do relatório "Raio-X da Mesa XP" e das decisões do
+usuário sobre ele.
 
 Cada item diz o que falta e, quando há, de quem é a decisão. Sugestão nova vem para cá, não para o
 código.
+
+## As fases decididas (21/10/2026)
+
+Uma sessão de perguntas antes de cada fase (o usuário pediu "sempre faça sessões de grilling"); cada
+fase sai publicada quando os testes, o build e o verificador passam.
+
+1. **Base** — os testes antes de cada publicação (a Vercel roda `npm test`; o GitHub roda também o
+   verificador); o robô que se atualiza sozinho (1.13.0, o arquivo `robo-hub.user.js` no site e a
+   versão mínima compatível na Mesa); a limpeza deste roadmap e do CSS sem uso; o post "Como a Mesa
+   funciona" no Operacional.
+2. **Renda Fixa configurável** — tudo o que faz a aba funcionar vira regra editável na própria tela,
+   **uma configuração para cada mercado** (primário e secundário), guardada no navegador de cada um,
+   sem login: o PU máximo, os prazos exibidos por categoria e os dos isentos, os tipos isentos, o
+   descarte de liquidez diária e de público qualificado e profissional, os bancos, a linha sem Tax.Mín
+   nem Tax.Máx (padrão: descartar), os títulos e o modelo de cada linha da mensagem (com ou sem
+   emissor…), e, em "Avançado", o reconhecimento do tipo pelo nome e os nomes das colunas. Com
+   "Restaurar o padrão" e "Copiar / Colar configuração" para passar a um colega.
+   - **2b. O robô buscar os dados no Hub** em vez da planilha baixada todo dia (Renda Fixa → emissão
+     bancária, e o secundário): estudo na tela de verdade, que o usuário mostra pelo Claude in Chrome.
+     A planilha fica como reserva. A troca do SheetJS pelo menor (sem `.xls`) espera esse estudo.
+3. **Fila e avisos** — som só na resposta do cliente, no erro e no aviso de prazo, e no máximo 3
+   avisos à vista; o aviso de prazo (15 min antes para Aprovação e execução, 30 min antes para os
+   Enviados sem resposta); a vista em tabela em Aprovação e execução; o histórico do Ordens ligado à
+   Fila (o estado de cada item, e o "Reabrir" com as correções).
+4. **Ordens** — a tabela de posições colada (`Ativo / Qtd. Teórica / Qtd. Atual`) não é pedido de
+   ordem: não gera nada e diz isso; o fracionário (`PETR4F`); os exemplos num menu; os emoji dos
+   atalhos de formato viram ícones de traço; o favorito 📥 sai depois de o robô passar no Hub de
+   verdade.
+
+## Decidido não fazer (por enquanto)
+
+- **F22** (o "não" do cliente avisar o assessor): descartada por enquanto (21/10/2026).
+- **Login no Calendário e nas Anotações**: ficam sem login; o que é de cada um fica no navegador.
+- **ROA.E. da Tabela de Cetipados**: fica de fora por enquanto.
+- **Os links antigos** (o Ordens no Netlify, o RendaFixa Pro, o Calendário antigo): o usuário já os
+  desativou.
 
 ## A conferir no Hub e no Outlook de verdade
 
 O passo a passo está em [`CONTEXTO.md`](CONTEXTO.md), "A testar no Hub e no Outlook de verdade".
 
-1. **O print da cotação de venda (robô 1.12.0).** A suspeita se confirmou na documentação do Chrome:
-   a aba escondida tem os relógios segurados em um despertar por minuto, e o print não terminava. Desde
-   a 1.12.0 ele sai numa aba à vista, como nos passos repetidos à mão em 20/10, que funcionavam. Falta o
-   teste na boleta de verdade; se falhar, o motivo aparece na venda e o "Copiar tempos" diz o passo.
-2. **O corpo em HTML colado no Outlook** (os prints abaixo de "Condições:", a tabela em grade): só no
-   Outlook de mentira.
-3. **O Tesouro (robô 1.7.x)**: a lista e a posição, com a recarga da aba para ler de novo. O fluxo foi
-   repetido à mão no Hub em 20/10; o robô inteiro, não.
-4. **O Estoque clientes**: o deságio e o estoque contra a boleta.
-5. **As respostas no Outlook (robô 1.8.0)**: só a caixa de entrada de mentira foi testada. A forma da
-   lista do Outlook na web de verdade (a lista, as opções, o e-mail no `title` do remetente, a hora)
-   precisa ser conferida com um e-mail de teste respondido.
+1. **O print da venda (robô 1.12.0)**, numa aba do Hub à vista que fecha sozinha; e os prints entrando
+   no e-mail do Outlook.
+2. **As respostas no Outlook (robô 1.11.0)**: o selo verde com a caixa aberta, a resposta com e sem o
+   assunto de confirmação.
+3. **O Tesouro (robô 1.7.x)**: a lista e a posição, com a recarga da aba para ler de novo.
+4. **A boleta pela Fila (robô 1.10.0)** e **o Estoque clientes** (o deságio e o estoque contra a boleta).
+5. **A instalação pelo site (robô 1.13.0)**: "Instalar robô" abre a tela do Tampermonkey; a versão
+   seguinte chega sozinha.
 
 ## Prateleira de fundos
 
-- **O disparo "Tabela de Cetipados"** (o modelo do Operacional: os fundos agrupados por "ROA.E. x%"
-  e por "Deságio Venda x%", com o "(IQ)" dos de investidor qualificado). Espera o operador: **como se
-  chega ao ROA.E. de cada fundo** (o ROA máximo da captura? arredondado como? quais fundos entram?), e
-  de onde vêm o deságio de venda e o "IQ" (a captura da Prateleira tem o de compra).
+- **Marcar o fundo de investidor qualificado** na tabela.
+- **Do fundo na tabela para o Ordens**, com a linha pronta e a conta a preencher.
 
 ## Ordens
 
-- **Tabela de posições colada lê a coluna errada.** `Ativo / Qtd. Teórica / Qtd. Atual` vira ordem
-  com a teórica, e posição zerada entra junto. Implementar de verdade (usar `Qtd. Atual`, excluir
-  `≤ 0` com aviso) ou recusar a tabela explicitamente. Decisão do operador.
-- **Fracionário (`PETR4F`)** vai para os descartes: o formato de ticker não aceita o `F`.
 - **`PETR4 39,50` sozinho** vira ordem de R$ 39,50 (decisão do operador: centavos são financeiro), mas
   pode ter sido um preço sem quantidade; o preview é quem pega.
-- **Reabrir do histórico descarta as correções feitas no cartão**: o histórico guarda o texto e o
-  passa pelo pipeline de novo. Guardar as correções ao lado do texto resolveria.
-- **TWAP exige dois horários.** "A partir das 10h" não é lido, de propósito; se aparecer no grupo,
-  vira lacuna.
-- **`Preço Would`** nunca é preenchido: nenhum pedido mostrou como ele vem. **O horário na planilha
-  (`HH:MM`)** nunca foi confirmado.
+- **TWAP exige dois horários.** "A partir das 10h" não é lido, de propósito.
+- **`Preço Would`** nunca é preenchido, e o horário na planilha (`HH:MM`) nunca foi confirmado:
+  esperam um pedido real que mostre o formato.
 - **Conta escrita depois das ordens** deixa as ordens numa solicitação sem conta. Bloqueia (não é
   perigoso), mas obriga a reescrever.
 - **Linhas de conversa** ("Bom dia!") que a limpeza não pega aparecem nos descartes.
-- **Separar o `index.js` do Ordens** (1.240 linhas; o tratador de cliques tem ~190). Não muda nada
-  para quem usa; facilita mexer sem quebrar o vizinho. Fazer aos poucos, quando cada parte for mexida.
+- **Separar o `index.js` do Ordens** (1.521 linhas): aos poucos, quando cada parte for mexida.
+- **A Fila guardar as quantidades aprovadas como dado** na hora do envio, em vez de relê-las do texto
+  do e-mail (hoje presa aos modelos do `FORMATOS-DE-SAIDA.md`).
 
 Ideias, com o custo grosseiro:
 
 | | Ideia | Custo |
 | --- | --- | --- |
-| F2 | Conta que nunca apareceu no histórico pede confirmação — a lógica da lista da B3 no campo mais crítico | médio |
-| F3 | Mesma conta e mesmo ativo já processados hoje: alerta de envio duplicado | baixo |
-| F4 | Depois de gerar, o texto colado com o que virou ordem marcado; o que ficar sem marca foi ignorado | médio |
 | F5 | Colar a ordem enviada junto do pedido e receber as divergências | alto |
 | F6 | Um clique põe a cesta inteira em Venda | baixo |
-| F8 | `Ctrl+Z` depois de remover uma linha por engano | baixo |
 | F9 | Baixar o lote como arquivo, além de copiar | baixo |
-| F11 | Copiar tudo quando o bloco tem várias contas | baixo |
 | F12 | Fila do dia: trabalhar o despejo da conversa solicitação por solicitação | médio |
-| F13 | Estado por solicitação: pendente / enviado mesa / confirmado | médio |
-| F14 | Resumo do dia por conta, para a conferência do fim do expediente | médio |
 | F15 | Pedido por print (OCR) — só como sugestão que obriga conferir campo a campo: OCR troca dígito de conta | alto |
 | F16 | Cestas favoritas, depois de o uso mostrar quais se repetem | médio |
 | F20 | Atalhos visíveis (`Ctrl+Enter`, `Alt+H` só estão no `title`) | baixo |
 | F21 | Segmentados como `radiogroup`: duas paradas de tabulação por linha em vez de seis | baixo |
-| F22 | Fila: o cliente respondeu "não" → abrir no Outlook o e-mail ao assessor, preenchido, para a pessoa enviar (o usuário, 21/10/2026: "se o cliente responder não, aí notificamos o assessor"). Quem lê "sim" ou "não" é o operador | médio |
 
 ## Robô do Hub e secundário
 
-- **O robô se atualizar sozinho em cada máquina.** Hoje cada um copia o robô novo à mão ("Copiar
-  robô"). Publicar o script no site (Vercel) com `@updateURL`/`@downloadURL` faria o Tampermonkey de
-  cada um buscar a versão nova sozinho.
+- **Tirar o "Copiar robô"** e os 345 KB de texto dele da página depois de 28/10/2026, uma semana depois
+  da instalação pelo site (robô 1.13.0).
+- **Separar o robô em partes** montadas no build (hoje 1.766 linhas num arquivo), para testar cada uma.
 - **Fundos sem corretagem** (44 na captura de 06/10: os XP CDI Private e FIPs com deságio de 5% a 15%
   e mínimo zero): a captura não dá o teto deles, e o pedido em R$ segura com
   `secundario-sem-corretagem`. Uma boleta de cada tipo, com a barra do ROA no fim, decide.
 - **Ágio** (deságio negativo, em seis fundos): ver numa boleta se há ROA neles.
-- **`canApply`** falso em 12 fundos da captura de 06/10 (11 sem estoque; o outro, o XP SS 1 FIC FIDC):
-  um aviso por ele precisa de uma boleta que mostre o que significa.
+- **`canApply`** falso em 12 fundos da captura de 06/10: um aviso por ele precisa de uma boleta que
+  mostre o que significa.
 - **Avisos do pre-check**: a resposta traz `checks` e `customer` (garantia, perfil do cliente), que
   poderiam virar avisos no cartão antes do e-mail.
-- **Atualizar a cotação ao voltar para a Mesa** (proposto em 06/10, sem resposta): se a lista tem mais
-  de 2 minutos quando a pessoa volta para a aba, o robô atualiza na hora, e a colagem não espera.
+- **Atualizar a cotação ao voltar para a Mesa**: se a lista tem mais de 2 minutos quando a pessoa
+  volta para a aba, o robô atualiza na hora, e a colagem não espera.
 - **O incentivo do Estoque clientes** (0,50% cetipados, 0,25% Portfolio Renda+) não vem na resposta.
 - **Histórico do ROA**: guardar as capturas mostraria quando o ROA de um fundo muda. Depende de onde
-  guardar (fase 2).
-- **O favorito 📥 velho**: quem o arrastou fica com aquela versão; se o Hub mudar o botão Atualizar ou a
-  API, cada um arrasta o novo. Com o robô, ele é só o caminho de reserva.
+  guardar.
 
 ## Renda Fixa
 
-- **Sem Tax.Mín nem Tax.Máx, o motor usa o ROA como taxa** (a primeira célula com "%"). O golden da
-  planilha sintética registra o comportamento atual (linha `CDB SO ROA`). Corrigir exige decidir com o
-  assessor e atualizar os goldens à mão.
-- Limitações herdadas do RendaFixa Pro: lê só a primeira aba; as regras (PU máximo, prazos exibidos,
-  janela, bancos) estão fixas em `motor.js`; a seção de isentos diz "LCAs/LCIs" mesmo quando o
-  vencedor é uma LCD; as variações dependem de uma análise salva antes de hoje; o histórico fica no
-  navegador.
-- **Tamanho do arquivo**: o SheetJS completo é a maior parte do `dist/index.html`. Medir se o
-  `xlsx.mini.min.js` da mesma versão lê a exportação da XP e os .xls/.csv aceitos; se ler, o arquivo
-  cai perto da metade, e a abertura fica mais rápida.
+- Na Fase 2 (acima): a linha sem Tax.Mín nem Tax.Máx (hoje o motor usa o ROA como taxa; o golden da
+  planilha sintética registra isso na linha `CDB SO ROA`), e as regras hoje fixas em `motor.js`.
+- **A seção de isentos diz "LCAs/LCIs"** mesmo quando o vencedor é uma LCD: o título da seção vira
+  editável na Fase 2.
+- **Lê só a primeira aba** da planilha.
 
 ## Calendário
 
@@ -112,44 +122,29 @@ Ideias, com o custo grosseiro:
   conectar…" com contagem, ou menos tentativas, deixaria claro que a rede caiu.
 - **O aviso de horário inválido aparece atrás do véu da janela do dia**: mostrar dentro da janela,
   como o erro ao salvar.
-- O motivo do horário indisponível não aparece na matriz (pode ser de saúde). Se a mesa sentir falta,
-  um ícone com o motivo no `title` — decidir junto com a fase 2.
 
 ## Operacional
 
 - **Colar o texto dos 15 posts pendentes** (os 12 de Padrões de Fixing, Confirmação resgate fundos,
   Confirmação aplicação Fundos, Ações e Fundos Listados): pela própria tela; não se inventa texto.
-- **Anexos** (foto, áudio, vídeo): no Storage do Supabase, num bucket privado — depende do login.
 - **Restaurar uma versão pela tela**: o banco guarda todas (`operacional_revisoes`); hoje a
   recuperação é pelo painel do Supabase.
-- **Autor por edição**: sem login não há quem.
 - Do Slab, não vieram: rascunhos, favoritos, "mais populares", Content Map, grupos, banner do tópico,
   excluir ou renomear tópico. Entram se a mesa sentir falta.
 
 ## Anotações
 
-- **Acompanhar a pessoa entre computadores**: com login, um adaptador do Supabase por usuário e o
-  Storage privado para os prints. Hoje, o backup leva à mão.
 - **Alerta com o navegador fechado**: exigiria service worker, que o arquivo único não permite.
-- **Lembrete que se repete** (todo dia 5, toda segunda).
-- **Anotar a partir das outras abas**: um "anotar" no cartão do Ordens com a conta e o ativo; um
-  "lembrar" no dia do Calendário.
-- **Compartilhar uma anotação** (depende do login) e **modelos da própria mesa** criados pela tela.
+- **Os modelos de nota vindos do Operacional**, em vez de uma lista à parte.
 
 ## Casca e engenharia
 
-- **Os avisos de tela se acumulam sem limite** quando muitos saem juntos.
-- **CI a cada envio**: `npm test`, o build e o `verificar` no GitHub Actions, antes da Vercel publicar.
-  O workflow semanal dos tickers já roda os testes; falta um a cada push. As exportações reais da XP
-  ficam fora do git, e os goldens delas seriam pulados no CI.
 - **O plano gratuito do Supabase pausa** depois de dias sem uso. Usado todo dia, não pausa; num
-  recesso, pode. Se a mesa depende disso, avaliar um plano que não pause.
-- **Aposentar os links antigos** (o Ordens no Netlify, o RendaFixa Pro, o Calendário antigo na
-  Vercel), se ainda estiverem no ar, depois que a mesa migrar.
+  recesso, pode.
 
-## Segurança — fase 2
+## Segurança
 
-A chave anon do Supabase está no código, e o banco do Calendário e do Operacional fica aberto a quem
-tiver o link (ver `CLAUDE.md`, "Pendência de segurança — fase 2"): Supabase Auth, políticas RLS
-fechadas para a equipe, repositório privado e rever o que vai no motivo de ausência. Destrava também
-os anexos do Operacional, as anotações entre computadores e o autor de cada edição.
+A chave anon do Supabase está no código de um repositório público, e o banco do Calendário e do
+Operacional fica aberto a quem tiver o link (ver `CLAUDE.md`, "Pendência de segurança — fase 2"). Em
+21/10/2026 o usuário decidiu que o Calendário e as Anotações ficam sem login; o que resta da fase 2
+(repositório privado, regras de acesso no banco sem login de cada pessoa) espera uma conversa com ele.

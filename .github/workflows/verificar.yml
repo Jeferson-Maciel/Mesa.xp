@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -45,4 +45,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verificar no navegador
-        run: npm run verificar
+        shell: bash
+        run: npm run verificar 2>&1 | tee verificar.log; exit ${PIPESTATUS[0]}
+
+      # O log do passo só o administrador do repositório vê; as anotações, qualquer um. Cada falha já sai
+      # como anotação; aqui, o fim da saída, para o caso de o verificador parar por um erro.
+      - name: O fim da saída, se falhou
+        if: failure()
+        shell: bash
+        run: tail -n 25 verificar.log | sed 's/^/::warning title=Fim do verificar::/'

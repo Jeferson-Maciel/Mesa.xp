@@ -47,11 +47,20 @@ if (!existsSync(distNormal)) {
 }
 
 let falhas = 0;
+let blocoAtual = '';
 const ok = (condicao, mensagem) => {
   if (!condicao) falhas++;
   console.log(`${condicao ? 'ok ' : 'FALHOU'} ${mensagem}`);
+  // No GitHub, cada falha vira uma anotação do passo: o log inteiro só o administrador do repositório
+  // vê, e a anotação, qualquer um (21/10/2026).
+  if (!condicao && process.env.GITHUB_ACTIONS === 'true') {
+    console.log(`::error title=${blocoAtual.replace(/[:,]/g, ' ')}::${String(mensagem).replace(/\r?\n/g, ' ')}`);
+  }
 };
-const titulo = (texto) => console.log(`\n── ${texto}`);
+const titulo = (texto) => {
+  blocoAtual = texto;
+  console.log(`\n── ${texto}`);
+};
 // O atalho de cada aba, na ordem da barra: uma aba nova no meio não desalinha o resto.
 const altDe = (aba) => `Alt+${ABAS.indexOf(aba) + 1}`;
 

@@ -160,14 +160,61 @@ export const htmlPastas = (pedidos, pastaAtual, agora = Date.now()) =>
     })
     .join('');
 
-/** O conteúdo da pasta aberta. */
-export const htmlLista = (pedidos, pasta, agora = Date.now()) => {
+/*
+ * Aprovação e execução em tabela (Fase 3, Q34): uma linha por pedido, para quem tem muitos de uma vez. À
+ * vista, o que se faz em cada um — Aprovou, o lote ou a ficha, a boleta e Executado —; o resto (ver o
+ * e-mail, anotar, não aprovou, cancelar) num menu "…" na linha.
+ */
+const linhaDaTabela = (pedido, agora) => {
+  const aprovadoEm = pedido.estado === 'aprovado' ? quandoFoi(pedido, 'aprovado') : null;
+  const resposta = pedido.resposta
+    ? `<span class="fl-tabela-resposta" title="${esc(pedido.resposta.previa ?? '')}">${esc(pedido.resposta.previa || '(sem prévia)')}</span><small>${esc(pedido.resposta.de ?? 'o cliente')} · ${hora(pedido.resposta.em)}</small>`
+    : `<span class="fl-tabela-resposta">sem resposta pelo e-mail</span>`;
+  const aprovado = aprovadoEm ? `<small>aprovado por você às ${hora(aprovadoEm)}</small>` : '';
+  return `
+    <tr class="fl-tabela-linha${pedeAtencao(pedido, agora) ? ' fl-atencao' : ''}" data-id="${esc(pedido.id)}" data-grupo="${esc(pedido.grupo)}" data-estado="${esc(pedido.estado)}">
+      <td class="fl-tabela-quem"><span class="fl-conta">${esc(pedido.conta)}</span><span class="fl-cliente${pedido.cliente?.nome ? '' : ' fl-sem'}">${esc(pedido.cliente?.nome ?? 'cliente não identificado')}</span><small>${esc(NOMES_DOS_GRUPOS[pedido.grupo] ?? pedido.grupo)}</small></td>
+      <td><ul class="fl-ordens">${pedido.ordens.map((o) => resumoDaOrdem(o, pedido)).join('')}</ul></td>
+      <td class="fl-tabela-dito">${resposta}${aprovado}</td>
+      <td>${htmlPrazo(pedido, agora)}</td>
+      <td class="fl-tabela-acoes">
+        ${pedido.estado === 'respondeu' ? botao('estado', 'Aprovou', { estado: 'aprovado', titulo: 'Li a resposta: o cliente aprovou (a hora fica na ficha)' }) : ''}
+        ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado' }) : botao('ficha', 'Ficha')}
+        ${boletasDe(pedido)}
+        ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados' })}
+        <details class="fl-menu">
+          <summary class="fl-menu-botao" title="Mais ações" aria-label="Mais ações">…</summary>
+          <div class="fl-menu-itens">
+            <button type="button" data-acao="email">Ver o e-mail</button>
+            <button type="button" data-acao="anotar">Anotar</button>
+            <button type="button" data-acao="estado" data-estado="enviado">Não aprovou</button>
+            <button type="button" class="fl-cancelar" data-acao="estado" data-estado="cancelado">Cancelar o pedido</button>
+          </div>
+        </details>
+      </td>
+    </tr>`;
+};
+
+const htmlTabela = (pedidos, agora) => `
+  <div class="fl-tabela-rolagem">
+    <table class="fl-tabela">
+      <thead><tr><th>Conta</th><th>Ordens</th><th>Resposta</th><th>Prazo</th><th><span class="fl-oculto">Ações</span></th></tr></thead>
+      <tbody>${pedidos.map((p) => linhaDaTabela(p, agora)).join('')}</tbody>
+    </table>
+  </div>`;
+
+/**
+ * O conteúdo da pasta aberta. Em Aprovação e execução, em cartões ou em tabela (`vista`, a chave
+ * Cartões / Tabela, lembrada no navegador).
+ */
+export const htmlLista = (pedidos, pasta, agora = Date.now(), { vista = 'cartoes' } = {}) => {
   const definicao = PASTAS.find((p) => p.id === pasta) ?? PASTAS[0];
   const daPasta = pedidos.filter((p) => definicao.estados.includes(p.estado));
   if (!daPasta.length) return `<p class="fl-vazio">${definicao.vazio}</p>`;
   if (definicao.id === 'executar') {
     // Os que pedem atenção primeiro (o prazo perto), depois por ordem de chegada da resposta.
     const ordenados = [...daPasta].sort((a, b) => Number(pedeAtencao(b, agora)) - Number(pedeAtencao(a, agora)) || (a.resposta?.em ?? a.atualizadoEm) - (b.resposta?.em ?? b.atualizadoEm));
+    if (vista === 'tabela') return htmlTabela(ordenados, agora);
     return `<div class="fl-cartoes">${ordenados.map((p) => cartaoParaExecutar(p, agora)).join('')}</div>`;
   }
   const recentes = [...daPasta].sort((a, b) => b.atualizadoEm - a.atualizadoEm);

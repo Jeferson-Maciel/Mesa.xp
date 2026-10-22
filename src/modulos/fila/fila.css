@@ -281,17 +281,20 @@
 }
 
 .fl .fl-cartao,
-.fl .fl-linha {
+.fl .fl-linha,
+.fl .fl-tabela-linha {
   --grupo: var(--safira);
 }
 
 .fl .fl-cartao[data-grupo^='fundos'],
-.fl .fl-linha[data-grupo^='fundos'] {
+.fl .fl-linha[data-grupo^='fundos'],
+.fl .fl-tabela-linha[data-grupo^='fundos'] {
   --grupo: var(--peridoto);
 }
 
 .fl .fl-cartao[data-grupo^='tesouro'],
-.fl .fl-linha[data-grupo^='tesouro'] {
+.fl .fl-linha[data-grupo^='tesouro'],
+.fl .fl-tabela-linha[data-grupo^='tesouro'] {
   --grupo: var(--marca);
 }
 
@@ -605,6 +608,188 @@
   outline: none;
 }
 
+/* ── Aprovação e execução em tabela (Fase 3) ──────────────────────────────────────────── */
+
+.fl .fl-vista {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-bottom: var(--esp-2);
+}
+
+.fl .fl-vista button {
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fl .fl-vista button[aria-pressed='true'] {
+  border-color: var(--acento-borda);
+  background: var(--acento-fundo);
+  color: var(--texto-forte);
+}
+
+.fl .fl-vista button:focus-visible,
+.fl .fl-menu-botao:focus-visible,
+.fl .fl-menu-itens button:focus-visible {
+  box-shadow: var(--foco);
+  outline: none;
+}
+
+.fl .fl-tabela-rolagem {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+}
+
+.fl .fl-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.fl .fl-tabela th {
+  padding: 0.45rem var(--esp-3);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.fl .fl-tabela td {
+  padding: 0.5rem var(--esp-3);
+  border-bottom: 1px solid var(--borda);
+  vertical-align: top;
+}
+
+.fl .fl-tabela tr:last-child td {
+  border-bottom: 0;
+}
+
+.fl .fl-tabela-linha td:first-child {
+  box-shadow: inset 3px 0 0 var(--grupo);
+}
+
+.fl .fl-tabela-linha:hover {
+  background: color-mix(in srgb, var(--acento) 5%, transparent);
+}
+
+.fl .fl-tabela-linha.fl-atencao {
+  background: color-mix(in srgb, var(--atencao) 7%, transparent);
+}
+
+.fl .fl-tabela-quem,
+.fl .fl-tabela-dito {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 9rem;
+}
+
+.fl .fl-tabela td small {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+.fl .fl-tabela-resposta {
+  display: -webkit-box;
+  overflow: hidden;
+  max-width: 18rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--texto-forte);
+}
+
+.fl .fl-tabela-acoes {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.fl .fl-tabela-acoes > * {
+  margin-left: 4px;
+}
+
+.fl .fl-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* O menu "…" da linha: o que não se usa a cada pedido. */
+.fl .fl-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.fl .fl-menu-botao {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--texto-fraco);
+  list-style: none;
+  cursor: pointer;
+}
+
+.fl .fl-menu-botao::-webkit-details-marker {
+  display: none;
+}
+
+.fl .fl-menu-botao:hover,
+.fl .fl-menu[open] .fl-menu-botao {
+  background: var(--fundo-sutil);
+  color: var(--texto-forte);
+}
+
+.fl .fl-menu-itens {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: 4px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-md);
+  box-shadow: var(--sombra-alta);
+}
+
+.fl .fl-menu-itens button {
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--texto-forte);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fl .fl-menu-itens button:hover {
+  background: var(--fundo-sutil);
+}
+
+.fl .fl-menu-itens .fl-cancelar {
+  color: var(--negativo);
+}
+
 /* ── As linhas das pastas (Enviados, Executados, Cancelados) ────────────────────────────── */
 
 .fl .fl-linhas {
@@ -790,7 +975,18 @@
   }
 
   .fl .fl-topo {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Com uma fonte mais larga que a Segoe UI, a busca e o Resumo do dia passavam da tela. */
+  .fl .fl-ferramentas {
+    flex-wrap: wrap;
+  }
+
+  .fl .fl-busca {
+    flex: 1 1 10rem;
+    width: auto;
+    min-width: 0;
   }
 
   .fl .fl-linha {

@@ -13,6 +13,22 @@ import { criarVigiaDoOutlook } from './vigiaOutlook.js';
 import { criarVigiaDePrazos } from './vigiaPrazos.js';
 import './fila.css';
 
+const CHAVE_DA_VISTA = 'mesa_fila_vista';
+const lerVista = () => {
+  try {
+    return localStorage.getItem(CHAVE_DA_VISTA) === 'tabela' ? 'tabela' : 'cartoes';
+  } catch {
+    return 'cartoes';
+  }
+};
+const gravarVista = (vista) => {
+  try {
+    localStorage.setItem(CHAVE_DA_VISTA, vista);
+  } catch {
+    // sem armazenamento, a vista vale só até recarregar
+  }
+};
+
 /**
  * A Fila do dia: o caminho de cada pedido depois que o e-mail sai (as regras em
  * `src/comum/fila/regras.js`). Uma caixa de entrada com pastas (21/10/2026, "me acostumei com o
@@ -38,10 +54,11 @@ export const iniciarFila = (secao) => {
     janelaTitulo: el('janela-titulo'),
     janelaCorpo: el('janela-corpo'),
     outlook: el('outlook'),
-    conferir: el('conferir')
+    conferir: el('conferir'),
+    vista: el('vista')
   };
   // Abre sempre em Aprovação e execução: a caixa limpa, com o que falta fazer.
-  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null, pasta: 'executar' };
+  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null, pasta: 'executar', vista: lerVista() };
   const hoje = () => diaDe(Date.now());
 
   /* ── Carregar e mostrar ───────────────────────────────────────────────────────────── */
@@ -67,7 +84,9 @@ export const iniciarFila = (secao) => {
     const agora = Date.now();
     const lista = filtrados();
     ui.pastas.innerHTML = htmlPastas(lista, estado.pasta, agora);
-    ui.lista.innerHTML = htmlLista(lista, estado.pasta, agora);
+    ui.lista.innerHTML = htmlLista(lista, estado.pasta, agora, { vista: estado.vista });
+    ui.vista.hidden = estado.pasta !== 'executar';
+    for (const b of ui.vista.querySelectorAll('[data-vista]')) b.setAttribute('aria-pressed', String(b.dataset.vista === estado.vista));
     // A entrada só quando a vista muda: outro dia, outra pasta, um pedido que chegou ou saiu dela —
     // não a cada 30 s, nem a cada letra da busca.
     encenar(`${estado.dia}|${estado.pasta}|${estado.pedidos.filter((p) => pastaDoEstado(p.estado) === estado.pasta).map((p) => p.id).join(',')}`);
@@ -114,6 +133,21 @@ export const iniciarFila = (secao) => {
     if (botao.dataset.acao === 'atribuir') vigia.atribuir(idResposta, botao.dataset.pedido);
     if (botao.dataset.acao === 'ignorar') vigia.ignorar(idResposta);
   });
+
+  // A chave Cartões / Tabela de Aprovação e execução, lembrada neste navegador.
+  ui.vista.addEventListener('click', (e) => {
+    const vista = e.target.closest('[data-vista]')?.dataset.vista;
+    if (!vista || vista === estado.vista) return;
+    estado.vista = vista;
+    gravarVista(vista);
+    render();
+  });
+
+  // O menu "…" da linha: um aberto por vez; fecha com um clique fora, ao escolher ou com Esc.
+  const fecharMenus = (exceto = null) => ui.lista.querySelectorAll('.fl-menu[open]').forEach((m) => m !== exceto && m.removeAttribute('open'));
+  ui.lista.addEventListener('toggle', (e) => e.target.matches?.('.fl-menu[open]') && fecharMenus(e.target), true);
+  document.addEventListener('click', (e) => !e.target.closest?.('.fl-menu') && fecharMenus());
+  secao.addEventListener('keydown', (e) => e.key === 'Escape' && fecharMenus());
 
   ui.pastas.addEventListener('click', (e) => {
     const pasta = e.target.closest('[data-pasta]')?.dataset.pasta;
@@ -227,6 +261,7 @@ export const iniciarFila = (secao) => {
     const pedido = doId(botao.closest('[data-id]')?.dataset.id);
     if (!pedido) return;
     const acao = botao.dataset.acao;
+    fecharMenus();
     if (acao === 'estado') mudar(pedido.id, botao.dataset.estado);
     if (acao === 'ficha') abrirFicha(pedido, botao);
     if (acao === 'lote') abrirLote(pedido, botao);
@@ -291,7 +326,8 @@ export const iniciarFila = (secao) => {
   // O que outra parte gravou (o Ordens, o robô, outra aba) aparece aqui; os prazos andam com o relógio.
   aoMudarAFila((origem) => origem !== 'fila' && carregar());
   setInterval(() => {
-    if (!secao.hidden) render();
+    // Com o menu "…" aberto, espera: o redesenho o fecharia na mão da pessoa.
+    if (!secao.hidden && !ui.lista.querySelector('.fl-menu[open]')) render();
   }, 30000);
 
   // Os pedidos de mais de 90 dias saem, uma vez por abertura.
@@ -403,6 +439,10 @@ const MARCACAO = `
     <nav class="fl-pastas" data-fl="pastas" aria-label="Pastas da Fila"></nav>
     <div class="fl-principal">
       <section class="panel fl-conferir" data-fl="conferir" aria-label="Respostas a conferir" hidden></section>
+      <div class="fl-vista" data-fl="vista" role="group" aria-label="Como mostrar Aprovação e execução">
+        <button type="button" data-vista="cartoes" aria-pressed="true">Cartões</button>
+        <button type="button" data-vista="tabela" aria-pressed="false">Tabela</button>
+      </div>
       <div class="fl-lista" data-fl="lista"></div>
     </div>
   </div>

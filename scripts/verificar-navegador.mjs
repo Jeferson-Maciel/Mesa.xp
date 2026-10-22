@@ -645,6 +645,34 @@ try {
       (await pagina.evaluate(() => location.hash)) === '#fila' && (await pagina.textContent('.fl-destaque').catch(() => '')).includes('1234567'),
       '"Ver na Fila" abre a Fila no cartão do pedido, aceso'
     );
+
+    // A vista em tabela de Aprovação e execução (Q34): à vista o que se faz; o resto no menu "…".
+    await pagina.click('.fl-linha [data-estado="aprovado"]');
+    await pagina.click('[data-pasta="executar"]');
+    await pagina.waitForSelector('.fl-cartao');
+    await pagina.click('[data-vista="tabela"]');
+    await pagina.waitForSelector('.fl-tabela-linha');
+    const acoes = await pagina.$$eval('.fl-tabela-linha .fl-tabela-acoes > button', (b) => b.map((x) => x.textContent.trim()));
+    ok(acoes.join(',') === 'Gerar lote,Executado', `em tabela, à vista o lote e o Executado (${acoes.join(', ')})`);
+    ok(!(await pagina.isVisible('.fl-menu-itens')), 'o resto fica fechado no menu "…"');
+    await pagina.click('.fl-menu-botao');
+    ok(await pagina.isVisible('.fl-menu-itens [data-estado="enviado"]'), 'o menu "…" abre com ver o e-mail, anotar, não aprovou e cancelar');
+    await pagina.click('.fl-menu-itens [data-estado="enviado"]');
+    await pagina.waitForFunction(() => !document.querySelector('.fl-tabela-linha'));
+    ok((await pagina.textContent('[data-pasta="enviados"] b')) === '1', '"Não aprovou" do menu volta o pedido para os Enviados');
+    await pagina.setViewportSize({ width: 360, height: 800 });
+    await pagina.click('[data-pasta="enviados"]');
+    await pagina.click('.fl-linha [data-estado="aprovado"]');
+    await pagina.click('[data-pasta="executar"]');
+    await pagina.waitForSelector('.fl-tabela-linha');
+    ok(
+      await pagina.$eval('.fl-tabela-rolagem', (t) => t.getBoundingClientRect().right <= document.documentElement.clientWidth && t.scrollWidth > t.clientWidth),
+      'a 360px, a tabela rola dentro dela, sem passar da página'
+    );
+    await pagina.reload();
+    await pagina.waitForSelector('[data-pasta="executar"]');
+    await pagina.waitForSelector('.fl-tabela-linha', { timeout: 5000 }).catch(() => {});
+    ok(Boolean(await pagina.$('.fl-tabela-linha')) && (await pagina.$eval('[data-vista="tabela"]', (b) => b.getAttribute('aria-pressed'))) === 'true', 'recarregada a página, a Fila lembra a vista em tabela');
     await contexto.close();
   }
 

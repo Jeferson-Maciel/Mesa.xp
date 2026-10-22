@@ -200,3 +200,57 @@ describe('o Aprovou no cartão respondido', () => {
     expect(html).toContain('Aprovado por você às 10:50.');
   });
 });
+
+// Fase 3 (Q34, 21/10/2026): a vista em tabela em Aprovação e execução — à vista Aprovou, Lote ou Ficha,
+// Boleta e Executado; o resto num menu "…" na linha.
+describe('Aprovação e execução em tabela', () => {
+  const tabela = (lista, agora = em(11)) => htmlLista(lista, 'executar', agora, { vista: 'tabela' });
+
+  it('uma linha por pedido, com a conta, o cliente, o grupo, as ordens, a resposta e o prazo', () => {
+    const html = tabela([respondido(), mudarEstado(pedido({ conta: '7654321' }), 'aprovado', em(11))]);
+    expect(html).toContain('<table class="fl-tabela"');
+    expect(html.match(/<tr class="fl-tabela-linha/g)).toHaveLength(2);
+    expect(html).toContain('FULANO DE TAL');
+    expect(html).toContain('PETR4');
+    expect(html).toContain('De acordo, pode seguir.');
+    expect(html).toContain('fl-prazo');
+  });
+
+  it('à vista: Aprovou (só no respondido), Gerar lote na bolsa, Ficha nos fundos, Boleta e Executado', () => {
+    const html = tabela([respondido()]);
+    const linha = html.slice(html.indexOf('<tr class="fl-tabela-linha'));
+    const aVista = linha.slice(0, linha.indexOf('fl-menu'));
+    expect(aVista).toContain('data-estado="aprovado"');
+    expect(aVista).toContain('data-acao="lote"');
+    expect(aVista).toContain('data-estado="executado"');
+    const fundos = tabela([mudarEstado(pedido({ grupo: 'fundos-compra', ordens: [{ ativo: 'Fundo Fictício FII', operacao: 'C', financeiro: 1000, fundoId: FUNDO }] }), 'aprovado', em(11))]);
+    expect(fundos).toContain('data-acao="ficha"');
+    expect(fundos).toContain('data-acao="boleta"');
+    expect(fundos).not.toMatch(/data-estado="aprovado"[^>]*>Aprovou/);
+  });
+
+  it('o resto num menu "…": ver o e-mail, anotar, não aprovou e cancelar', () => {
+    const html = tabela([respondido()]);
+    const menu = html.slice(html.indexOf('fl-menu'));
+    expect(html).toContain('<summary class="fl-menu-botao" title="Mais ações" aria-label="Mais ações">…</summary>');
+    for (const acao of ['data-acao="email"', 'data-acao="anotar"', 'data-estado="enviado"', 'data-estado="cancelado"']) expect(menu).toContain(acao);
+  });
+
+  it('a mesma ordem da vista em cartões: o de prazo perto primeiro', () => {
+    const tarde = respondido({ conta: '7654321', em: em(9) });
+    const html = tabela([respondido(), tarde], em(16, 20));
+    expect(html.indexOf('7654321')).toBeGreaterThan(-1);
+    expect(html).toContain('fl-atencao');
+  });
+
+  it('o que vem do pedido passa por esc', () => {
+    const html = tabela([respondido({ cliente: { nome: '<img src=x onerror=alert(1)>', email: null } }, '<b>ok</b>')]);
+    expect(html).not.toContain('<img src=x');
+    expect(html).not.toContain('<b>ok</b>');
+  });
+
+  it('as outras pastas não mudam com a vista', () => {
+    const p = pedido();
+    expect(htmlLista([p], 'enviados', em(11), { vista: 'tabela' })).toBe(htmlLista([p], 'enviados', em(11)));
+  });
+});

@@ -438,7 +438,20 @@ export const ordensDoLote = (pedido) => {
       financeiro: emReais ? o.financeiro : null
     });
   }
-  return { ordens, fora, semSimples: ordens.filter((o) => o.financeiro !== null).map((o) => o.ativo) };
+  // Com R$ e quantidade no mesmo pedido (22/10/2026, pedido do usuário: "gerar os em financeiro em
+  // TWAP, o resto em lote"), cada lote leva a sua parte. Sem mistura, os dois levam tudo o que cabe
+  // neles: o Simples não tem coluna de financeiro.
+  const emReais = ordens.filter((o) => o.financeiro !== null);
+  const emQuantidade = ordens.filter((o) => o.financeiro === null);
+  const misto = emReais.length > 0 && emQuantidade.length > 0;
+  return {
+    ordens,
+    fora,
+    semSimples: emReais.map((o) => o.ativo),
+    paraSimples: emQuantidade,
+    paraTwap: misto ? emReais : ordens,
+    misto
+  };
 };
 
 /** O resumo do dia, para o fim do expediente: quantos em cada estado, e o que ficou pendente. */

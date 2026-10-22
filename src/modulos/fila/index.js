@@ -205,13 +205,14 @@ export const iniciarFila = (secao) => {
    */
   function abrirLote(pedido, origem) {
     const formatar = servico('ordens.lotes');
-    const { ordens, fora, semSimples } = ordensDoLote(pedido);
-    const solicitacao = { conta: pedido.conta, ordens, horario: pedido.horario ?? null };
+    const { fora, semSimples, paraSimples, paraTwap, misto } = ordensDoLote(pedido);
+    const de = (ordens) => ({ conta: pedido.conta, ordens, horario: pedido.horario ?? null });
     const lotes = {
-      simples: formatar && ordens.length && !semSimples.length ? formatar.simples(solicitacao) : null,
-      twap: formatar && ordens.length ? formatar.twap(solicitacao) : null,
+      simples: formatar && paraSimples.length ? formatar.simples(de(paraSimples)) : null,
+      twap: formatar && paraTwap.length ? formatar.twap(de(paraTwap)) : null,
       fora,
-      semSimples
+      semSimples,
+      misto
     };
     estado.aberto = pedido.id;
     estado.lotes = lotes;

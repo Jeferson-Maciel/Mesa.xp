@@ -295,7 +295,7 @@ const htmlTabelaDoTsv = (tsv) => {
  * @param {object} pedido
  * @param {{simples: string|null, twap: string|null, fora: string[], semSimples: string[]}} lotes
  */
-export const htmlLote = (pedido, { simples, twap, fora, semSimples }, agora = Date.now()) => {
+export const htmlLote = (pedido, { simples, twap, fora, semSimples, misto = false }, agora = Date.now()) => {
   const semHorario = !pedido.horario?.inicial && !pedido.horario?.final;
   const secao = (titulo, formato, tsv, nota) => `
     <section class="fl-lote" data-formato="${formato}">
@@ -306,9 +306,13 @@ export const htmlLote = (pedido, { simples, twap, fora, semSimples }, agora = Da
       ${tsv ? htmlTabelaDoTsv(tsv) : ''}
       ${nota ? `<p class="fl-nota">${nota}</p>` : ''}
     </section>`;
+  const emReais = `${esc(semSimples.join(', '))} ${semSimples.length > 1 ? 'estão' : 'está'} em R$`;
+  // Misturado (22/10/2026): as em R$ vão no TWAP, o resto no Simples; cada lote diz o que leva.
+  const notaDoSimples = simples ? (misto ? `${emReais}: vai no Lote TWAP.` : '') : semSimples.length ? `O Lote Simples não tem coluna de financeiro: ${emReais}. Use o Lote TWAP.` : 'Nenhuma ordem para o lote.';
+  const notaDoTwap = [misto ? 'Só o que está em R$; o resto vai no Lote Simples.' : '', twap && semHorario ? 'O pedido não disse o horário: as colunas de hora saem vazias.' : ''].filter(Boolean).join(' ');
   return `
-    ${secao('Lote Simples', 'simples', simples, simples ? '' : semSimples.length ? `O Lote Simples não tem coluna de financeiro: ${esc(semSimples.join(', '))} ${semSimples.length > 1 ? 'estão' : 'está'} em R$. Use o Lote TWAP.` : 'Nenhuma ordem para o lote.')}
-    ${secao('Lote TWAP', 'twap', twap, twap && semHorario ? 'O pedido não disse o horário: as colunas de hora saem vazias.' : '')}
+    ${secao('Lote Simples', 'simples', simples, notaDoSimples)}
+    ${secao('Lote TWAP', 'twap', twap, notaDoTwap)}
     ${fora.length ? `<p class="fl-nota">Fora do lote (não são ticker): ${esc(fora.join(', '))}.</p>` : ''}
     <details class="fl-lote-ficha"><summary>A ficha do pedido</summary><pre class="fl-ficha-texto">${esc(fichaDeExecucao(pedido, agora))}</pre></details>
     <p class="fl-nota">Quantidades do e-mail aprovado.</p>`;

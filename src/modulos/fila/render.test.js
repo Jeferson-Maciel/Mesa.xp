@@ -172,6 +172,11 @@ describe('o lote e o Tesouro na Fila', () => {
     const semSimples = htmlLote(p, { simples: null, twap: 'Estratégia\tCliente\nTWAP\t1234567\n', fora: [], semSimples: ['VULC3'] }, em(11));
     expect(semSimples).toContain('O Lote Simples não tem coluna de financeiro: VULC3 está em R$. Use o Lote TWAP.');
     expect(semSimples).toContain('O pedido não disse o horário: as colunas de hora saem vazias.');
+    // Misturado: cada lote diz o que leva.
+    const misto = htmlLote(p, { simples: tsvSimples, twap: 'Estratégia\tCliente\nTWAP\t1234567\n', fora: [], semSimples: ['VULC3'], misto: true }, em(11));
+    expect(misto).toContain('VULC3 está em R$: vai no Lote TWAP.');
+    expect(misto).toContain('Só o que está em R$; o resto vai no Lote Simples.');
+    expect(misto).not.toContain('Use o Lote TWAP');
   });
 
   it('o Tesouro mostra o título do Hub, o valor e o vencimento do e-mail, e o botão do Tesouro do cliente', () => {

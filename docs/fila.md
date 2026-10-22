@@ -174,8 +174,10 @@ até o certo; e que, igual aos fundos, apareçam as quantidades também".
 - **Gerar lote** (na bolsa, no lugar da ficha): o **Lote Simples** e o **Lote TWAP** do pedido, cada um
   numa tabela para conferir de olho e com o seu Copiar (o TSV, como o Ordens o gera: os formatadores
   dele, pelo serviço `ordens.lotes`). A quantidade é a do e-mail aprovado (`ordensDoLote`); a ordem em
-  R$ segue em R$, e por isso só cabe no TWAP — o Lote Simples, que não tem coluna de financeiro, diz por
-  que não saiu. O horário do TWAP é o que o pedido disse (guardado no cartão desde 21/10); sem ele, as
+  R$ segue em R$, e por isso só cabe no TWAP. **Com R$ e quantidade no mesmo pedido** (22/10/2026,
+  pedido do usuário: "gerar os em financeiro em TWAP, o resto em lote"), cada lote leva a sua parte: as
+  em R$ no TWAP, as em quantidade no Simples, e cada um diz o que leva. Sem mistura, os dois levam tudo
+  o que cabe neles; só em R$, o Simples diz por que não saiu. O horário do TWAP é o que o pedido disse (guardado no cartão desde 21/10); sem ele, as
   colunas de hora saem vazias, com o aviso. O que não é ticker (um fundo pelo nome) fica fora do lote.
   A ficha do pedido vem embaixo, recolhida.
 - **A ficha** (no aprovado): a conta e o cliente, o que fazer com cada ativo (comprar, vender, aplicar,

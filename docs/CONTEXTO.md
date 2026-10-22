@@ -54,6 +54,12 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: o Gerar lote da Fila com R$ e quantidade
+
+Pedido do usuário: com ativos em R$ e em quantidade no mesmo pedido, o "Gerar lote" põe os em R$ no
+Lote TWAP e o resto no Lote Simples, e cada lote diz o que leva (`ordensDoLote`: `paraSimples`,
+`paraTwap`, `misto`). Sem mistura, como antes. Detalhe em `docs/fila.md`.
+
 ## 22/10: o topo mais limpo
 
 Pedido do usuário: "tudo menos poluído". O topo fica só com o nome "Mesa XP" (sem o selo XP e sem o

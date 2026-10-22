@@ -351,15 +351,27 @@ describe('o lote e a boleta de um pedido', () => {
   });
 
   it('as ordens do lote com a quantidade aprovada; a em R$ só no TWAP; o que não é ticker, fora', () => {
+    const klbn = { ativo: 'KLBN11', operacao: 'V', preco: null, quantidade: 674, financeiro: null };
+    const vulc = { ativo: 'VULC3', operacao: 'C', preco: null, quantidade: null, financeiro: 11800 };
+    // Misturado (22/10/2026, pedido do usuário): a em R$ vai no TWAP, o resto no Simples.
     expect(ordensDoLote(p)).toEqual({
-      ordens: [
-        { ativo: 'KLBN11', operacao: 'V', preco: null, quantidade: 674, financeiro: null },
-        { ativo: 'VULC3', operacao: 'C', preco: null, quantidade: null, financeiro: 11800 }
-      ],
+      ordens: [klbn, vulc],
       fora: ['Fundo Por Nome'],
-      semSimples: ['VULC3']
+      semSimples: ['VULC3'],
+      paraSimples: [klbn],
+      paraTwap: [vulc],
+      misto: true
     });
     expect(p.horario).toEqual({ inicial: '10:00', final: '15:00' });
+  });
+
+  it('sem mistura, os dois lotes levam tudo o que cabe neles', () => {
+    const soQuantidade = ordensDoLote({ ...p, ordens: [p.ordens[0]] });
+    expect([soQuantidade.paraSimples, soQuantidade.paraTwap].map((l) => l.map((o) => o.ativo))).toEqual([['KLBN11'], ['KLBN11']]);
+    expect(soQuantidade.misto).toBe(false);
+    const soReais = ordensDoLote({ ...p, ordens: [p.ordens[1]] });
+    expect([soReais.paraSimples, soReais.paraTwap].map((l) => l.map((o) => o.ativo))).toEqual([[], ['VULC3']]);
+    expect(soReais.misto).toBe(false);
   });
 
   it('o destino da boleta: o fundo com o lado, o Tesouro do cliente; a bolsa não tem', () => {

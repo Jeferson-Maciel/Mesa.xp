@@ -585,19 +585,21 @@ try {
     const cartao = '.fl-cartao';
     await pagina.waitForSelector(cartao);
     ok((await pagina.textContent(cartao)).includes('Aprovado por você'), 'em Aprovação e execução, o pedido diz que foi aprovado por você');
-    // Na bolsa, "Gerar lote" (21/10/2026): o Lote Simples e o TWAP com as quantidades do e-mail. A
-    // ordem em R$ (VULC3) não cabe no Lote Simples; o TWAP a leva em R$.
+    // Na bolsa, "Gerar lote" (21/10/2026): os lotes com as quantidades do e-mail. Com R$ e quantidade
+    // no mesmo pedido (22/10/2026), a ordem em R$ (VULC3) vai no TWAP, e o resto (KLBN11) no Simples.
     await pagina.click(`${cartao} [data-acao="lote"]`);
     await pagina.waitForSelector('.fl-janela[open] .fl-lote');
+    await pagina.click('[data-acao="copiar-lote"][data-formato="simples"]');
+    const simples = await areaDeTransferencia();
     ok(
-      (await pagina.textContent('.fl-lote[data-formato="simples"]')).includes('VULC3 está em R$. Use o Lote TWAP.'),
-      '"Gerar lote": o Lote Simples diz que a ordem em R$ não cabe nele'
+      simples.includes('Simples\t1234567\tKLBN11\tV\tA mercado\t674') && !simples.includes('VULC3'),
+      '"Gerar lote": o Lote Simples leva o que está em quantidade, com a do e-mail aprovado'
     );
     await pagina.click('[data-acao="copiar-lote"][data-formato="twap"]');
     const twap = await areaDeTransferencia();
     ok(
-      twap.startsWith('Estratégia\tCliente\tAtivo') && twap.includes('TWAP\t1234567\tKLBN11\tV\t674\t') && twap.includes('TWAP\t1234567\tVULC3\tC\t\tR$ 11.800,00'),
-      'e o Lote TWAP sai copiado, com a quantidade do e-mail aprovado e a ordem em R$'
+      twap.startsWith('Estratégia\tCliente\tAtivo') && twap.includes('TWAP\t1234567\tVULC3\tC\t\tR$ 11.800,00') && !twap.includes('KLBN11'),
+      'e o Lote TWAP leva só a ordem em R$'
     );
     ok((await pagina.textContent('.fl-lote-ficha pre')).startsWith('EXECUTAR · conta 1234567'), 'a ficha do pedido fica embaixo do lote');
     await pagina.click('.fl-janela [data-fechar]');

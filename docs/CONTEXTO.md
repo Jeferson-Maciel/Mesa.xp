@@ -54,6 +54,19 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: Correção da Navegação de Prints e Robô 1.13.3
+
+Relato do usuário: ao tentar tirar o print da venda, o sistema mostrava que estava tirando, passava alguns segundos e nada acontecia, com a aba do Hub aberta presa na página geral do mercado secundário (`#/secundario/prateleira`) sem ir para a boleta com a posição do cliente.
+
+- **Causa Raiz 1 (Endereço inicial da aba de print)**: A aba aberta pela Mesa via `GM_openInTab` nascia genericamente em `ABA_DO_ROBO` (`#/secundario/prateleira`), dependendo de um hashchange tardio no `DOMContentLoaded`.
+- **Causa Raiz 2 (Corrida de Router no Bootstrap da SPA)**: Ao tentar trocar o hash para a boleta antes da SPA (Angular) inicializar seus componentes, o roteador do Hub sobrescrevia o hash de volta para a Prateleira ou ignorava o evento, estagnando a tela na Prateleira e causando timeout de 15s no pre-check (`sem-boleta`).
+- **Causa Raiz 3 (Corrida de foco na atribuição do papel)**: A checagem `visibilidadeReal() !== 'hidden'` no início do script falhava se a aba estivesse em segundo plano durante a criação no Chrome, fazendo com que a aba nunca adquirisse o papel `mesa-xp-print`.
+- **Solução no Robô 1.13.3**:
+  - **Abertura direta na boleta do cliente**: A aba de print nasce diretamente na rota de venda da conta e do fundo (`#/secundario/vender/:fundoId/:conta`), abrindo visualmente e imediatamente a boleta do cliente com suas cotas disponíveis.
+  - **Reconhecimento resiliente de papel**: Remoção da trava de visibilidade oculta inicial e conferência redundante em `pegarPendentes()`.
+  - **Espera ordenada de montagem da SPA**: Se estiver na Prateleira, o robô aguarda o botão "Atualizar" existir antes de disparar transições de rota; se já estiver na boleta daquele fundo e a cota já tiver sido recebida pela carga inicial, aproveita a resposta imediatamente.
+  - **Clique robusto em "Total de cotas"**: Sobe pelos ancestrais no Shadow DOM até os botões Soma hospedeiros para garantir que o clique acione os handlers da aplicação sem exigir intervenção humana.
+
 ## 22/10: o Comprovante em Imagem de Venda e o Robô 1.13.2
 
 Pedido e diagnóstico do usuário: na boleta de venda, o robô exigia cliques manuais em "Estoque XP" e

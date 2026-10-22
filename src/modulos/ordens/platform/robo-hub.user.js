@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.13.2
+// @version      1.13.3
 // @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js
 // @downloadURL  https://mesa-xp.vercel.app/robo-hub.user.js
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
@@ -121,7 +121,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.13.2';
+  const VERSAO = '1.13.3';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -234,7 +234,7 @@
      * à vista, que faz os prints e é fechada pela Mesa no fim. Vale para a primeira aba do Hub nova e à
      * vista, na Prateleira, que nasce nos 30 s seguintes ao pedido.
      */
-    if (!destinoDeExecucao && !pagina.name && pagina.history.length <= 2 && visibilidadeReal() !== 'hidden' && location.pathname.startsWith('/new/fundos-de-investimento')) {
+    if (!destinoDeExecucao && !pagina.name && location.pathname.startsWith('/new/fundos-de-investimento')) {
       const pedidoDoPrint = GM_getValue(PAPEIS.print.bilhete, null);
       if (pedidoDoPrint && Date.now() - pedidoDoPrint.em < 30000) {
         GM_setValue(PAPEIS.print.bilhete, null);
@@ -258,8 +258,16 @@
         GM_setValue(chave, null);
       }
     }
-    const papel = papelDoNome();
+    let papel = papelDoNome();
     let doRobo = papel !== null;
+    const atualizarPapel = () => {
+      papel = papelDoNome();
+      doRobo = papel !== null;
+      if (doRobo) {
+        agirComoAVista();
+        marcarTitulo();
+      }
+    };
 
     /*
      * A aba do robô age como se estivesse à vista. O Chrome não desenha aba em segundo plano: não
@@ -474,6 +482,7 @@
     /* O gancho no fetch entra antes do app carregar: é por ele que passam a prateleira e o
        pre-check da boleta. */
     let esperaPreCheck = null;
+    let ultimoPreCheck = null;
     // Quando esta aba pediu e recebeu a lista pela última vez, e quem está esperando por ela.
     let listaPedidaEm = 0;
     let capturouEm = 0;
@@ -518,11 +527,13 @@
               const fundo = json && json.fund;
               if (!fundo || !FUNDO.test(String(fundo.id)) || typeof fundo.quotaValue !== 'number') return;
               const cota = { fundoId: fundo.id, valor: fundo.quotaValue, dataDaCota: String(fundo.quotaDate || '').slice(0, 10) };
+              const posicao = numerosDe(json.customer && json.customer.balancePosition, CAMPOS_DA_POSICAO);
+              const dadoCompleto = { ...cota, stock: estoquesDe(fundo.stock), posicao, em: Date.now() };
+              ultimoPreCheck = dadoCompleto;
               if (esperaPreCheck && esperaPreCheck.fundoId === cota.fundoId) {
                 // Da boleta que o robô abriu: os estoques do fundo e, na venda, a posição do cliente.
                 const { lado } = esperaPreCheck;
-                const posicao = lado === 'vender' ? numerosDe(json.customer && json.customer.balancePosition, CAMPOS_DA_POSICAO) : null;
-                esperaPreCheck.resolver({ ...cota, lado, stock: estoquesDe(fundo.stock), posicao });
+                esperaPreCheck.resolver({ ...dadoCompleto, lado, posicao: lado === 'vender' ? posicao : null });
               } else GM_setValue('cotaVista', { ...cota, em: Date.now() });
             })
             .catch(() => {});
@@ -769,7 +780,16 @@
           const todos = elementosDe(document);
           return todos.find((el) => (textoProprio(el) === 'Total de cotas' || textoInteiro(el) === 'Total de cotas') && visivel(el)) || null;
         }, 5000);
-        if (!clicarSo(total, ['Total de cotas'])) return { erro: 'sem-total' };
+        let clicouTotal = clicarSo(total, ['Total de cotas']);
+        if (!clicouTotal && total) {
+          for (const pai of ancestrais(total).slice(0, 4)) {
+            if (clicarSo(pai, ['Total de cotas'])) {
+              clicouTotal = true;
+              break;
+            }
+          }
+        }
+        if (!clicouTotal) return { erro: 'sem-total' };
       } else {
         // A máscara do campo tem 8 casas, e os dígitos entram pela direita: 590 cotas são 59000000000.
         preencher(campo, String(Math.round(quantidade * 1e8)));
@@ -866,7 +886,14 @@
     const lerPrints = async ({ id, itens }) => {
       const resultados = [];
       for (const [i, { fundoId, conta, quantidade, modalidade, desagio }] of itens.entries()) {
-        if (naBoleta()) await passarPelaPrateleira();
+        const rotaBoleta = `#/secundario/vender/${fundoId}/${conta}`;
+        if (location.hash !== rotaBoleta) {
+          if (naPrateleira()) {
+            await esperar(() => botao(), 15000);
+          } else if (naBoleta()) {
+            await passarPelaPrateleira();
+          }
+        }
         const cota = await abrirBoleta(fundoId, conta, PRE_CHECK_MS, false, 'vender');
         let resultado = { fundoId, indice: i, erro: 'sem-boleta' };
         if (cota) {
@@ -1007,6 +1034,11 @@
     // Abre a boleta do fundo para a conta — de compra ou de venda — e espera o pre-check dele.
     const abrirBoleta = (fundoId, conta, prazo, direto, lado = 'comprar') =>
       new Promise((resolver) => {
+        const rota = `#/secundario/${lado}/${fundoId}/${conta}`;
+        if (location.hash === rota && ultimoPreCheck && ultimoPreCheck.fundoId === fundoId && Date.now() - ultimoPreCheck.em < 6000) {
+          registrar('pre-check já estava na tela', { fundoId, direto, lado });
+          return resolver({ ...ultimoPreCheck, lado, posicao: lado === 'vender' ? ultimoPreCheck.posicao : null });
+        }
         const relogio = setTimeout(() => {
           esperaPreCheck = null;
           resolver(null);
@@ -1021,7 +1053,7 @@
           }
         };
         registrar('abriu a boleta', { fundoId, direto, lado });
-        irPara(`#/secundario/${lado}/${fundoId}/${conta}`);
+        irPara(rota);
       });
 
     const passarPelaPrateleira = async () => {
@@ -1216,6 +1248,14 @@
     };
 
     const pegarPendentes = () => {
+      if (!pagina.name && location.pathname.startsWith('/new/fundos-de-investimento')) {
+        const pedidoDoPrint = GM_getValue(PAPEIS.print.bilhete, null);
+        if (pedidoDoPrint && Date.now() - pedidoDoPrint.em < 30000) {
+          GM_setValue(PAPEIS.print.bilhete, null);
+          pagina.name = PAPEIS.print.nome;
+          atualizarPapel();
+        }
+      }
       receberCotacao(GM_getValue('pedido', null));
       receberCotas(GM_getValue('pedidoCotas', null));
       receberCliente(GM_getValue('pedidoCliente', null));
@@ -1630,7 +1670,9 @@
         GM_setValue('pedidoPrints', { id, itens, em: Date.now() });
         GM_setValue(PAPEIS.print.bilhete, { em: Date.now() });
         if (abaDoPrint) fecharAbaDoPrint();
-        abaDoPrint = { id, aba: GM_openInTab(ABA_DO_ROBO, { active: true, insert: true }) };
+        const primeiro = itens[0];
+        const enderecoInicial = primeiro ? `${BASE}#/secundario/vender/${primeiro.fundoId}/${primeiro.conta}` : ABA_DO_ROBO;
+        abaDoPrint = { id, aba: GM_openInTab(enderecoInicial, { active: true, insert: true }) };
         // Se a aba pegou o pedido e não terminou (a tarefa tem prazo), fecha depois do prazo; se nunca
         // pegou (o Hub pediu login), fica aberta, para a pessoa ver.
         setTimeout(() => {

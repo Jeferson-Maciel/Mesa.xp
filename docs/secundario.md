@@ -311,9 +311,11 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   22/10/2026) entra em ação: gera diretamente em Canvas 2D nativo o comprovante oficial da cotação de venda
   em PNG (Retina 2x, 620px), com todas as contas auditadas e o layout idêntico à boleta do Secundário XP,
   garantindo que o e-mail nunca fique sem imagem nem com o risco de 1px.
-  No robô (1.13.2, 22/10/2026): `escolherEstoque` busca também por `textoInteiro` e sobe aos ancestrais
-  do Soma; na venda do total, clica em "Total de cotas" (oficial da XP) mesmo se a quantidade foi informada
-  em número; e o recorte valida altura mínima de 60px para evitar o risco de 1px caso o SnapDOM colapse.
+  No robô (1.13.2 e 1.13.3, 22/10/2026): a aba de print abre diretamente na rota da boleta do cliente
+  (`#/secundario/vender/:fundoId/:conta`) em vez de nascer na Prateleira geral; o reconhecimento do bilhete
+  não depende de foco inicial imediato (`visibilidadeReal()`); o `abrirBoleta` reutiliza o pre-check
+  recém-carregado na hora; `escolherEstoque` e "Total de cotas" sobem pelos ancestrais até os componentes
+  Soma no Shadow DOM; e o recorte valida altura mínima de 60px para evitar o risco de 1px.
 - **O corpo no Outlook** (robô 1.5.0, @match no Outlook na web): a janela abre no clique, com o texto
   — senão o navegador a bloqueia como pop-up —, e o robô, **só no compor que a Mesa acabou de abrir**
   (`/deeplink/compose`, pedido de menos de 2 minutos, corpo começando pelo texto que a Mesa mandou),

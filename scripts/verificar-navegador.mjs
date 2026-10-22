@@ -156,6 +156,10 @@ try {
   titulo('Atalhos presos à aba');
   {
     const { pagina, contexto } = await abrir();
+    ok(
+      (await pagina.isVisible('.atalhos-dica')) && (await pagina.innerText('.atalhos-dica')).replace(/\s+/g, '') === 'Ctrl+Enteranalisa·Alt+Hhistórico',
+      'os atalhos do Ordens à vista, abaixo dos botões (F20)'
+    );
     await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
     await pagina.keyboard.press(altDe('rendafixa'));
     await pagina.keyboard.press('Control+Enter');

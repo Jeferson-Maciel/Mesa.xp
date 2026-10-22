@@ -118,6 +118,24 @@
   margin: var(--esp-4) 0;
 }
 
+/* Os atalhos à vista (F20, 22/10/2026), e não só no title dos botões. */
+.atalhos-dica {
+  margin: calc(-1 * var(--esp-2)) 0 var(--esp-3);
+  color: var(--texto-fraco);
+  font-size: 0.75rem;
+}
+
+.atalhos-dica kbd {
+  padding: 0 5px;
+  border: 1px solid var(--borda-forte);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .button-group button {
   position: relative;
   /* Os secundários ficam do tamanho do rótulo e o primário absorve a sobra: com flex igual

@@ -373,3 +373,8 @@ deduzi-lo.
 mudaram só três coisas: o tema e os avisos de tela vêm de `src/ui/`, e os atalhos (Ctrl+Enter,
 Alt+H, Esc) só valem com a aba à vista. O botão Histórico mora no topo e só aparece na aba Ordens
 (`data-so-na-aba="ordens"`).
+
+**Os atalhos estão à vista** (F20, 22/10/2026): abaixo de Analisar, Colar e analisar e Limpar, uma
+linha com as teclas — `Ctrl`+`Enter` analisa · `Alt`+`H` histórico. O `title` do Limpar dizia "Esc",
+mas o Esc do Ordens só fecha o histórico: saiu. `atalhos.test.js` confere que a dica só promete o que
+o `keydown` faz.

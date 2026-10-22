@@ -86,7 +86,6 @@ Ideias, com o custo grosseiro:
 | F12 | Fila do dia: trabalhar o despejo da conversa solicitação por solicitação | médio |
 | F15 | Pedido por print (OCR) — só como sugestão que obriga conferir campo a campo: OCR troca dígito de conta | alto |
 | F16 | Cestas favoritas, depois de o uso mostrar quais se repetem | médio |
-| F20 | Atalhos visíveis (`Ctrl+Enter`, `Alt+H` só estão no `title`) | baixo |
 | F21 | Segmentados como `radiogroup`: duas paradas de tabulação por linha em vez de seis | baixo |
 
 ## Robô do Hub e secundário

@@ -79,8 +79,8 @@ histórico do Ordens não foram tocados). Branch `claude/bold-knuth-t4cj2w`, um 
   antes** (rodado com `git stash`): o Chromium daqui é o 1194, emprestado no lugar do 1243 que o
   Playwright do projeto pede (o download é bloqueado), e o GitHub, com o navegador certo, passa. Uma
   conferência do robô no Outlook falhou uma vez em cada rodada, cada vez uma diferente, e não na seguinte.
-- **O push foi recusado** (403: o app do Claude no GitHub sem acesso ao repositório); os commits ficaram
-  na branch local da sessão até o acesso ser refeito.
+- Enviado à branch e aberto o pull request; **nada foi para a `main`** (push lá é deploy, só com o OK do
+  usuário).
 
 ## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
 

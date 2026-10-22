@@ -117,6 +117,18 @@ const abrir = async ({ arquivo = distLocal, hash = '', largura = 1400, tema = 'e
   return { pagina, contexto, erros };
 };
 
+/*
+ * Recarregar para conferir o que ficou no localStorage. A gravação chega ao navegador depois da página:
+ * recarregar no mesmo instante, numa máquina carregada (o GitHub, 22/10/2026), às vezes voltava sem ela
+ * — o post editado, o conflito do Operacional, as regras do Renda Fixa. Gente não recarrega no mesmo
+ * milissegundo em que salvou; o verificador, sim. (O IndexedDB não precisa: a transação só termina
+ * gravada.)
+ */
+const recarregar = async (pagina) => {
+  await pagina.waitForTimeout(500);
+  await pagina.reload();
+};
+
 const semRolagemLateral = (pagina) =>
   pagina.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
@@ -513,7 +525,7 @@ try {
     ok(await pagina.isHidden('[data-rf="selo-regras"]'), 'o secundário tem as regras dele, no padrão');
 
     // Recarregar: as regras ficam no navegador.
-    await pagina.reload();
+    await recarregar(pagina);
     await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
     await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
     const seloDepois = await pagina.textContent('[data-rf="selo-regras"]');
@@ -686,7 +698,7 @@ try {
       await pagina.$eval('.fl-tabela-rolagem', (t) => t.getBoundingClientRect().right <= document.documentElement.clientWidth && t.scrollWidth > t.clientWidth),
       'a 360px, a tabela rola dentro dela, sem passar da página'
     );
-    await pagina.reload();
+    await recarregar(pagina);
     await pagina.waitForSelector('[data-pasta="executar"]');
     await pagina.waitForSelector('.fl-tabela-linha', { timeout: 5000 }).catch(() => {});
     ok(Boolean(await pagina.$('.fl-tabela-linha')) && (await pagina.$eval('[data-vista="tabela"]', (b) => b.getAttribute('aria-pressed'))) === 'true', 'recarregada a página, a Fila lembra a vista em tabela');
@@ -884,7 +896,7 @@ try {
     await pagina.press('[data-op="editor"] textarea', 'Control+Enter');
     await pagina.waitForSelector('.op-texto');
     ok((await pagina.textContent('.op-texto')) === 'Rubi: texto colado do Slab\nsegunda linha', 'editar e salvar mostra o texto novo, com a quebra de linha');
-    await pagina.reload();
+    await recarregar(pagina);
     await pagina.waitForSelector('.op-texto');
     ok((await pagina.textContent('.op-texto')).startsWith('Rubi: texto colado'), 'o texto editado continua lá depois de recarregar');
 
@@ -942,7 +954,7 @@ try {
     await pagina.waitForSelector('[data-op="aviso-editor"] .alert-danger');
     ok((await pagina.textContent('[data-op="aviso-editor"]')).includes('Outra pessoa alterou'), 'conflito: quem salvou depois é avisado');
     ok((await pagina.inputValue('[data-op="editor"] textarea')) === 'versão desta aba', 'conflito: o texto de quem foi recusado continua no editor');
-    await outra.reload();
+    await recarregar(outra);
     await outra.waitForSelector('.op-texto');
     const textoDaOutra = await outra.textContent('.op-texto');
     ok(textoDaOutra === 'versão da outra aba', `conflito: a versão salva primeiro não foi sobrescrita ("${textoDaOutra.slice(0, 60)}")`);
@@ -1806,7 +1818,7 @@ try {
     // pela Prateleira e traz o preço do mesmo jeito.
     await robo1.evaluate(() => { window.__semTrocaDireta = true; window.__rotas = []; });
     await mesa.evaluate(() => localStorage.removeItem('ordens_secundario_cotas'));
-    await mesa.reload();
+    await recarregar(mesa);
     await esperarTexto('#robo-status', 'aba 🤖 do Hub aberta');
     await colar();
     await mesa.check('#formatos input[value="email"]');

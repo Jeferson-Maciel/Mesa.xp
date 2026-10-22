@@ -56,11 +56,12 @@ vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador 
 
 ## 22/10: a revisão das duas sessões da nuvem
 
-- **O GitHub roda no Ubuntu 24.04, fixo** (`runs-on: ubuntu-24.04`). No `ubuntu-latest`, que passa ao
-  Ubuntu 26 desde 19/10/2026, o verificador falhou quatro vezes seguidas no pull request #1, cada vez
-  numa conferência que grava no navegador e recarrega (o post novo e o conflito do Operacional, as
-  regras do Renda Fixa); com a máquina fixa, o mesmo código passou. Uma anotação diz em que sistema
-  rodou. Deve ser o mesmo tropeço do `localStorage` que a máquina da nuvem mostra (acima).
+- **Recarregar logo depois de gravar no `localStorage` perdia a gravação no GitHub** (e na máquina
+  da nuvem): o post editado e o conflito do Operacional, as regras do Renda Fixa — cinco rodadas
+  seguidas falharam assim, cada vez numa dessas, no Ubuntu 26 e no 24.04. Gente não recarrega no mesmo
+  milissegundo em que salvou; o verificador, sim. As recargas que conferem o `localStorage` passam por
+  `recarregar`, com meio segundo antes (o IndexedDB não precisa: a transação só termina gravada). A
+  máquina do GitHub ficou fixa no Ubuntu 24.04, o que o Playwright suporta, e uma anotação diz qual rodou.
 - **O fim da saída do verificador sai numa anotação só**, com as 40 últimas linhas: o GitHub guarda 10
   anotações por passo, e o erro que parava o verificador ficava de fora.
 - **Duas conferências consertadas**: a leitura da área de transferência troca o `\r\n` do Windows por

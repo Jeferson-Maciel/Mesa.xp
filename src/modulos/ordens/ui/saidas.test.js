@@ -199,3 +199,26 @@ describe("o Tesouro no cartão", () => {
     expect(gerar(comTesouro(), "lote", new Set()).texto).not.toContain("Tesouro");
   });
 });
+
+describe('Baixar o lote como arquivo (F9, 22/10/2026)', () => {
+  const solicitacao = {
+    conta: '1234567',
+    descartadas: [],
+    horario: null,
+    ordens: [{ ativo: 'PETR4', operacao: 'C', quantidade: 100, financeiro: null, preco: null }]
+  };
+
+  it('o Lote Simples e o Lote TWAP ganham um Baixar ao lado do Copiar', () => {
+    for (const formato of ['lote', 'twap']) {
+      const html = renderSaidas(solicitacao, [formato], new Set());
+      expect(html).toContain(
+        `<button class="copy-btn" data-copiar="${formato}" data-grupo="bolsa">Copiar</button><button class="copy-btn" data-baixar="${formato}" data-grupo="bolsa" title="Baixa um arquivo .tsv com o mesmo texto do Copiar">Baixar</button>`
+      );
+    }
+  });
+
+  it('os e-mails não ganham Baixar, e o lote bloqueado também não', () => {
+    expect(renderSaidas(solicitacao, ['email', 'auditoria'], new Set())).not.toContain('data-baixar');
+    expect(renderSaidas({ ...solicitacao, conta: null }, ['lote', 'twap'], new Set())).not.toContain('data-baixar');
+  });
+});

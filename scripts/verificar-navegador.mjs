@@ -156,6 +156,10 @@ try {
   titulo('Atalhos presos à aba');
   {
     const { pagina, contexto } = await abrir();
+    ok(
+      (await pagina.isVisible('.atalhos-dica')) && (await pagina.innerText('.atalhos-dica')).replace(/\s+/g, '') === 'Ctrl+Enteranalisa·Alt+Hhistórico',
+      'os atalhos do Ordens à vista, abaixo dos botões (F20)'
+    );
     await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
     await pagina.keyboard.press(altDe('rendafixa'));
     await pagina.keyboard.press('Control+Enter');
@@ -179,7 +183,8 @@ try {
   titulo('Ordens: o texto lido, desfazer a remoção e os lotes juntos');
   {
     const { pagina, contexto, erros } = await abrir();
-    const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+    // O Windows devolve a área de transferência com \r\n; o texto copiado é o mesmo (o arquivo baixado tem \n).
+    const areaDeTransferencia = async () => (await pagina.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
     await pagina.fill('#entrada', '[13:46, 21/09/2026] Paulo: 1234567\nlote\nC PETR4 100\nvender XPML11 100 e comprar BTLG11 100\nenviado mesa\n7654321\nlote\nV VALE3 50');
     await pagina.click('#btn-analisar');
     ok(
@@ -192,6 +197,17 @@ try {
       lotes.split('\n').filter((l) => l.startsWith('Estratégia')).length === 1 && lotes.includes('PETR4') && lotes.includes('VALE3'),
       '"Copiar todos os Lote Simples" junta as duas contas num TSV com um cabeçalho só'
     );
+    // F9 (22/10/2026): o lote baixado é o texto do Copiar, num .tsv.
+    const baixado = async (seletor) => {
+      const [download] = await Promise.all([pagina.waitForEvent('download'), pagina.click(seletor)]);
+      return { nome: download.suggestedFilename(), texto: readFileSync(await download.path(), 'utf8') };
+    };
+    const juntos = await baixado('#lotes-juntos [data-lotes="lote"][data-baixar-lotes]');
+    ok(/^lote-simples-2-contas-\d{4}-\d{2}-\d{2}\.tsv$/.test(juntos.nome) && juntos.texto === lotes, `"Baixar" dos Juntos: o mesmo TSV, num arquivo (${juntos.nome})`);
+    await pagina.click('[data-solicitacao="0"] [data-copiar="lote"]');
+    const copiadoUm = await areaDeTransferencia();
+    const um = await baixado('[data-solicitacao="0"] [data-baixar="lote"]');
+    ok(/^lote-simples-1234567-\d{4}-\d{2}-\d{2}\.tsv$/.test(um.nome) && um.texto === copiadoUm, `"Baixar" do Lote Simples de uma conta: o texto do Copiar, byte a byte (${um.nome})`);
     await pagina.click('[data-solicitacao="0"] .btn-remover');
     ok((await pagina.$$('[data-solicitacao="0"] tbody tr')).length === 0, 'a linha sai do cartão');
     await pagina.locator('body').click({ position: { x: 5, y: 5 } });
@@ -500,7 +516,8 @@ try {
     await pagina.reload();
     await pagina.setInputFiles('[data-rf="entrada-arquivo"]', planilhaSintetica);
     await pagina.waitForSelector('[data-rf="corpo"] .rf-secao');
-    ok((await pagina.textContent('[data-rf="selo-regras"]')) === 'regras personalizadas · 2', 'recarregada a página, as regras continuam (no navegador)');
+    const seloDepois = await pagina.textContent('[data-rf="selo-regras"]');
+    ok(seloDepois === 'regras personalizadas · 2', `recarregada a página, as regras continuam (no navegador) ("${seloDepois}")`);
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
   }
@@ -757,12 +774,28 @@ try {
     const celula = pagina.locator('.cal-linha', { hasText: 'Ana Teste' }).locator('.cal-dia').first();
     await celula.click();
     ok(await pagina.$eval('.cal-dialogo', (d) => d.matches(':modal')), 'a janela do dia é um <dialog> modal');
+    // O horário inválido avisa dentro da janela, e não atrás do véu (22/10/2026).
+    await pagina.fill('[data-cal="inicio"]', '15:00');
+    await pagina.fill('[data-cal="fim"]', '14:00');
+    await pagina.click('[data-cal="adicionar-horario"]');
+    ok(
+      await pagina.$eval('.cal-dialogo', (d) => {
+        const alerta = d.querySelector('[data-cal="erro-horario"] .alert');
+        if (!alerta || !alerta.textContent.includes('depois do inicial')) return false;
+        const a = alerta.getBoundingClientRect();
+        const j = d.getBoundingClientRect();
+        return a.height > 0 && a.top >= j.top && a.bottom <= j.bottom;
+      }),
+      'horário final antes do inicial: o aviso aparece dentro da janela do dia'
+    );
+    ok((await pagina.$$eval('.cal-horarios li', (l) => l.length)) <= 1, 'o horário inválido não entra na lista');
     await pagina.check('[data-cal="presencial"]');
     await pagina.fill('[data-cal="observacao"]', 'obs <b>teste</b>');
     await pagina.fill('[data-cal="inicio"]', '14:00');
     await pagina.fill('[data-cal="fim"]', '15:00');
     await pagina.fill('[data-cal="motivo"]', 'motivo <i>teste</i>');
     await pagina.press('[data-cal="motivo"]', 'Enter');
+    ok((await pagina.$$eval('[data-cal="erro-horario"] .alert', (a) => a.length)) === 0, 'o horário certo some com o aviso');
     await pagina.click('[data-cal="salvar"]');
     await pagina.waitForFunction(() => !document.querySelector('.cal-dialogo').open);
     const texto = await celula.innerText();
@@ -864,7 +897,9 @@ try {
     await pagina.fill('[data-op="editor"] textarea', 'texto de teste');
     await pagina.click('[data-op="editor"] button[type="submit"]');
     await pagina.waitForFunction(() => location.hash.startsWith('#operacional/post/'));
-    await pagina.waitForSelector('.op-titulo');
+    // A página do tópico também tem um .op-titulo ("Disparos"): espera o do post novo, senão a
+    // conferência corre na frente do desenho numa máquina lenta (o GitHub, 22/10/2026).
+    await pagina.waitForFunction((t) => document.querySelector('.op-titulo')?.textContent === t, XSS, { timeout: 5_000 }).catch(() => null);
     ok((await pagina.textContent('.op-titulo')) === XSS, 'post novo: o título com <img onerror> aparece como texto');
     ok((await pagina.evaluate(() => window.__xss)) === undefined && (await pagina.$$eval('#modulo-operacional img', (i) => i.length)) === 0, 'post novo: o onerror não rodou e nenhum <img> foi criado');
     ok((await contagem('Disparos')) === '4', 'post novo: a árvore passa a contar 4 em Disparos');
@@ -909,7 +944,8 @@ try {
     ok((await pagina.inputValue('[data-op="editor"] textarea')) === 'versão desta aba', 'conflito: o texto de quem foi recusado continua no editor');
     await outra.reload();
     await outra.waitForSelector('.op-texto');
-    ok((await outra.textContent('.op-texto')) === 'versão da outra aba', 'conflito: a versão salva primeiro não foi sobrescrita');
+    const textoDaOutra = await outra.textContent('.op-texto');
+    ok(textoDaOutra === 'versão da outra aba', `conflito: a versão salva primeiro não foi sobrescrita ("${textoDaOutra.slice(0, 60)}")`);
     await outra.close();
 
     ok(rede.length === 0, `o modo local não faz requisição de rede ${rede.length ? JSON.stringify(rede) : ''}`);
@@ -2185,17 +2221,35 @@ try {
     await contexto.close();
   }
 
+  /* ── Calendário com a rede caída ────────────────────────────────────────────────── */
+  titulo('Calendário com a rede caída: o aviso na hora, com a contagem');
+  {
+    const contexto = await navegador.newContext();
+    await contexto.route(/supabase\.co/, (r) => r.abort('internetdisconnected'));
+    const pagina = await contexto.newPage();
+    const inicio = Date.now();
+    await pagina.goto(`${pathToFileURL(distNormal).href}#calendario`);
+    await pagina.waitForSelector('.cal-erro .alert-warning', { timeout: 5_000 }).catch(() => null);
+    const decorrido = Date.now() - inicio;
+    const aviso = (await pagina.$('.cal-erro .alert-warning')) && (await pagina.innerText('.cal-erro .alert-warning'));
+    ok(Boolean(aviso) && /Tentando conectar de novo \(\d de 4\)/.test(aviso) && decorrido < 5_000, `a queda aparece em menos de 5 s, com a contagem (${decorrido} ms: "${aviso}")`);
+    ok((await pagina.textContent('[data-cal="conexao"]')) === 'tentando conectar…', 'o status diz "tentando conectar…"');
+    await pagina.waitForSelector('.cal-erro .alert-danger [data-cal="tentar"]', { timeout: 20_000 });
+    ok((await pagina.textContent('[data-cal="conexao"]')) === 'sem conexão', 'depois das tentativas, o erro com "Tentar de novo" e "sem conexão"');
+    await contexto.close();
+  }
+
   /* ── Calendário no build normal ─────────────────────────────────────────────────── */
   titulo('Calendário no build normal (banco da mesa)');
   {
     const { pagina, contexto, erros } = await abrir({ arquivo: distNormal, hash: '#calendario' });
     await pagina.waitForFunction(
-      () => document.querySelector('[data-cal="conexao"]')?.textContent === 'ao vivo' || document.querySelector('.cal-erro .alert'),
+      () => document.querySelector('[data-cal="conexao"]')?.textContent === 'ao vivo' || document.querySelector('.cal-erro .alert-danger'),
       null,
       { timeout: 45_000 }
     );
     const status = await pagina.textContent('[data-cal="conexao"]');
-    const erroNaTela = await pagina.$('.cal-erro .alert');
+    const erroNaTela = await pagina.$('.cal-erro .alert-danger');
     if (erroNaTela) {
       console.log(`   o banco não respondeu: "${(await erroNaTela.innerText()).split('\n')[0]}"`);
       ok(true, 'sem banco, o erro aparece na tela');

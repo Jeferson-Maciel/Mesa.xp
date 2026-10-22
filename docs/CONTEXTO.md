@@ -22,8 +22,9 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação (22/10, na nuvem): 1.364 testes (`npm test`), o build e o verificador, com as
-  conferências da Fase 3 passando; as que falham ali falham igual na base (ver "Para quem continuar").
+- A última verificação (22/10), inteira, na máquina do usuário, com as duas branches da nuvem juntas:
+  1.394 testes (`npm test`; sem as planilhas reais, 18 são pulados), o build e 355 conferências no
+  navegador (`npm run verificar`); no GitHub também, no Ubuntu 24.04.
   Antes (21/10, noite), inteira: 1.340 testes e 336 conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
@@ -37,10 +38,10 @@ cada sessão.
 
 ## Para quem continuar (a sessão na nuvem, ou outra)
 
-**A Fase 3 (Fila e avisos) está feita** (22/10, na sessão da nuvem), na branch
-`claude/nice-ptolemy-dk7gpi`, com um pull request para a `main`. **Próximo passo: a Fase 4 (Ordens)**,
-com a rodada de perguntas antes; e a 2b (o robô buscar os dados de Renda Fixa no Hub — precisa do
-usuário mostrando a tela). Outra sessão fazia, ao mesmo tempo, o Calendário e os itens F20 e F9.
+**A Fase 3 (Fila e avisos), o Calendário, o F20 e o F9 estão publicados** (22/10): feitos em duas
+sessões na nuvem, revistos e juntados na `main` na máquina do usuário (os pull requests #1 e #2).
+**Próximo passo: a Fase 4 (Ordens)**, com a rodada de perguntas antes; e a 2b (o robô buscar os dados
+de Renda Fixa no Hub — precisa do usuário mostrando a tela).
 
 **Na nuvem, não há**: as exportações reais da XP (`src/modulos/rendafixa/fixtures/*.xlsx`, fora do git
 — os goldens delas são pulados), o Hub e o Outlook de verdade, o Tampermonkey nem o Chrome do usuário.
@@ -52,6 +53,21 @@ igual na base (no GitHub passam). Alguns passos do verificador falham de vez em 
 na base também (o robô no Outlook, e o que depende do `localStorage` depois de recarregar a página —
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
+
+## 22/10: a revisão das duas sessões da nuvem
+
+- **O GitHub roda no Ubuntu 24.04, fixo** (`runs-on: ubuntu-24.04`). No `ubuntu-latest`, que passa ao
+  Ubuntu 26 desde 19/10/2026, o verificador falhou quatro vezes seguidas no pull request #1, cada vez
+  numa conferência que grava no navegador e recarrega (o post novo e o conflito do Operacional, as
+  regras do Renda Fixa); com a máquina fixa, o mesmo código passou. Uma anotação diz em que sistema
+  rodou. Deve ser o mesmo tropeço do `localStorage` que a máquina da nuvem mostra (acima).
+- **O fim da saída do verificador sai numa anotação só**, com as 40 últimas linhas: o GitHub guarda 10
+  anotações por passo, e o erro que parava o verificador ficava de fora.
+- **Duas conferências consertadas**: a leitura da área de transferência troca o `\r\n` do Windows por
+  `\n` (o "Baixar" do F9 falhava na máquina do usuário); e o post novo do Operacional espera o título
+  dele, não qualquer `.op-titulo` (o da página do tópico já estava lá).
+- **O "Baixar" do lote grava no histórico com as correções do cartão**, como o Copiar: as duas
+  branches se cruzavam ali.
 
 ## 22/10: a Fase 3 — a Fila e os avisos
 
@@ -74,6 +90,29 @@ o Reabrir").
   no Ordens, o som só nele, os 3 avisos, recarregar sem avisar de novo, "Ver na Fila", a tabela, o menu,
   a vista lembrada, o selo do histórico e o Reabrir com a correção).
 - **Nada de robô novo**: a Fase 3 é só da página; ninguém precisa reinstalar.
+
+## 22/10: Calendário (a queda de rede e o horário inválido), F20 e F9 — na nuvem
+
+Pedido do usuário, numa sessão na nuvem, ao mesmo tempo que outra fazia a Fase 3 (a Fila e o
+histórico do Ordens não foram tocados). Branch `claude/bold-knuth-t4cj2w`, um commit por item.
+
+- **Calendário**: a queda de rede aparece na primeira tentativa que falha, "Tentando conectar de novo
+  (2 de 4)…", com "tentando conectar…" no status, e não mais calada uns 12 s (`aoFalharTentativa`, em
+  `src/dados/banco.js`; as tentativas do supabase-js ficaram). O horário indisponível inválido avisa
+  dentro da janela do dia. Sem login, como estava. Detalhe em `docs/calendario.md`.
+- **F20**: "Ctrl+Enter analisa · Alt+H histórico" em teclas, abaixo dos botões do Ordens. O `title` do
+  Limpar prometia um Esc que não existe: saiu.
+- **F9**: Baixar o Lote Simples e o Lote TWAP (e o "Juntos") num `.tsv`, o mesmo texto do Copiar, byte a
+  byte; conta no histórico como o Copiar. As três decisões (TSV igual ao copiado, conta no histórico,
+  nos dois lugares) foram perguntadas ao usuário.
+- **Verificado**: 1.334 testes (18 pulados, sem as planilhas reais), o build, e o `verificar` com as
+  conferências novas (a rede caída com a rota do Supabase cortada; o horário inválido dentro da janela;
+  a dica dos atalhos; os dois downloads comparados com o copiado). Na nuvem, o `verificar` deu 6 falhas
+  de "sem rolagem lateral" a 360px (Fila Enviados, Calendário semana e histórico), **iguais no código de
+  antes** (rodado com `git stash`): o Chromium daqui é o 1194, emprestado no lugar do 1243 que o
+  Playwright do projeto pede (o download é bloqueado), e o GitHub, com o navegador certo, passa. Uma
+  conferência do robô no Outlook falhou uma vez em cada rodada, cada vez uma diferente, e não na seguinte.
+- Revisto e juntado na `main` em 22/10 (pull request #1), com a revisão acima.
 
 ## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
 

@@ -809,3 +809,8 @@
   justify-content: flex-end;
   gap: var(--esp-2);
 }
+
+/* O horário inválido, dentro da janela do dia, logo abaixo dos campos (22/10/2026). */
+.cal [data-cal='erro-horario'] .alert {
+  margin-top: var(--esp-2);
+}

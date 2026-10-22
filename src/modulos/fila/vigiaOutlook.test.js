@@ -155,3 +155,39 @@ describe('o vigia no modo conversas do Outlook (robô 1.9.1)', () => {
     expect(vigia.soltas()).toEqual([]);
   });
 });
+
+describe('proteção contra loop oscilatório e avalanche de avisos (bug Aline Alcantara)', () => {
+  it('duas mensagens da mesma conta não entram em loop de avisos em leituras sucessivas', async () => {
+    const p = pedido({ conta: '16051172', nome: 'ALINE ARAUJO DE ALCANTARA', email: 'aline@exemplo.com' });
+    const { avisos, ler } = await montar([p]);
+
+    const msgA = resposta({ id: 'rA', de: 'Aline Alcantara', conta: '16051172', previa: 'Boa tarde Gregori, Pode seguir com a realização das ordens.', hora: '10:42' });
+    const msgB = resposta({ id: 'rB', de: 'Aline Alcantara', conta: '16051172', previa: 'Boa tarde Gregori, Pode seguir com a ordem.', hora: '10:43' });
+
+    // Leitura 1: recebe as duas mensagens
+    await ler([msgA, msgB]);
+    const totalAvisosAposLeitura1 = avisos.length;
+    expect(totalAvisosAposLeitura1).toBeLessThanOrEqual(2);
+
+    // Leitura 2 (2 segundos depois): o Outlook manda a mesma lista novamente
+    await ler([msgA, msgB]);
+    expect(avisos.length).toBe(totalAvisosAposLeitura1); // nenhum novo aviso gerado
+
+    // Leitura 3: repete a lista mais 3 vezes simulando polling contínuo do robô
+    await ler([msgA, msgB]);
+    await ler([msgA, msgB]);
+    await ler([msgA, msgB]);
+    expect(avisos.length).toBe(totalAvisosAposLeitura1); // estabilidade total, zero avalanche
+  });
+
+  it('mensagens idênticas em nós duplicados na mesma leitura são desduplicadas', async () => {
+    const p = pedido({ conta: '16051172', nome: 'ALINE ARAUJO DE ALCANTARA' });
+    const { avisos, ler } = await montar([p]);
+
+    const msg = resposta({ id: 'r1', de: 'Aline Alcantara', conta: '16051172', previa: 'De acordo' });
+    // Robô extrai nós duplicados do DOM
+    await ler([msg, { ...msg }, { ...msg }]);
+
+    expect(avisos.length).toBe(1);
+  });
+});

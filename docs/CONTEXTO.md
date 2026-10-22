@@ -54,6 +54,31 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: Puxar do Hub na Renda Fixa e Robô 1.14.0 (Concluído)
+
+- **Objetivo**: eliminar o download manual diário da planilha de Emissão Bancária no Hub da XP.
+- **Implementação**:
+  - `src/modulos/ordens/platform/robo-hub.user.js`: adicionado o papel `rendafixa` (aba `🤖 Renda Fixa`). Abre ou reaproveita a aba em `#/produtos/emissao-bancaria`, aguarda a resposta do APIM (`rf-fixedincome-hub-apim`) e aciona o botão Soma `soma-icon-button[aria-label="Exportar"]`. Intercepta o blob `.xlsx` em memória via `GM_setValue('rendafixa', ...)` e envia para a Mesa sem gravação em disco.
+  - `src/modulos/ordens/platform/roboHub.js`: implementado `pedirRendaFixa()` com timeout de 35s e barramento seguro de concorrência.
+  - `src/modulos/rendafixa/index.js` e `render.js`: botão "Puxar do Hub" (`[data-rf="puxar-hub"]`, atalho P) com estados visuais de spinner, erro e detecção de versão (`VERSAO_MINIMA_DO_ROBO = '1.14.0'`). Leitura em memória pelo SheetJS (`lerDados`) processando diretamente o funil e os cartões.
+  - `scripts/verificar-navegador.mjs`: rota mock do APIM e verificação end-to-end completa no Chromium conferindo zero downloads e validação contra o golden da sintética.
+
+## 22/10: Correção Definitiva da Avalanche de Notificações no Outlook e UI (3 Camadas)
+
+- **Diagnóstico do Bug do Colega**: O cliente enviou duas respostas quase simultâneas para uma ordem. A cada ciclo de 2s do vigia (`vigiaOutlook.js`), uma mensagem substituía a outra no pedido ("ping-pong"), redisparando `avisar()`. IDs de elemento voláteis no DOM virtual do Outlook (`item.id`) impediam identificação de repetidos. A camada de UI (`avisos.js`) não limitava o total de nós simultâneos nem a criação de instâncias de `AudioContext`, provocando esgotamento de recursos e congelamento total do Chromium.
+- **Proteção em 3 Camadas**:
+  1. **UI (`src/ui/avisos.js`)**:
+     - Hard cap rígido no DOM (`MAXIMO_DE_AVISOS = 3`): remove nós excedentes imediatamente.
+     - Deduplicação de toast ativo (`toast.dataset.mensagem === texto`): não empilha cópias idênticas.
+     - Singleton de `AudioContext` com rate-limit de 600ms, reutilizando o contexto em vez de criar um novo por toast.
+  2. **Vigia da Fila (`src/modulos/fila/vigiaOutlook.js`)**:
+     - Registro persistente em memória (`notificadas = new Set()`): mensagem notificada jamais gera toast novamente nesta sessão.
+     - Anti-ping-pong: resposta anterior ou de desempate inferior jamais substitui a resposta mais recente do pedido.
+     - Deduplicação no lote de entrada de cada ciclo.
+  3. **Robô (`src/modulos/ordens/platform/robo-hub.user.js`)**:
+     - Chave determinística de mensagem (`remetente|hora|assunto|preview`), independente do `item.id` do React/Fluent UI.
+     - Deduplicação de itens visíveis no `acharItens()`.
+
 ## 22/10: Cotas Auditadas na Fila e Desambiguação Compra vs. Venda no Outlook
 
 Demandas resolvidas a pedido do usuário:

@@ -54,7 +54,9 @@ const ENDERECO_DO_ROBO = 'https://mesa-xp.vercel.app/robo-hub.user.js';
 export const iniciarRendaFixa = (secao) => {
   secao.innerHTML = MARCACAO;
 
-  const el = (nome) => secao.querySelector(`[data-rf="${nome}"]`);
+  const el = (nome) =>
+    secao.querySelector(`[data-rf="${nome}"]`) ||
+    (nome === 'arquivo-nome' ? secao.querySelector('[data-rf="nome-arquivo"]') : null);
   const ui = {
     raiz: secao.querySelector('.rf'),
     soltar: el('soltar'),
@@ -700,7 +702,7 @@ const MARCACAO = `
 
         <div class="rf-arquivo" data-rf="arquivo" hidden>
           <div class="rf-arquivo-info">
-            <strong data-rf="arquivo-nome"></strong>
+            <strong data-rf="nome-arquivo" data-rf-alt="arquivo-nome"></strong>
             <span class="meta-counter" data-rf="arquivo-detalhes"></span>
           </div>
           <button type="button" class="copy-btn" data-rf="trocar" title="Trocar planilha (A)">Trocar</button>

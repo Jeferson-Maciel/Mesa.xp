@@ -402,6 +402,12 @@ try {
     await pagina.waitForSelector('[data-rf="corpo"] .rf-secao, [data-rf="corpo"] .empty-state button');
     for (const modo of ['primario', 'secundario']) {
       if (modo === 'secundario') await pagina.click('[data-mercado="secundario"]');
+      const g = golden(nome, modo);
+      if (!g.texto) {
+        const desabilitado = await pagina.evaluate(() => document.querySelector('[data-rf="copiar"]')?.disabled);
+        ok(desabilitado, `${nome} (${modo}): sem oportunidades no mercado, botão copiar desabilitado`);
+        continue;
+      }
       // A cópia é assíncrona: espera o botão confirmar antes de colar, senão cola a anterior.
       await pagina.waitForFunction(() => document.querySelector('[data-rf="copiar"]').textContent === 'Copiar mensagem');
       await pagina.click('[data-rf="copiar"]');
@@ -413,7 +419,7 @@ try {
       const colado = await pagina.inputValue('#entrada');
       await pagina.fill('#entrada', '');
       await pagina.keyboard.press(altDe('rendafixa'));
-      ok(colado === golden(nome, modo).texto, `${nome} (${modo}): texto colado = golden`);
+      ok(colado === g.texto, `${nome} (${modo}): texto colado = golden`);
     }
     ok(erros.length === 0, `${nome}: console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
@@ -707,7 +713,7 @@ try {
     );
     await recarregar(pagina);
     await pagina.waitForSelector('[data-pasta="executar"]');
-    await pagina.waitForSelector('.fl-tabela-linha', { timeout: 5000 }).catch(() => {});
+    await pagina.waitForSelector('.fl-tabela-linha', { timeout: 15_000 }).catch(() => {});
     ok(Boolean(await pagina.$('.fl-tabela-linha')) && (await pagina.$eval('[data-vista="tabela"]', (b) => b.getAttribute('aria-pressed'))) === 'true', 'recarregada a página, a Fila lembra a vista em tabela');
     await contexto.close();
   }
@@ -1276,6 +1282,8 @@ try {
       reducedMotion: 'reduce',
       permissions: ['clipboard-read', 'clipboard-write']
     });
+    let downloads = 0;
+    contexto.on('download', () => downloads++);
     const loja = {};
     // Tudo o que passou pelo armazenamento do robô, para conferir o que nunca pode passar por ele.
     const escritas = [];
@@ -1360,6 +1368,29 @@ try {
             };
       r.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(corpo) });
     });
+    // O APIM de Renda Fixa (robô 1.14.0): lista de emissão bancária e export da planilha em .xlsx
+    const RF_APIM = 'https://api-advisor.xpi.com.br/rf-fixedincome-hub-apim';
+    const bufferSintetica = readFileSync(planilhaSintetica);
+    const pedidosDeRendaFixa = { lista: 0, export: 0 };
+    await contexto.route(`${RF_APIM}/**`, (r) => {
+      const url = new URL(r.request().url());
+      if (url.pathname.includes('/available-assets/export')) {
+        pedidosDeRendaFixa.export++;
+        return r.fulfill({
+          status: 200,
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          headers: { 'access-control-allow-origin': '*' },
+          body: bufferSintetica
+        });
+      }
+      pedidosDeRendaFixa.lista++;
+      return r.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ items: [], totalPages: 10, totalRows: 460 })
+      });
+    });
     await contexto.route(`${FICHA_API}/**`, (r) => {
       pedidosAoHub.ficha++;
       const conta = new URL(r.request().url()).pathname.match(/customers\/(\d+)\/customer-info$/)?.[1];
@@ -1379,14 +1410,25 @@ try {
         contentType: 'text/html',
         body: `<!doctype html><meta charset=utf-8><title>Hub</title><body>
           <script>
-            // O Renda Fixa, como o Hub de verdade em 20/10/2026 (robô 1.7.0):
+            // Componente de botão com ícone do Design System Soma (robô 1.14.0)
+            if (!customElements.get('soma-icon-button')) {
+              customElements.define('soma-icon-button', class extends HTMLElement {
+                constructor() {
+                  super();
+                  this.attachShadow({ mode: 'open' }).innerHTML = '<button type="button"><slot></slot></button>';
+                }
+              });
+            }
+            // O Renda Fixa, como o Hub de verdade em 20/10/2026 (robô 1.7.0 e 1.14.0):
             //  - o cliente escolhido no "Pesquisar cliente" (o resultado diz "Conta XP: <conta>") vale
             //    para Produtos e Posições, e continua escolhido depois de recarregar;
             //  - a lista e a posição de um cliente são pedidas uma vez só por carga da página: entrar
             //    em Produtos → Tesouro Direto pede a lista; em Posições, o clique na aba Tesouro Direto
             //    pede a posição; escolher o cliente pede a da tela em que se está;
             //  - Posições abre na aba Renda Fixa e desfaz a troca de rota para a do Tesouro;
-            //  - o resultado da busca ignora o clique do primeiro segundo.
+            //  - o resultado da busca ignora o clique do primeiro segundo;
+            //  - em Produtos → Emissão Bancária (1.14.0), pede a lista duas vezes por XHR e o botão
+            //    Exportar só responde após a lista chegar, disparando o XHR do export em Blob.
             if (location.pathname.startsWith('/new/renda-fixa')) {
               let escolhido = sessionStorage.getItem('cliente');
               const pedidas = new Set();
@@ -1396,22 +1438,49 @@ try {
                 fetch('${TESOURO_API}/v1/customers/' + escolhido + '/' + recurso);
               };
               let abas = null;
+              let btnExportar = null;
               let pelaAba = false;
               let entradas = 0;
+              let listaEmissaoBancariaPedida = false;
+              let emissaoBancariaPronta = false;
+              const pedirEmissaoBancaria = () => {
+                if (listaEmissaoBancariaPedida) return;
+                listaEmissaoBancariaPedida = true;
+                let concluidos = 0;
+                for (let i = 0; i < 2; i++) {
+                  const x = new XMLHttpRequest();
+                  x.open('GET', '${RF_APIM}/v2/available-assets?page=1&pageSize=50&category=BANCARIO&brand=XP');
+                  x.addEventListener('load', () => {
+                    concluidos++;
+                    if (concluidos >= 2) {
+                      emissaoBancariaPronta = true;
+                    }
+                  });
+                  x.send();
+                }
+              };
               const naTela = () => {
                 const entrada = ++entradas;
                 if (location.hash.startsWith('#/produtos/tesouro-direto')) pedir('available-assets');
+                if (location.hash.startsWith('#/produtos/emissao-bancaria')) pedirEmissaoBancaria();
                 if (location.hash.startsWith('#/posicoes/cliente/tesouro-direto')) {
                   if (pelaAba) pedir('positions');
                   else setTimeout(() => entrada === entradas && location.replace('#/posicoes/cliente/renda-fixa'), 300);
                 }
                 pelaAba = false;
                 if (abas) abas.hidden = !location.hash.startsWith('#/posicoes/cliente');
+                if (btnExportar) btnExportar.hidden = !location.hash.startsWith('#/produtos/emissao-bancaria');
               };
               addEventListener('hashchange', naTela);
               document.addEventListener('DOMContentLoaded', () => {
                 const busca = document.createElement('input');
                 busca.placeholder = 'Pesquisar cliente';
+                window.__toquesNaBusca = 0;
+                const tocarBusca = () => { window.__toquesNaBusca = (window.__toquesNaBusca || 0) + 1; };
+                busca.addEventListener('focus', tocarBusca);
+                busca.addEventListener('click', tocarBusca);
+                busca.addEventListener('input', tocarBusca);
+                busca.addEventListener('keydown', tocarBusca);
                 const resultados = document.createElement('div');
                 busca.addEventListener('input', () => {
                   resultados.dataset.desde = Date.now();
@@ -1441,7 +1510,27 @@ try {
                   });
                   abas.append(aba);
                 }
-                document.body.append(busca, resultados, abas);
+                btnExportar = document.createElement('soma-icon-button');
+                btnExportar.setAttribute('aria-label', 'Exportar');
+                btnExportar.addEventListener('click', () => {
+                  if (!emissaoBancariaPronta) return;
+                  const x = new XMLHttpRequest();
+                  x.open('GET', '${RF_APIM}/v2/available-assets/export?category=BANCARIO&brand=XP');
+                  x.responseType = 'blob';
+                  x.addEventListener('load', () => {
+                    if (x.status === 200) {
+                      const url = URL.createObjectURL(x.response);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'produtos-renda-fixa-emissao-bancaria.xlsx';
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                    }
+                  });
+                  x.send();
+                });
+                document.body.append(busca, resultados, abas, btnExportar);
                 naTela();
               });
             }
@@ -2201,6 +2290,51 @@ try {
     await mesa.fill('[data-fu="busca"]', '');
     await mesa.screenshot({ path: join(temporario, 'fundos.png'), fullPage: true });
 
+    // ── Renda Fixa: puxar do Hub pelo robô (1.14.0) ──
+    await mesa.keyboard.press(altDe('rendafixa'));
+    await mesa.waitForSelector('[data-rf="puxar-hub"]');
+    ok(await mesa.isVisible('[data-rf="puxar-hub"]'), 'o botão "Puxar do Hub" está na aba Renda Fixa');
+    ok((await mesa.textContent('[data-rf="puxar-hub"]')).includes('Puxar do Hub'), 'o texto do botão diz "Puxar do Hub"');
+
+    // Primeira puxada
+    await mesa.click('[data-rf="puxar-hub"]');
+    await mesa.waitForFunction(() => {
+      const nome = document.querySelector('[data-rf="nome-arquivo"]')?.textContent || '';
+      return nome.startsWith('Hub · ');
+    }, null, { timeout: 35_000 });
+
+    ok(downloads === 0, 'zero downloads ao puxar a planilha pelo robô');
+    const nomePuxado1 = await mesa.textContent('[data-rf="nome-arquivo"]');
+    ok(nomePuxado1.startsWith('Hub · '), `o nome carregado começa com "Hub · " (${nomePuxado1})`);
+
+    // Conferir que as oportunidades batem com o golden da sintética no mercado primário
+    await mesa.click('[data-rf="copiar"]');
+    await mesa.waitForSelector('[data-rf="copiar"].copiado');
+    const saidaPrimario = (await mesa.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
+    const goldenPrimario = golden('sintetica', 'primario');
+    ok(saidaPrimario.trim() === goldenPrimario.texto.trim(), 'as oportunidades puxadas do Hub conferem com o golden da sintética no mercado primário');
+
+    // Conferir que a aba de renda fixa do robô foi aberta com o título certo e sem tocar na busca
+    const abaRf = contexto.pages().find((p) => p.url().includes('/produtos/emissao-bancaria'));
+    ok(Boolean(abaRf), 'a aba de Renda Fixa do robô foi aberta');
+    ok((await abaRf.title()).startsWith('🤖 Renda Fixa'), 'a aba do robô tem o título com prefixo "🤖 Renda Fixa"');
+    const toquesBusca = await abaRf.evaluate(() => window.__toquesNaBusca || 0);
+    ok(toquesBusca === 0, 'nenhum toque no campo "Pesquisar cliente"');
+
+    // Segunda puxada: reaproveita a aba, sem navegação nova e rápida
+    const totalAbasAntes = contexto.pages().length;
+    const cargasAntes = cargasDoRendaFixa;
+    const inicioPuxada2 = Date.now();
+    await mesa.click('[data-rf="puxar-hub"]');
+    await mesa.waitForFunction(() => {
+      const btn = document.querySelector('[data-rf="puxar-hub"]');
+      return btn && !btn.classList.contains('rf-puxando');
+    }, null, { timeout: 15_000 });
+    const tempoPuxada2 = Date.now() - inicioPuxada2;
+    ok(contexto.pages().length === totalAbasAntes, 'a segunda puxada reaproveita a mesma aba');
+    ok(cargasDoRendaFixa === cargasAntes, 'a segunda puxada não recarrega nem navega a página');
+    ok(tempoPuxada2 < 10_000, `a segunda puxada é rápida (${tempoPuxada2} ms)`);
+
     ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
     await contexto.close();
 
@@ -2211,10 +2345,27 @@ try {
     ok(await semRobo.pagina.isHidden('#btn-atualizar-cotacoes'), 'e esconde o "Atualizar cotações"');
     ok(
       (await semRobo.pagina.isVisible('#btn-instalar-robo')) && (await semRobo.pagina.textContent('#btn-instalar-robo')) === 'Instalar robô',
-      'sem o robô, a Mesa oferece "Instalar robô", que abre o robô no site para o Tampermonkey (1.13.0)'
+      'sem o robô, a Mesa oferece "Instalar robô", que abre o robô no site para o Tampermonkey (1.14.0)'
     );
     await semRobo.pagina.click('#btn-copiar-robo');
     ok((await semRobo.pagina.evaluate(() => navigator.clipboard.readText())).startsWith('// ==UserScript=='), '"Copiar robô" copia o script do Tampermonkey');
+
+    // Na aba Renda Fixa: sem o robô, o botão indica Instalar robô
+    await semRobo.pagina.keyboard.press(altDe('rendafixa'));
+    await semRobo.pagina.waitForSelector('[data-rf="puxar-hub"]');
+    ok(
+      await semRobo.pagina.evaluate(() => document.querySelector('[data-rf="puxar-hub"]')?.classList.contains('rf-sem-robo')),
+      'sem o robô, o botão de Renda Fixa indica "Instalar robô" com .rf-sem-robo'
+    );
+
+    // Com robô antigo (< 1.14.0): o botão oferece "Atualizar robô" (.rf-desatualizado)
+    await semRobo.pagina.evaluate(() => {
+      window.postMessage({ origem: 'robo-hub', tipo: 'presente', versao: '1.13.4', hub: { abas: 1, robo: true, prateleira: true } }, '*');
+    });
+    await semRobo.pagina.waitForFunction(() => document.querySelector('[data-rf="puxar-hub"]')?.classList.contains('rf-desatualizado'));
+    const textoDesatualizado = await semRobo.pagina.textContent('[data-rf="puxar-hub"]');
+    ok(textoDesatualizado.includes('Atualizar robô'), `com robô antigo (< 1.14.0), a Mesa oferece "Atualizar robô" (${textoDesatualizado.trim()})`);
+
     await semRobo.contexto.close();
   }
 

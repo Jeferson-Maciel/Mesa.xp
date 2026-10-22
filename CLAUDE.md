@@ -129,14 +129,19 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
 - **não lê senha, token, cabeçalho, `localStorage` nem `sessionStorage`, e não chama a API do Hub
   por conta própria**: lê só a resposta que o próprio Hub recebe. Um teste confere o texto do script;
 - **nunca põe parâmetro no endereço do Hub**: qualquer um trava o módulo;
-- **só clica no que está numa lista fechada** (`clicarSo`, mais dois rótulos fixos que a tarefa
-  passa: a aba "Tesouro Direto" e o resultado "Conta XP: <a conta do pedido>"): nunca Próximo, Enviar,
+- **só clica no que está numa lista fechada** (`clicarSo`, mais três rótulos fixos que a tarefa
+  passa: a aba "Tesouro Direto", o resultado "Conta XP: <a conta do pedido>" e o botão Soma `Exportar` em
+  Emissão Bancária para download segurado da planilha pelo robô 1.14.0): nunca Próximo, Enviar,
   Confirmar ou Vender; e **nunca envia e-mail** — no Outlook, só troca o corpo do e-mail que a Mesa abriu e, na
   caixa de entrada (1.8.0), só lê a lista de mensagens: dos e-mails de hoje com "Confirmação" no
   assunto **ou que citam "conta XP <n>"** (1.11.0, decidido com o usuário em 21/10/2026: a resposta do
   cliente pode vir sem o assunto — o que vale é o cliente responder), o remetente, o e-mail, o assunto,
   a prévia, a hora e a conta citada. Não clica, não abre e-mail e só olha enquanto a Mesa tem pedido
-  esperando o cliente;
+  esperando o cliente.
+- **proteção contra avalanche de notificações (22/10/2026)**: vigia com registro imutável por sessão de mensagens já notificadas
+  (`notificadas = new Set()`), desempate estável anti-ping-pong impedindo oscilação por respostas múltiplas quase simultâneas,
+  chave determinística de mensagem sem depender do `item.id` volátil do Outlook e teto rígido de até 3 avisos simultâneos no DOM
+  com singleton de áudio protegido contra esgotamento;
 - **a aba que ele abre para a pessoa é dela** (1.10.0, o botão Boleta da Fila): à vista, ele só a leva
   até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche a boleta (só a busca de
   cliente, com a conta do pedido), não clica em Próximo;

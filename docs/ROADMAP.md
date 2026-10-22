@@ -24,9 +24,10 @@ fase sai publicada quando os testes, o build e o verificador passam.
    nem Tax.Máx (padrão: descartar), os títulos e o modelo de cada linha da mensagem (com ou sem
    emissor…), e, em "Avançado", o reconhecimento do tipo pelo nome e os nomes das colunas. Com
    "Restaurar o padrão" e "Copiar / Colar configuração" para passar a um colega.
-   - **2b. O robô buscar os dados no Hub** em vez da planilha baixada todo dia (Renda Fixa → emissão
-     bancária, e o secundário): estudo na tela de verdade, que o usuário mostra pelo Claude in Chrome.
-     A planilha fica como reserva. A troca do SheetJS pelo menor (sem `.xls`) espera esse estudo.
+   - ~~**2b. O robô buscar os dados no Hub**~~ — **feita em 22/10/2026** (ver `docs/rendafixa.md`, "Puxar do Hub pelo Robô"):
+     o botão "Puxar do Hub" aciona o robô 1.14.0, que abre ou reaproveita a aba do Hub em Emissão Bancária,
+     dispara o download segurado pelo botão Soma `Exportar` e transfere a planilha `.xlsx` em memória diretamente
+     para a Mesa, gerando as oportunidades instantaneamente sem downloads no disco. A planilha arrastada fica como reserva.
 3. ~~**Fila e avisos**~~ — **feita em 22/10/2026** (ver `docs/fila.md`, "O aviso de prazo" e "O
    histórico do Ordens e a Fila"): o som só na resposta do cliente, no erro e no aviso de prazo; no
    máximo 3 avisos à vista; o aviso de prazo em qualquer aba (15 min antes em Aprovação e execução, 30

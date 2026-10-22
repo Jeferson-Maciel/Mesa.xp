@@ -51,6 +51,7 @@ const curto = (texto, n = 90) => {
  */
 export const criarVigiaDoOutlook = ({ robo, atende = () => true, repo, avisar = () => {}, agora = () => Date.now() }) => {
   const estado = { caixaVistaEm: 0, itens: 0, esperando: 0, soltas: [], ignoradas: lerIgnoradas(diaDe(agora())) };
+  const notificadas = new Set();
   const ouvintes = new Set();
   const mudou = () => ouvintes.forEach((fn) => fn());
   let fila = Promise.resolve();
@@ -62,41 +63,106 @@ export const criarVigiaDoOutlook = ({ robo, atende = () => true, repo, avisar = 
   // com a pasta Itens Enviados aberta, ele citaria a conta e casaria como se fosse a resposta.
   const ehDaMesa = (previa) => /^\s*Prezado\(a\)/i.test(previa ?? '');
 
+  const assinaturaResposta = (r) => `${r.id}|${r.conta ?? ''}|${r.hora ?? ''}|${curto(r.previa, 60)}`;
+
   async function receber(leitura) {
     if (leitura.lista) {
       estado.caixaVistaEm = leitura.em;
       estado.itens = leitura.itens;
     }
     let pedidos = await daVista();
-    const doId = new Map(pedidos.filter((p) => p.resposta?.id).map((p) => [p.resposta.id, p]));
+    const doId = new Map();
+    const daChave = new Map();
+    for (const p of pedidos) {
+      if (p.resposta?.id) doId.set(p.resposta.id, p);
+      if (p.resposta && p.conta) {
+        daChave.set(`${p.conta}|${curto(p.resposta.previa, 60)}`, p);
+      }
+    }
+
     const soltas = [];
     let gravou = false;
     const gravar = async (atualizado) => {
       await repo.salvar(atualizado);
       pedidos = pedidos.map((p) => (p.id === atualizado.id ? atualizado : p));
-      doId.set(atualizado.resposta.id, atualizado);
+      if (atualizado.resposta?.id) doId.set(atualizado.resposta.id, atualizado);
+      if (atualizado.resposta && atualizado.conta) {
+        daChave.set(`${atualizado.conta}|${curto(atualizado.resposta.previa, 60)}`, atualizado);
+      }
       gravou = true;
     };
 
-    for (const r of leitura.respostas) {
+    // Desduplica a lista de entrada para não processar o mesmo nó duas vezes no mesmo ciclo
+    const respostasUnicas = [];
+    const vistasNoCiclo = new Set();
+    for (const r of leitura.respostas || []) {
+      if (!r) continue;
+      const k = assinaturaResposta(r);
+      if (!vistasNoCiclo.has(k)) {
+        vistasNoCiclo.add(k);
+        respostasUnicas.push(r);
+      }
+    }
+
+    for (const r of respostasUnicas) {
       const em = momentoDaHora(r.hora, agora());
       if (em === null || estado.ignoradas[r.id] || ehDaMesa(r.previa)) continue;
       const resposta = { id: r.id, de: r.de, email: r.email, assunto: r.assunto, previa: r.previa, em, conta: r.conta ?? null };
-      // A mesma conversa com uma mensagem nova: a prévia muda, e o cartão fica com a de agora.
-      const jaGuardada = doId.get(r.id);
-      if (jaGuardada) {
-        if (jaGuardada.resposta.previa !== r.previa) await gravar(registrarResposta(jaGuardada, resposta, agora()));
+      const sig = assinaturaResposta(r);
+
+      // 1. A mesma resposta já guardada pelo ID
+      const jaGuardadaPeloId = doId.get(r.id);
+      if (jaGuardadaPeloId) {
+        if (jaGuardadaPeloId.resposta.previa !== r.previa) {
+          await gravar(registrarResposta(jaGuardadaPeloId, resposta, agora()));
+        }
+        notificadas.add(r.id);
+        notificadas.add(sig);
         continue;
       }
+
+      // 2. A mesma resposta já guardada pelo conteúdo e conta (evita oscilação de IDs voláteis)
+      const jaGuardadaPelaChave = r.conta ? daChave.get(`${r.conta}|${curto(r.previa, 60)}`) : null;
+      if (jaGuardadaPelaChave) {
+        notificadas.add(r.id);
+        notificadas.add(sig);
+        continue;
+      }
+
       const casamento = casarResposta(resposta, pedidos);
       if (casamento.tipo === 'casou') {
-        const atualizado = registrarResposta(casamento.pedido, resposta, agora());
+        const pedidoAlvo = casamento.pedido;
+
+        // Se o pedido já tem uma resposta registrada:
+        if (pedidoAlvo.resposta) {
+          // Prevenção de ping-pong: se a resposta recebida for anterior à que já está no pedido, ignora
+          if (typeof pedidoAlvo.resposta.em === 'number' && typeof em === 'number') {
+            if (em < pedidoAlvo.resposta.em) {
+              notificadas.add(r.id);
+              notificadas.add(sig);
+              continue;
+            }
+            // Se tiver o mesmo horário e prévia equivalente, desempata deterministicamente
+            if (em === pedidoAlvo.resposta.em && (pedidoAlvo.resposta.id || '') > (r.id || '')) {
+              notificadas.add(r.id);
+              notificadas.add(sig);
+              continue;
+            }
+          }
+        }
+
+        const atualizado = registrarResposta(pedidoAlvo, resposta, agora());
         await gravar(atualizado);
-        // A resposta do cliente é um dos três avisos com som (Fase 3): pede a pessoa de volta.
-        avisar(`${r.de || 'O cliente'} respondeu (conta ${atualizado.conta}): "${curto(r.previa) || 'sem prévia'}"`, {
-          som: true,
-          acao: { rotulo: 'Ver na Fila', fazer: () => (location.hash = '#fila') }
-        });
+
+        // Só notifica se esta resposta específica ainda não foi notificada nesta sessão
+        if (!notificadas.has(r.id) && !notificadas.has(sig)) {
+          notificadas.add(r.id);
+          notificadas.add(sig);
+          avisar(`${r.de || 'O cliente'} respondeu (conta ${atualizado.conta}): "${curto(r.previa) || 'sem prévia'}"`, {
+            som: true,
+            acao: { rotulo: 'Ver na Fila', fazer: () => (location.hash = '#fila') }
+          });
+        }
       } else if (casamento.tipo !== 'nenhum' || r.prefixo || r.conta) {
         // O que não casou com nada só fica "a conferir" se for resposta a e-mail nosso — com "RE:" ou
         // com a conta citada. Outro e-mail com "Confirmação" no assunto (um aviso de sistema) não é.

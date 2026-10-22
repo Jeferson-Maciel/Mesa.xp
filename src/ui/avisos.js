@@ -51,14 +51,28 @@ const somDesligado = () => {
   }
 };
 
+let audioCtxCompartilhado = null;
+let ultimoSomTocadoEm = 0;
+const INTERVALO_MINIMO_SOM_MS = 600;
+
 export const tocarSom = (tipo = 'info') => {
   try {
     if (typeof window === 'undefined') return;
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
+    const agoraMs = Date.now();
+    if (agoraMs - ultimoSomTocadoEm < INTERVALO_MINIMO_SOM_MS) return;
     if (somDesligado()) return;
 
-    const ctx = new AudioCtx();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    if (!audioCtxCompartilhado || audioCtxCompartilhado.state === 'closed') {
+      audioCtxCompartilhado = new AudioCtx();
+    } else if (audioCtxCompartilhado.state === 'suspended') {
+      audioCtxCompartilhado.resume().catch(() => {});
+    }
+
+    ultimoSomTocadoEm = agoraMs;
+    const ctx = audioCtxCompartilhado;
     const agora = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -82,9 +96,6 @@ export const tocarSom = (tipo = 'info') => {
       osc.start(agora);
       osc.stop(agora + 0.12);
     }
-    setTimeout(() => {
-      try { ctx.close(); } catch {}
-    }, 250);
   } catch {}
 };
 
@@ -123,9 +134,28 @@ export const aviso = (mensagem, { tipo = 'info', som, acao = null } = {}) => {
 
   const erro = tipo === 'erro';
   const duracao = tipo === 'prazo' ? DURACAO.prazo : acao ? DURACAO.acao : erro ? DURACAO.erro : DURACAO.info;
+
+  // Proteção contra avalanche: se já há um toast ativo com exatamente o mesmo texto, renova o tempo e não empilha outro.
+  const aVista = [...lista.children].filter((t) => !t.classList.contains('saindo'));
+  const duplicado = aVista.find((t) => t.dataset.mensagem === mensagem);
+  if (duplicado) {
+    duplicado.renovar?.(duracao);
+    return;
+  }
+
+  // Teto rígido no DOM: se o número total de nós exceder o limite, remove imediatamente os mais antigos para evitar vazamento de memória
+  const todosFilhos = [...lista.children];
+  if (todosFilhos.length >= MAXIMO_DE_AVISOS) {
+    const excesso = todosFilhos.slice(0, todosFilhos.length - MAXIMO_DE_AVISOS + 1);
+    excesso.forEach((t) => {
+      try { t.remove(); } catch {}
+    });
+  }
+
   const toast = document.createElement('div');
   toast.className = erro ? 'toast erro' : tipo === 'prazo' ? 'toast prazo' : 'toast';
   toast.dataset.tipo = tipo;
+  toast.dataset.mensagem = mensagem;
   toast.setAttribute('role', erro ? 'alert' : 'status');
   // A linha que encolhe no pé do aviso mostra quanto tempo ele ainda fica (base.css).
   toast.style.setProperty('--duracao', `${duracao}ms`);
@@ -137,15 +167,23 @@ export const aviso = (mensagem, { tipo = 'info', som, acao = null } = {}) => {
   toast.append(icone, texto);
 
   let feito = false;
+  let relogioSaida = null;
   const tirar = () => {
     if (feito) return;
     feito = true;
+    clearTimeout(relogioSaida);
     toast.remove();
   };
   const sair = () => {
     toast.classList.add('saindo');
     toast.addEventListener('animationend', tirar, { once: true });
     setTimeout(tirar, 400); // movimento reduzido: sem animação, sai assim mesmo
+  };
+
+  toast.renovar = (novaDuracao) => {
+    clearTimeout(relogioSaida);
+    relogioSaida = setTimeout(sair, novaDuracao);
+    toast.style.setProperty('--duracao', `${novaDuracao}ms`);
   };
 
   if (acao) {
@@ -161,12 +199,12 @@ export const aviso = (mensagem, { tipo = 'info', som, acao = null } = {}) => {
     toast.append(botao);
   }
 
-  // O quarto tira o mais antigo, menos o de erro. Os que já estão saindo não contam.
-  const aVista = [...lista.children].filter((t) => !t.classList.contains('saindo'));
-  for (const i of avisosParaTirar(aVista.map((t) => t.dataset.tipo ?? 'info'))) aVista[i].sairAgora?.();
+  // O quarto tira o mais antigo, menos o de erro.
+  const aVistaAtual = [...lista.children].filter((t) => !t.classList.contains('saindo'));
+  for (const i of avisosParaTirar(aVistaAtual.map((t) => t.dataset.tipo ?? 'info'))) aVistaAtual[i]?.sairAgora?.();
   toast.sairAgora = sair;
 
   lista.appendChild(toast);
-  setTimeout(sair, duracao);
+  relogioSaida = setTimeout(sair, duracao);
 };
 

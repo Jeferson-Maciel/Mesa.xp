@@ -328,6 +328,23 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   clica em nada. Sem resposta, a Mesa avisa para usar o Copiar e colar com Ctrl+V.
 - **A posição do cliente fica só na memória da página** (`estado.boletas`), como o cliente; nunca no
   `localStorage`, no histórico ou no repositório.
+- **Renda Fixa no robô** (1.14.0, 22/10/2026): adicionado o papel `rendafixa` no robô Tampermonkey. A Mesa
+  pede ao robô a grade de Emissão Bancária (`pedirRendaFixa`). O robô abre ou reaproveita uma aba em
+  `https://hub.xpi.com.br/new/renda-fixa/#/produtos/emissao-bancaria` (título "🤖 Renda Fixa"), aguarda a
+  carga dos dados e dispara o download segurado clicando no botão Soma (`soma-icon-button[aria-label="Exportar"]`).
+  O blob `.xlsx` é capturado em memória (`GM_setValue`), transferido para a Mesa e processado sem passar
+  por arquivo em disco.
+- **Proteção contra Avalanche de Notificações e Ping-Pong** (22/10/2026):
+  - *Causa Raiz*: Quando um cliente envia múltiplas respostas quase simultâneas no Outlook para a mesma conta/ordem,
+    o vigia sofria oscilação contínua re-notificando a cada ciclo de polling (2s). Somado a IDs voláteis do DOM do Outlook
+    e ausência de teto de notificações na UI, o navegador travava por colapso de nós no DOM e estouro de `AudioContext`.
+  - *Proteção em 3 Camadas*:
+    1. **Robô (`robo-hub.user.js`)**: Geração de chave de mensagem determinística (`remetente|hora|assunto|preview`),
+       desduplicação de nós no `acharItens()` e imunidade a IDs randômicos do React/Fluent UI.
+    2. **Vigia da Fila (`vigiaOutlook.js`)**: Registro imutável de mensagens já notificadas na sessão (`notificadas = new Set()`),
+       regra anti-ping-pong onde mensagens de horários anteriores ou de desempate inferior nunca sobrescrevem o pedido nem re-disparam toasts.
+    3. **UI de Avisos (`avisos.js`)**: Teto rígido de nós simultâneos no DOM (`MAXIMO_DE_AVISOS = 3`), deduplicação de toasts
+       ativos com a mesma mensagem e singleton com rate-limit de 600ms no `AudioContext` para evitar esgotamento de recursos de áudio.
 - **Os grupos de e-mail.** Cada conta sai em até cinco e-mails, um por grupo, cada um numa seção do
   cartão com o que é dele: **Bolsa** (ações, FIIs listados, ETFs, BDRs; compra e venda juntas, no
   modelo de sempre), **Fundos · Compra** (o modelo de sempre, com as cotas) e **Fundos · Venda** (o

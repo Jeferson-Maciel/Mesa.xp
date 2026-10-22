@@ -173,3 +173,22 @@ leva à seção e a contagem de cada mercado.
   líquido e a taxa líquida ao ano. A conta é a do mercado para título pré — 252 dias úteis, contados
   com os feriados da B3 (`src/comum/diasUteis.js`) — e é uma estimativa, dita na tela: não entram
   IOF, custódia nem o PU do dia no secundário (`simulador.js`).
+
+## Puxar do Hub pelo Robô (22/10/2026 - Robô 1.14.0)
+
+Funcionalidade para obter a grade de Emissão Bancária automaticamente sem precisar baixar e arrastar a planilha manualmente todos os dias:
+
+- **Botão "Puxar do Hub"** (`[data-rf="puxar-hub"]`): localizado na barra lateral da aba Renda Fixa (atalho P).
+- **Integração com o robô Tampermonkey**:
+  - Abre ou reaproveita a aba do Hub em `https://hub.xpi.com.br/new/renda-fixa/#/produtos/emissao-bancaria` com título prefixado por `🤖 Renda Fixa`.
+  - Aguarda o carregamento dos dados via APIM e aciona o download segurado do arquivo `.xlsx` através do botão nativo do Design System Soma (`soma-icon-button[aria-label="Exportar"]`).
+  - O download é interceptado em memória pelo robô (`GM_setValue`), transferindo o conteúdo binário diretamente para a Mesa via canal de mensagens local, sem salvar lixo no disco e sem poluir a pasta de downloads.
+- **Processamento Instantâneo**:
+  - A planilha sintética ou oficial é lida pelo SheetJS (`lerDados`) e processada pelo `motor.js` instantaneamente, gerando o funil, os cartões e a mensagem para o WhatsApp.
+  - O nome do arquivo é exibido como `Hub · DD/MM HH:MM`.
+- **Estados Visuais**:
+  - Normal: "Puxar do Hub" (botão primário).
+  - Puxando: spinner ativo e rótulo "Puxando do Hub…".
+  - Sem robô: "Instalar robô" (`.rf-sem-robo`).
+  - Robô desatualizado (< 1.14.0): "Atualizar robô (vX.X.X)" (`.rf-desatualizado`).
+

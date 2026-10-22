@@ -1688,7 +1688,8 @@
         .filter((l) => !normalizarHora(l))
         .join(' ')
         .slice(0, 2000);
-      const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhaAssunto}|${hora}`;
+      const idConversa = item.getAttribute('data-convid');
+      const chave = idConversa || `${de || ''}|${conta || ''}|${linhaAssunto}|${hora}|${previa.slice(0, 80)}`;
       return { id: 'r' + resumo(chave), de, email, assunto: linhaAssunto, previa, hora, conta, prefixo: PREFIXO_DE_RESPOSTA.test(linhaAssunto) };
     };
 
@@ -1702,7 +1703,9 @@
       ];
       if (listas.length > 0) {
         const itens = listas.flatMap((l) => [...l.querySelectorAll('[role="option"], [role="row"], div[data-convid]')]);
-        if (itens.length > 0) return itens;
+        // Evita ler nó pai e filho da mesma mensagem no DOM do Outlook
+        const unicos = itens.filter((el, idx, arr) => !arr.some((outro, outroIdx) => outroIdx !== idx && outro.contains(el)));
+        if (unicos.length > 0) return unicos;
       }
       return [...document.querySelectorAll('[role="option"]')];
     };
@@ -1722,11 +1725,20 @@
       const itens = acharItens();
       const listaPresente = temListaDeVerdade(itens);
       const respostas = itens.map(lerLinha).filter(Boolean);
-      const agora = JSON.stringify(respostas);
+      // Desduplica por id da resposta na saída do robô
+      const respostasUnicas = [];
+      const idsVistos = new Set();
+      for (const r of respostas) {
+        if (!idsVistos.has(r.id)) {
+          idsVistos.add(r.id);
+          respostasUnicas.push(r);
+        }
+      }
+      const agora = JSON.stringify(respostasUnicas);
       if (!forcado && agora === ultima && Date.now() - mandouEm < 60 * 1000) return;
       ultima = agora;
       mandouEm = Date.now();
-      GM_setValue('outlookVigia', { em: Date.now(), lista: listaPresente, itens: itens.length, respostas });
+      GM_setValue('outlookVigia', { em: Date.now(), lista: listaPresente, itens: itens.length, respostas: respostasUnicas });
     };
 
     // A lista muda (mensagem nova, a pessoa troca de pasta): olha logo, no máximo uma vez a cada 2 s.

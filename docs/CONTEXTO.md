@@ -67,6 +67,9 @@ vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador 
 - **Duas conferências consertadas**: a leitura da área de transferência troca o `\r\n` do Windows por
   `\n` (o "Baixar" do F9 falhava na máquina do usuário); e o post novo do Operacional espera o título
   dele, não qualquer `.op-titulo` (o da página do tópico já estava lá).
+- **Robô 1.13.1**: o compor do Outlook espera a reserva da Mesa até 15 s, em vez de desistir calado
+  quando abre antes de ela chegar — a outra falha de vez em quando do verificador (o robô colando os
+  prints), que a Mesa de verdade também podia ter. Chega sozinho pelo site; ninguém reinstala.
 - **O "Baixar" do lote grava no histórico com as correções do cartão**, como o Copiar: as duas
   branches se cruzavam ali.
 

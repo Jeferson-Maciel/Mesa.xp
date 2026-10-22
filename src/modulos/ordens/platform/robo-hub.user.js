@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.13.0
+// @version      1.13.1
 // @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js
 // @downloadURL  https://mesa-xp.vercel.app/robo-hub.user.js
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
@@ -121,7 +121,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.13.0';
+  const VERSAO = '1.13.1';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -1227,13 +1227,26 @@
    * Cola como a pessoa colaria (o evento de colar, com o HTML), e o Outlook trata as imagens e a
    * tabela como trata as dele. Nunca clica em Enviar, nem em nada.
    */
-  const naAbaDoOutlook = () => {
+  const naAbaDoOutlook = (esperarAReserva = true) => {
     // O compor aberto pelo link da Mesa (`/mail/deeplink/compose`), ou o compor para onde o Outlook o
     // leve (1.12.0). Fora de um compor (a caixa de entrada, por exemplo), nada: senão a aba da caixa
     // responderia "sem corpo" ao pedido antes da aba do e-mail colar.
     if (!/\/compose(\/|$)/.test(location.pathname)) return;
     const reservado = GM_getValue('corpoParaOutlook', null);
-    if (!reservado || Date.now() - reservado.em > 2 * 60 * 1000) return;
+    if (!reservado || Date.now() - reservado.em > 2 * 60 * 1000) {
+      // A Mesa manda a reserva e abre esta janela no mesmo clique: a janela pode chegar aqui antes de a
+      // reserva chegar ao armazenamento do robô, e desistir calada (1.13.1). Espera por ela 15 s, uma
+      // vez. Um e-mail que não é o da Mesa não recebe nada: o corpo tem de começar com o texto dela.
+      if (!esperarAReserva) return;
+      let chegou = false;
+      setTimeout(() => (chegou = true), 15 * 1000);
+      GM_addValueChangeListener('corpoParaOutlook', (_chave, _antigo, novo) => {
+        if (chegou || !novo || novo.cancelado) return;
+        chegou = true;
+        naAbaDoOutlook(false);
+      });
+      return;
+    }
     // A Mesa abre a janela no clique, antes de os prints ficarem prontos — senão o navegador a
     // bloqueia —, e manda o HTML depois: até lá o pedido chega reservado, sem ele. Espera até 90 s.
     if (typeof reservado.html !== 'string') {

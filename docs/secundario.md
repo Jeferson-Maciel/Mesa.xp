@@ -318,7 +318,10 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   (`/deeplink/compose`, pedido de menos de 2 minutos, corpo começando pelo texto que a Mesa mandou),
   troca o corpo pelo HTML como se fosse colado: os prints abaixo de "Condições:" na venda, a tabela em
   grade no E-mail em tabela. A Mesa reserva o e-mail antes de abrir e manda o HTML depois, com o mesmo
-  id (`reservarOutlook`); se o print falhar, cancela, e o corpo de texto fica. **Nunca envia** nem
+  id (`reservarOutlook`); se o print falhar, cancela, e o corpo de texto fica. A reserva e a janela
+  saem no mesmo clique, e a janela pode chegar antes da reserva: desde a 1.13.1 o compor espera por
+  ela até 15 s, uma vez, em vez de desistir calado (o verificador pegava isso de vez em quando, com o
+  Outlook de mentira, que abre na hora). **Nunca envia** nem
   clica em nada. Sem resposta, a Mesa avisa para usar o Copiar e colar com Ctrl+V.
 - **A posição do cliente fica só na memória da página** (`estado.boletas`), como o cliente; nunca no
   `localStorage`, no histórico ou no repositório.

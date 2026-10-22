@@ -34,6 +34,30 @@ cada sessão.
   robô 1.13.0 uma vez ("Instalar robô" → Instalar, no Tampermonkey) e recarregar a aba do Outlook e a
   do Hub; daí em diante ele se atualiza sozinho.
 
+## Para quem continuar (a sessão na nuvem, ou outra)
+
+**Próximo passo: a Fase 3 (Fila e avisos).** As decisões grandes estão no `docs/ROADMAP.md`. A rodada
+de perguntas de detalhe foi feita ao usuário em 21/10 e **esperava as respostas**:
+
+- **Q31** — o aviso de prazo (15 min antes para Aprovação e execução, 30 min para Enviados sem
+  resposta) aparece em qualquer aba, como os lembretes das Anotações, com som e "Ver na Fila", uma vez
+  por pedido e por prazo, e o contador da aba Fila fica âmbar? (recomendado: sim)
+- **Q32** — o som segue ligado por padrão, agora que só toca na resposta do cliente, no erro e no
+  aviso de prazo? (recomendado: sim)
+- **Q33** — no máximo 3 avisos à vista; o quarto tira o mais antigo, menos o de erro? (recomendado: sim)
+- **Q34** — a vista em tabela na Fila: à vista Aprovou, Lote ou Ficha, Boleta e Executado; o resto num
+  menu "…" na linha? (recomendado: sim)
+- **Q35** — o histórico do Ordens mostra o estado do e-mail na Fila, com o selo levando ao cartão, e o
+  "Reabrir" volta com as correções do cartão (valores editados, linhas removidas, confirmações), com
+  aviso das que não couberem? (recomendado: sim)
+
+Se o usuário não tiver respondido, pergunte de novo antes de construir. Depois da Fase 3: a Fase 4
+(Ordens) e a 2b (o robô buscar os dados de Renda Fixa no Hub — precisa do usuário mostrando a tela).
+
+**Na nuvem, não há**: as exportações reais da XP (`src/modulos/rendafixa/fixtures/*.xlsx`, fora do git
+— os goldens delas são pulados), o Hub e o Outlook de verdade, o Tampermonkey nem o Chrome do usuário.
+O resto — testes, build, verificador com o Hub e o Outlook de mentira — roda igual.
+
 ## 21/10 (noite, fim): a Fase 2 — o Renda Fixa configurável
 
 Decidido na sessão de perguntas (Q5–Q7, Q18–Q20, Q24–Q30). Detalhe em `docs/rendafixa.md`, "As

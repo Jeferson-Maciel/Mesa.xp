@@ -37,6 +37,15 @@ a tela e para o código. No ar em **https://mesa-xp.vercel.app** (Vercel, ligada
   literais das saídas, caractere por caractere.
 - **Pedido real do operador vira teste antes do código**, com as contas trocadas por fictícias.
 - Sugestão e ideia vão para [`docs/ROADMAP.md`](docs/ROADMAP.md), não para o código.
+- **Os combinados com o usuário (21/10/2026)**, que valem em qualquer sessão, local ou na nuvem:
+  - **Uma sessão de perguntas (grilling) antes de cada fase** do roadmap: perguntas numeradas, uma
+    rodada por vez, cada uma com a recomendação; só depois de ele responder, construir. Fato que dá
+    para achar no código não vira pergunta.
+  - **Commit e push a cada passo verificado** (`npm test`, `npm run build`, `npm run verificar`),
+    com o diff conferido contra dado de cliente: o usuário continua o trabalho de outro lugar (o
+    Claude na nuvem) se os créditos acabarem. Deixe o `docs/CONTEXTO.md` em dia a cada push.
+  - **Por fases**, primeiro o que é principal ou de valor alto; as fases e o que ele decidiu não
+    fazer estão no `docs/ROADMAP.md`.
 - O [`AGENTS.md`](AGENTS.md) resume isto para outros agentes; este arquivo e os documentos são a
   fonte.
 

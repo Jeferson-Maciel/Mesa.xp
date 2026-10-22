@@ -183,7 +183,8 @@ try {
   titulo('Ordens: o texto lido, desfazer a remoção e os lotes juntos');
   {
     const { pagina, contexto, erros } = await abrir();
-    const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
+    // O Windows devolve a área de transferência com \r\n; o texto copiado é o mesmo (o arquivo baixado tem \n).
+    const areaDeTransferencia = async () => (await pagina.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
     await pagina.fill('#entrada', '[13:46, 21/09/2026] Paulo: 1234567\nlote\nC PETR4 100\nvender XPML11 100 e comprar BTLG11 100\nenviado mesa\n7654321\nlote\nV VALE3 50');
     await pagina.click('#btn-analisar');
     ok(

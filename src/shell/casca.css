@@ -42,8 +42,14 @@
 
 .logo {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--esp-3);
+}
+
+.logo strong,
+.logo .sub-badge {
+  white-space: nowrap;
 }
 
 .logo > div {
@@ -248,6 +254,19 @@
   text-decoration: none;
   white-space: nowrap;
   transition: color var(--t-medio) var(--curva), background-color var(--t-rapido) var(--curva);
+}
+
+/* Se ainda assim faltar lugar, as abas encolhem e o nome ganha reticências, em vez de empurrar o
+   topo para fora da tela. */
+.abas,
+.aba {
+  min-width: 0;
+}
+
+.aba-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .aba svg {
@@ -646,10 +665,14 @@
   font-size: 0.74rem;
 }
 
-/* Com as sete abas e as ações do topo, o botão da busca fica no ícone abaixo de 1500px. */
+/* Com as sete abas e as ações do topo, os botões da busca e do histórico ficam no ícone (e no
+   contador), e o logo sem o "back office", abaixo de 1500px: a 1400px, com a Segoe UI, o topo cabia com zero de folga, e uma fonte
+   mais larga (a do Linux, outra do sistema) o empurrava para fora da tela (21/10/2026). */
 @media (max-width: 1500px) {
   .busca-rotulo,
-  .busca-tecla {
+  .busca-tecla,
+  .historico-rotulo,
+  .logo .sub-badge {
     display: none;
   }
 

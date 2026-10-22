@@ -1697,12 +1697,25 @@ try {
     // O Outlook muda o rótulo e o papel do corpo do e-mail (1.12.0, a lição da caixa de entrada na
     // 1.11.0: a tela da Microsoft muda): o robô acha o corpo pelo começo do texto que a Mesa mandou.
     corpoDoOutlook = { papel: null, rotulo: 'Editor de texto' };
-    const [outroOutlook] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]')]);
-    const colouNoOutro = await outroOutlook
-      .waitForFunction(() => document.querySelectorAll('[contenteditable="true"] img').length === 2, null, { timeout: 30_000 })
-      .then(() => true, () => false);
-    ok(colouNoOutro, 'com outro rótulo, e sem o papel de caixa de texto, o robô ainda acha o corpo do e-mail pelo texto e cola os prints');
-    await outroOutlook.close();
+    // A janela do e-mail pelo endereço, e não pela primeira que abrir: no GitHub (Linux), outra aba pode
+    // nascer no meio.
+    const abertasAntes = new Set(contexto.pages());
+    await mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]');
+    let outroOutlook = null;
+    for (let i = 0; i < 100 && !outroOutlook; i++) {
+      outroOutlook = contexto.pages().find((p) => !abertasAntes.has(p) && !p.isClosed() && p.url().includes('/deeplink/compose')) ?? null;
+      if (!outroOutlook) await mesa.waitForTimeout(100);
+    }
+    const colouNoOutro = outroOutlook
+      ? await outroOutlook
+        .waitForFunction(() => document.querySelectorAll('[contenteditable="true"] img').length === 2, null, { timeout: 30_000 })
+        .then(() => true, () => false)
+      : false;
+    const porque = colouNoOutro
+      ? ''
+      : ` (${outroOutlook ? `janela ${outroOutlook.url().split('?')[0]}` : 'a janela do e-mail não abriu'}; o robô disse ${JSON.stringify(loja.corpoColado ?? null)}; abas novas: ${contexto.pages().filter((p) => !abertasAntes.has(p)).map((p) => p.url().split('?')[0]).join(', ')})`;
+    ok(colouNoOutro, `com outro rótulo, e sem o papel de caixa de texto, o robô ainda acha o corpo do e-mail pelo texto e cola os prints${porque}`);
+    await outroOutlook?.close();
     corpoDoOutlook = { papel: 'textbox', rotulo: 'Corpo da mensagem' };
 
     // ── A boleta pela Fila (robô 1.10.0) ──

@@ -48,7 +48,13 @@ As decisões da sessão de perguntas estão no `docs/ROADMAP.md`, "As fases deci
 - **Limpeza**: o roadmap reescrito com as fases e as decisões; o CSS de "piscar a mudança" sem uso,
   apagado.
 - **O post "Como a Mesa funciona"** no Operacional, em Passo a Passo, gravado no banco da mesa com a
-  autorização do usuário.
+  autorização do usuário (criado em 21/10, relido do banco).
+- **O verificador no GitHub (Linux) achou um defeito real**: a 1400 px a barra do topo cabia com zero
+  de folga com a Segoe UI, e com uma fonte mais larga (a do Linux, ou outra do sistema) a página rolava
+  para o lado — o logo já quebrava em duas linhas. Abaixo de 1500 px o histórico fica no ícone e no
+  contador e o logo sem o "back office"; se ainda faltar lugar, as abas encolhem com reticências. As
+  falhas do verificador no GitHub agora saem como anotações públicas (o log inteiro só o administrador
+  do repositório vê).
 
 ## 21/10 (noite, depois): o print numa aba à vista (robô 1.12.0)
 

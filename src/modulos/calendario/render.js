@@ -172,3 +172,20 @@ export const htmlHorarios = (horarios) =>
         )
         .join('')
     : '<li class="cal-horario-vazio">Nenhum horário indisponível registrado.</li>';
+
+/**
+ * O horário indisponível que a pessoa quer adicionar: o que está errado, ou null. A mensagem fica
+ * dentro da janela do dia, ao lado dos campos (o aviso flutuante ficava atrás do véu do <dialog>).
+ */
+export const validarHorario = (inicio, fim) => {
+  if (!inicio || !fim) return 'Preencha os dois horários.';
+  if (inicio >= fim) return 'O horário final deve ser depois do inicial.';
+  return null;
+};
+
+/**
+ * O que a tela diz enquanto o supabase-js tenta de novo uma leitura que caiu na rede
+ * (`aoFalharTentativa`, em src/dados/banco.js); null na última falha, quando o erro vem em seguida.
+ */
+export const textoTentando = ({ falha, de, ultima }) =>
+  ultima ? null : `Sem resposta do banco de presença. Tentando conectar de novo (${falha + 1} de ${de})…`;

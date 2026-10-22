@@ -644,12 +644,28 @@ try {
     const celula = pagina.locator('.cal-linha', { hasText: 'Ana Teste' }).locator('.cal-dia').first();
     await celula.click();
     ok(await pagina.$eval('.cal-dialogo', (d) => d.matches(':modal')), 'a janela do dia é um <dialog> modal');
+    // O horário inválido avisa dentro da janela, e não atrás do véu (22/10/2026).
+    await pagina.fill('[data-cal="inicio"]', '15:00');
+    await pagina.fill('[data-cal="fim"]', '14:00');
+    await pagina.click('[data-cal="adicionar-horario"]');
+    ok(
+      await pagina.$eval('.cal-dialogo', (d) => {
+        const alerta = d.querySelector('[data-cal="erro-horario"] .alert');
+        if (!alerta || !alerta.textContent.includes('depois do inicial')) return false;
+        const a = alerta.getBoundingClientRect();
+        const j = d.getBoundingClientRect();
+        return a.height > 0 && a.top >= j.top && a.bottom <= j.bottom;
+      }),
+      'horário final antes do inicial: o aviso aparece dentro da janela do dia'
+    );
+    ok((await pagina.$$eval('.cal-horarios li', (l) => l.length)) <= 1, 'o horário inválido não entra na lista');
     await pagina.check('[data-cal="presencial"]');
     await pagina.fill('[data-cal="observacao"]', 'obs <b>teste</b>');
     await pagina.fill('[data-cal="inicio"]', '14:00');
     await pagina.fill('[data-cal="fim"]', '15:00');
     await pagina.fill('[data-cal="motivo"]', 'motivo <i>teste</i>');
     await pagina.press('[data-cal="motivo"]', 'Enter');
+    ok((await pagina.$$eval('[data-cal="erro-horario"] .alert', (a) => a.length)) === 0, 'o horário certo some com o aviso');
     await pagina.click('[data-cal="salvar"]');
     await pagina.waitForFunction(() => !document.querySelector('.cal-dialogo').open);
     const texto = await celula.innerText();
@@ -2072,17 +2088,35 @@ try {
     await contexto.close();
   }
 
+  /* ── Calendário com a rede caída ────────────────────────────────────────────────── */
+  titulo('Calendário com a rede caída: o aviso na hora, com a contagem');
+  {
+    const contexto = await navegador.newContext();
+    await contexto.route(/supabase\.co/, (r) => r.abort('internetdisconnected'));
+    const pagina = await contexto.newPage();
+    const inicio = Date.now();
+    await pagina.goto(`${pathToFileURL(distNormal).href}#calendario`);
+    await pagina.waitForSelector('.cal-erro .alert-warning', { timeout: 5_000 }).catch(() => null);
+    const decorrido = Date.now() - inicio;
+    const aviso = (await pagina.$('.cal-erro .alert-warning')) && (await pagina.innerText('.cal-erro .alert-warning'));
+    ok(Boolean(aviso) && /Tentando conectar de novo \(\d de 4\)/.test(aviso) && decorrido < 5_000, `a queda aparece em menos de 5 s, com a contagem (${decorrido} ms: "${aviso}")`);
+    ok((await pagina.textContent('[data-cal="conexao"]')) === 'tentando conectar…', 'o status diz "tentando conectar…"');
+    await pagina.waitForSelector('.cal-erro .alert-danger [data-cal="tentar"]', { timeout: 20_000 });
+    ok((await pagina.textContent('[data-cal="conexao"]')) === 'sem conexão', 'depois das tentativas, o erro com "Tentar de novo" e "sem conexão"');
+    await contexto.close();
+  }
+
   /* ── Calendário no build normal ─────────────────────────────────────────────────── */
   titulo('Calendário no build normal (banco da mesa)');
   {
     const { pagina, contexto, erros } = await abrir({ arquivo: distNormal, hash: '#calendario' });
     await pagina.waitForFunction(
-      () => document.querySelector('[data-cal="conexao"]')?.textContent === 'ao vivo' || document.querySelector('.cal-erro .alert'),
+      () => document.querySelector('[data-cal="conexao"]')?.textContent === 'ao vivo' || document.querySelector('.cal-erro .alert-danger'),
       null,
       { timeout: 45_000 }
     );
     const status = await pagina.textContent('[data-cal="conexao"]');
-    const erroNaTela = await pagina.$('.cal-erro .alert');
+    const erroNaTela = await pagina.$('.cal-erro .alert-danger');
     if (erroNaTela) {
       console.log(`   o banco não respondeu: "${(await erroNaTela.innerText()).split('\n')[0]}"`);
       ok(true, 'sem banco, o erro aparece na tela');

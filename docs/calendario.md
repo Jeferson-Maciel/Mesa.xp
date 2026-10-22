@@ -42,6 +42,15 @@ banco do Calendário antigo passam para o novo tabela por tabela, sem conversão
   e fica lá até dar certo; a janela do dia não fecha quando o salvamento falha. Só uma das duas
   variáveis vazia é erro de configuração, na tela — não modo local. Armazenamento local cheio também
   vira erro (o original só avisava no console).
+- **A queda de rede aparece na hora** (22/10/2026). O supabase-js repete sozinho a leitura que caiu
+  na rede (3 vezes, depois de 1, 2 e 4 s), e o erro só chegava à tela uns 12 s depois. Agora o
+  cliente do banco avisa cada tentativa que falha (`aoFalharTentativa`, em `src/dados/banco.js`), e o
+  Calendário mostra, já na primeira, "Sem resposta do banco de presença. Tentando conectar de novo
+  (2 de 4)…", em amarelo, com "tentando conectar…" no status; na última, o erro de sempre, com
+  "Tentar de novo". As tentativas ficaram (uma rede que pisca volta sozinha); só a espera calada
+  saiu. A gravação não é repetida pelo supabase-js, e o erro dela já aparecia na hora.
+- **O horário indisponível inválido avisa dentro da janela do dia** (22/10/2026), logo abaixo dos
+  campos, em vermelho, como o erro ao salvar; o aviso flutuante ficava atrás do véu do `<dialog>`.
 - O motivo do horário indisponível pode ser de saúde: a matriz da semana mostra o horário, não o
   motivo. O motivo aparece na janela do dia e no histórico, como no original.
 - Remover um colaborador apaga os registros dele pelo `on delete cascade` do banco (no modo local,

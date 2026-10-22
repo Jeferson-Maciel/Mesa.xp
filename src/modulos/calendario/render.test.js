@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CORES, corSegura, htmlHistorico, htmlHorarios, htmlSemana, indexar } from './render.js';
+import { CORES, corSegura, htmlHistorico, htmlHorarios, htmlSemana, indexar, textoTentando, validarHorario } from './render.js';
 
 const XSS = '<img src=x onerror=alert(1)>';
 const segunda = new Date(2026, 8, 28);
@@ -95,5 +95,23 @@ describe('horários na janela do dia', () => {
 
   it('diz quando não há horário', () => {
     expect(htmlHorarios([])).toContain('Nenhum horário indisponível');
+  });
+});
+
+describe('o horário indisponível novo (22/10/2026: o aviso dentro da janela do dia)', () => {
+  it('sem um dos horários, ou com o fim antes do início, diz o que falta; certo, nada', () => {
+    expect(validarHorario('', '09:00')).toBe('Preencha os dois horários.');
+    expect(validarHorario('08:00', '')).toBe('Preencha os dois horários.');
+    expect(validarHorario('09:00', '09:00')).toBe('O horário final deve ser depois do inicial.');
+    expect(validarHorario('14:00', '08:30')).toBe('O horário final deve ser depois do inicial.');
+    expect(validarHorario('08:00', '09:00')).toBeNull();
+  });
+});
+
+describe('a queda de rede avisada na hora (22/10/2026)', () => {
+  it('conta as tentativas a partir da primeira falha, e a última diz que o erro vem', () => {
+    expect(textoTentando({ falha: 1, de: 4, ultima: false })).toBe('Sem resposta do banco de presença. Tentando conectar de novo (2 de 4)…');
+    expect(textoTentando({ falha: 3, de: 4, ultima: false })).toBe('Sem resposta do banco de presença. Tentando conectar de novo (4 de 4)…');
+    expect(textoTentando({ falha: 4, de: 4, ultima: true })).toBeNull();
   });
 });

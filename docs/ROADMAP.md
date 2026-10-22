@@ -114,13 +114,6 @@ Ideias, com o custo grosseiro:
 - **A imagem para baixar** segue o formato padrão da taxa e do prazo (as casas e o texto do prazo das
   regras valem só para a mensagem).
 
-## Calendário
-
-- **O erro de rede demora ~12 s para aparecer** (o supabase-js tenta de novo). Um "tentando
-  conectar…" com contagem, ou menos tentativas, deixaria claro que a rede caiu.
-- **O aviso de horário inválido aparece atrás do véu da janela do dia**: mostrar dentro da janela,
-  como o erro ao salvar.
-
 ## Operacional
 
 - **Colar o texto dos 15 posts pendentes** (os 12 de Padrões de Fixing, Confirmação resgate fundos,

@@ -11,11 +11,10 @@ código.
 
 O passo a passo está em [`CONTEXTO.md`](CONTEXTO.md), "A testar no Hub e no Outlook de verdade".
 
-1. **O print da cotação de venda (robô 1.7.1).** Os passos dele foram repetidos à mão numa boleta de
-   verdade em 20/10 e funcionam até a foto; a foto (SnapDOM) só rodou no Hub de mentira. O teste do
-   operador em 20/10 saiu sem print, e falta o "Copiar tempos" dele para saber o motivo. Suspeita:
-   a aba do robô escondida há muito tempo, com os relógios segurados pelo Chrome (a foto agora tem
-   prazo de 30 s, e o motivo aparece no cartão).
+1. **O print da cotação de venda (robô 1.12.0).** A suspeita se confirmou na documentação do Chrome:
+   a aba escondida tem os relógios segurados em um despertar por minuto, e o print não terminava. Desde
+   a 1.12.0 ele sai numa aba à vista, como nos passos repetidos à mão em 20/10, que funcionavam. Falta o
+   teste na boleta de verdade; se falhar, o motivo aparece na venda e o "Copiar tempos" diz o passo.
 2. **O corpo em HTML colado no Outlook** (os prints abaixo de "Condições:", a tabela em grade): só no
    Outlook de mentira.
 3. **O Tesouro (robô 1.7.x)**: a lista e a posição, com a recarga da aba para ler de novo. O fluxo foi

@@ -1002,7 +1002,11 @@ try {
       window.GM_getValue = (k, padrao) => (k in dados() && cache[k] !== null ? JSON.parse(JSON.stringify(cache[k])) : padrao);
       window.GM_setValue = (k, v) => { dados(); cache[k] = v; window.__gm('set', k, v); };
       window.GM_addValueChangeListener = (k, fn) => { (ouvintes[k] ||= []).push(fn); };
-      window.GM_openInTab = (url, opcoes) => { window.__gm('abrir', url, Boolean(opcoes && opcoes.active)); };
+      window.GM_openInTab = (url, opcoes) => {
+        const id = 'aba-' + Math.random().toString(36).slice(2);
+        window.__gm('abrir', url, Boolean(opcoes && opcoes.active), id);
+        return { close: () => window.__gm('fechar', id) };
+      };
       window.unsafeWindow = window;
       // O Hub como o Chrome o trata em segundo plano: escondido e sem quadro de desenho. A aba que o
       // robô abre à vista (a boleta da Fila, 1.10.0) fica como está: a pessoa está nela.
@@ -1030,20 +1034,31 @@ try {
     const pedidosAoHub = { lista: 0, preCheck: 0, ficha: 0 };
     // As abas que o robô abriu à vista (GM_openInTab com active), para o Hub falso não as esconder.
     const abasAVista = new Set();
-    const novaAba = async (url, aVista = false) => {
+    // As abas abertas pelo robô, pelo id do controle que o GM_openInTab devolveu.
+    const abasPorId = new Map();
+    const novaAba = async (url, aVista = false, id = null) => {
       const p = await contexto.newPage();
       if (aVista) abasAVista.add(p);
+      if (id) abasPorId.set(id, p);
       await p.addInitScript(`window.__gmFoto = ${JSON.stringify(loja)};`);
       await p.goto(url).catch(() => {});
       return p;
     };
-    await contexto.exposeBinding('__gm', async (_origem, op, chave, valor) => {
+    // O que a boleta falsa viu (o estoque escolhido, um clique em Próximo), guardado aqui: a aba do
+    // print (robô 1.12.0) fecha no fim, e o que estava nela some com ela.
+    const naBoletaFalsa = { estoques: [], proximos: 0 };
+    await contexto.exposeBinding('__hubFalso', (_origem, tipo, valor) => {
+      if (tipo === 'estoque') naBoletaFalsa.estoques.push(valor);
+      if (tipo === 'proximo') naBoletaFalsa.proximos++;
+    });
+    await contexto.exposeBinding('__gm', async (_origem, op, chave, valor, id) => {
       if (op === 'set') {
         loja[chave] = valor;
         escritas.push(JSON.stringify(valor) ?? '');
         for (const p of contexto.pages()) p.evaluate(([k, v]) => window.__gmMudou?.(k, v), [chave, valor]).catch(() => {});
       }
-      if (op === 'abrir') novaAba(chave, valor === true);
+      if (op === 'abrir') novaAba(chave, valor === true, id);
+      if (op === 'fechar') abasPorId.get(chave)?.close().catch(() => {});
     });
     await contexto.route('https://gm.teste/**', (r) => {
       if (r.request().url().endsWith('/vista')) {
@@ -1257,6 +1272,7 @@ try {
                 opcao.addEventListener('click', () => {
                   for (const outra of b.querySelectorAll('.opcao')) outra.classList.toggle('selecionada', outra === opcao);
                   window.__estoqueEscolhido.push(opcao.dataset.m);
+                  window.__hubFalso?.('estoque', opcao.dataset.m);
                   const desagio = (DESAGIOS_DA_VENDA[fundo] || {})[opcao.dataset.m];
                   b.querySelector('.ds').textContent = typeof desagio === 'number' ? desagio.toFixed(2).replace('.', ',') + '%' : '—';
                   b.querySelector('.passo2').hidden = false;
@@ -1282,7 +1298,7 @@ try {
               b.querySelector('.det').addEventListener('click', () => {
                 b.querySelector('.linhas').hidden = !b.querySelector('.linhas').hidden;
               });
-              b.querySelector('.proximo').addEventListener('click', () => { window.__proximo++; });
+              b.querySelector('.proximo').addEventListener('click', () => { window.__proximo++; window.__hubFalso?.('proximo'); });
             };
             const boletaDaRota = () => {
               const m = location.hash.match(/^#\\/secundario\\/vender\\/([0-9a-f-]{36})\\/(\\d+)$/);
@@ -1328,6 +1344,9 @@ try {
         chegar({ id: 'c0', de: 'Equipe da Mesa', email: 'equipe@exemplo.com', hora: '09:00', assunto: 'Pauta de amanhã', previa: 'TEXTO QUE O ROBO NAO PODE LER' });
         chegar({ id: 'c00', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', hora: 'seg 19/10', assunto: 'RE: Confirmação de ordem', previa: 'RESPOSTA ANTIGA' });
       </script></body>`;
+    // O corpo do e-mail no Outlook falso: o rótulo e o papel de hoje, ou outros — o Outlook muda —, para
+    // conferir que o robô ainda acha o corpo pelo começo do texto que a Mesa mandou (1.12.0).
+    let corpoDoOutlook = { papel: 'textbox', rotulo: 'Corpo da mensagem' };
     await contexto.route('https://outlook.cloud.microsoft/**', (r) =>
       !r.request().url().includes('/deeplink/') ? r.fulfill({ contentType: 'text/html', body: CAIXA_DE_ENTRADA }) :
       r.fulfill({
@@ -1339,9 +1358,9 @@ try {
             const corpo = para.startsWith('mailto:') ? new URLSearchParams(para.split('?')[1] || '').get('body') || '' : endereco.searchParams.get('body') || '';
             setTimeout(() => {
               const editor = document.createElement('div');
-              editor.setAttribute('role', 'textbox');
+              ${corpoDoOutlook.papel ? `editor.setAttribute('role', '${corpoDoOutlook.papel}');` : ''}
               editor.setAttribute('contenteditable', 'true');
-              editor.setAttribute('aria-label', 'Corpo da mensagem');
+              editor.setAttribute('aria-label', ${JSON.stringify(corpoDoOutlook.rotulo)});
               editor.innerText = corpo;
               editor.addEventListener('paste', (e) => {
                 const html = e.clipboardData && e.clipboardData.getData('text/html');
@@ -1618,10 +1637,12 @@ try {
     const lojaDepois = JSON.stringify(loja);
     ok(!lojaDepois.includes('1234.5678') && !lojaDepois.includes('99999') && !lojaDepois.includes('1234567'), 'nem a posição nem a conta ficam no armazenamento do robô depois da busca');
 
-    // ── O print da cotação de venda e o corpo no Outlook (robô 1.5.0) ──
-    // "Tirar prints": o robô abre a boleta de venda de cada fundo, preenche a quantidade (o total), abre
-    // o detalhe e tira o print do painel.
-    await mesa.click('.secundario-vendas [data-campo="tirar-prints"]');
+    // ── O print da cotação de venda e o corpo no Outlook (robô 1.5.0; a aba do print, 1.12.0) ──
+    // "Tirar prints": o robô abre uma aba do Hub à vista (escondida, o Chrome segura os relógios dela, e
+    // o print não terminava), abre a boleta de venda de cada fundo, escolhe o estoque, preenche a
+    // quantidade (o total), abre o detalhe, tira o print do painel — e a Mesa fecha a aba no fim.
+    const estoquesAntes = naBoletaFalsa.estoques.length;
+    const [abaDoPrint] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.secundario-vendas [data-campo="tirar-prints"]')]);
     const prints = await mesa
       .waitForFunction(() => document.querySelectorAll('.secundario-print img').length === 2, null, { timeout: 60_000 })
       .then(() => true, () => false);
@@ -1629,13 +1650,19 @@ try {
     const fontes = await mesa.$$eval('.secundario-print img', (l) => l.map((i) => i.getAttribute('src')));
     ok(prints && fontes.every((f) => /^data:image\/png;base64,.{200,}/.test(f)), 'o robô tira o print da cotação de cada venda na boleta, e a miniatura aparece na venda');
     ok((await mesa.textContent('.secundario-vendas')).includes('vale até'), 'cada print diz até quando vale (um dia útil)');
+    const estoquesDoPrint = naBoletaFalsa.estoques.slice(estoquesAntes);
+    ok(
+      JSON.stringify(estoquesDoPrint) === '["xp","clientes"]',
+      `o robô escolhe na boleta o estoque de cada venda (o XP do IMOV11, o clientes do Riza Terrax), antes da quantidade, e confere o deságio dele no painel (${JSON.stringify(estoquesDoPrint)})`
+    );
+    ok(naBoletaFalsa.proximos === 0, 'o robô nunca clica em Próximo na boleta');
+    const fechou = abaDoPrint.isClosed() || (await abaDoPrint.waitForEvent('close', { timeout: 5000 }).then(() => true, () => false));
+    ok(abasAVista.has(abaDoPrint) && fechou, 'os prints saem numa aba do Hub aberta à vista, que a Mesa fecha no fim');
     const roboAgora = await abaDoRobo();
     ok(
-      JSON.stringify(await roboAgora.evaluate(() => window.__estoqueEscolhido)) === '["xp","clientes"]',
-      `o robô escolhe na boleta o estoque de cada venda (o XP do IMOV11, o clientes do Riza Terrax), antes da quantidade, e confere o deságio dele no painel (${JSON.stringify(await roboAgora.evaluate(() => window.__estoqueEscolhido))})`
+      (await roboAgora.evaluate(() => location.hash)) === '#/secundario/prateleira' && (await roboAgora.evaluate(() => (window.__estoqueEscolhido ?? []).length)) === 0,
+      'a aba do robô, escondida, não faz os prints: fica na Prateleira'
     );
-    ok((await roboAgora.evaluate(() => window.__proximo)) === 0, 'o robô nunca clica em Próximo na boleta');
-    ok((await roboAgora.evaluate(() => location.hash)) === '#/secundario/prateleira', 'depois dos prints, a aba do robô volta à Prateleira, sem a boleta preenchida');
     const lojaDosPrints = JSON.stringify(loja);
     ok(!lojaDosPrints.includes('data:image') && !lojaDosPrints.includes('1234567'), 'os prints e a conta não ficam no armazenamento do robô');
 
@@ -1656,6 +1683,17 @@ try {
     ok(avisouQueColou, 'a Mesa avisa que os prints estão no e-mail');
     ok(!JSON.stringify(loja).includes('data:image'), 'o corpo em HTML não fica no armazenamento do robô depois de colado');
     await janelaDoOutlook.close();
+
+    // O Outlook muda o rótulo e o papel do corpo do e-mail (1.12.0, a lição da caixa de entrada na
+    // 1.11.0: a tela da Microsoft muda): o robô acha o corpo pelo começo do texto que a Mesa mandou.
+    corpoDoOutlook = { papel: null, rotulo: 'Editor de texto' };
+    const [outroOutlook] = await Promise.all([contexto.waitForEvent('page'), mesa.click('.saida[data-grupo="fundos-venda"] [data-outlook]')]);
+    const colouNoOutro = await outroOutlook
+      .waitForFunction(() => document.querySelectorAll('[contenteditable="true"] img').length === 2, null, { timeout: 30_000 })
+      .then(() => true, () => false);
+    ok(colouNoOutro, 'com outro rótulo, e sem o papel de caixa de texto, o robô ainda acha o corpo do e-mail pelo texto e cola os prints');
+    await outroOutlook.close();
+    corpoDoOutlook = { papel: 'textbox', rotulo: 'Corpo da mensagem' };
 
     // ── A boleta pela Fila (robô 1.10.0) ──
     // O e-mail de venda entrou na Fila; aprovado, o botão Boleta pede ao robô a boleta do fundo: ele
@@ -1851,7 +1889,14 @@ try {
       !todasAsEscritas.includes('TEXTO QUE O ROBO NAO PODE LER') && !todasAsEscritas.includes('Pauta de amanhã') && !todasAsEscritas.includes('RESPOSTA ANTIGA'),
       'da caixa de entrada só passam as respostas de hoje aos e-mails de confirmação: nem a outra mensagem, nem a resposta antiga'
     );
-    ok(loja.outlookVigia === null && !JSON.stringify(loja).includes('De acordo'), 'a resposta sai do armazenamento do robô assim que a Mesa a recebe');
+    // Desde a 1.11.0 a aba do Outlook relê na hora a cada pedido da Mesa: entre a escrita e a entrega
+    // há um instante em que a resposta está no armazenamento. Ela tem de sair logo — não ficar.
+    let saiuDoArmazenamento = false;
+    for (let i = 0; i < 50 && !saiuDoArmazenamento; i++) {
+      saiuDoArmazenamento = loja.outlookVigia === null && !JSON.stringify(loja).includes('De acordo');
+      if (!saiuDoArmazenamento) await mesa.waitForTimeout(100);
+    }
+    ok(saiuDoArmazenamento, 'a resposta sai do armazenamento do robô assim que a Mesa a recebe');
     ok((await caixa.evaluate(() => window.__cliques)) === 0, 'o robô não clica em nada na caixa de entrada');
 
     // Uma resposta de quem não tem cartão: fica a conferir, e "Não é de pedido" a tira.

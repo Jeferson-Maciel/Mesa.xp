@@ -22,16 +22,33 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação passou inteira (21/10, noite): 1.308 testes (`npm test`), o build e 318
+- A última verificação passou inteira (21/10, noite): 1.308 testes (`npm test`), o build e 320
   conferências no navegador (`npm run verificar`). O Hub de mentira
   agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
   aba de Posições). As duas
   conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
   vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
   a condição.
-- **De 20 a 21/10 foram 38 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
+- **De 20 a 21/10 foram 41 commits locais, sem push** (com este registro), de `b1aa45d` a este: push é deploy, e espera
   o OK do usuário. Com o push, entram também o workflow semanal dos tickers da B3 e o robô 1.8.0
-  (os colegas precisam copiar o robô de novo: agora a 1.11.0, e recarregar a aba do Outlook).
+  (os colegas precisam copiar o robô de novo: agora a 1.12.0, e recarregar a aba do Outlook).
+
+## 21/10 (noite, depois): o print numa aba à vista (robô 1.12.0)
+
+O usuário: "o Antigravity resolveu o e-mail conectado; aprenda como ele fez e resolva o print não
+funcionar para enviar o e-mail". A lição da 1.11.0: o código supunha um navegador que o Chrome de
+verdade não é (o robô só começava no `DOMContentLoaded`, que às vezes já tinha passado; os seletores
+presos a um formato do Outlook). Aplicada ao print:
+
+- **A colagem no e-mail** (`naAbaDoOutlook`) começava no mesmo `DOMContentLoaded` — o conserto da
+  1.11.0 já a cobre. A 1.12.0 acha o corpo também pelo texto que a Mesa mandou, se o Outlook mudar o
+  rótulo, e só age num compor.
+- **A foto na boleta**: a aba do robô vive escondida, e o Chrome segura os relógios dela em um
+  despertar por minuto (10 s depois de carregar escondida; pesquisado na documentação do Chrome, em
+  `docs/secundario.md`). O print, feito de esperas curtas, não terminava; nos passos à mão, à vista,
+  funcionava. Agora cada pedido de prints abre uma aba do Hub à vista, que a Mesa fecha no fim.
+- O `verificar` confere as duas coisas: os prints numa aba aberta à vista, fechada no fim, e o corpo
+  achado com outro rótulo e sem o papel de caixa de texto (320 conferências, duas rodadas seguidas).
 
 ## 21/10 (noite): o trabalho do Antigravity, revisado e guardado
 
@@ -240,7 +257,13 @@ plano tinha 4 fases, e **as quatro estão feitas**, com o Tesouro inteiro (aplic
 - O material do usuário fica na pasta-mãe, em `anexos_claude/` (do Antigravity): o e-mail de
   auditoria de venda aprovado e dois prints. **Tem dado de cliente real: nunca versionar.**
 
-### A testar no Hub e no Outlook de verdade (robôs 1.9.0, 1.10.0 e 1.11.0)
+### A testar no Hub e no Outlook de verdade (robôs 1.9.0 a 1.12.0)
+
+**O print da venda (1.12.0)**: copiar o robô novo; colar uma venda de um fundo seu; **Tirar prints**. Uma
+aba do Hub deve aparecer à vista, abrir a boleta de venda, escolher o estoque, preencher, abrir o
+detalhe e fechar sozinha; a miniatura aparece na venda. Depois, **Abrir no Outlook**: o e-mail deve
+abrir e, em segundos, ganhar os prints abaixo de "Condições:". Se não sair, o motivo aparece na venda
+("sem o print: …") e o "Copiar tempos" diz o passo.
 
 **O Outlook (1.11.0)**: copiar o robô novo, **recarregar a aba do Outlook** e a da Mesa. Com um pedido
 esperando o cliente, o selo da Fila deve ficar verde ("vendo as respostas") em segundos. Se ficar âmbar,

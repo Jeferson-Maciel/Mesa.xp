@@ -165,6 +165,10 @@ src/comum/fila/respostas.js    o que é resposta a pedido, e o cartão de cada r
 src/modulos/fila/vigiaOutlook.js  o vigia, do lado da Mesa: pede ao robô, casa, grava, avisa
 ```
 
+- **O corpo do e-mail no Outlook** (robô 1.12.0): o robô acha o corpo pelo rótulo dele, ou, se o
+  Outlook o mudar, pelo campo editável que já começa com o texto que a Mesa mandou; e só age num compor
+  (`/compose`). Até a 1.10.0 a colagem nem começava quando o Tampermonkey injetava o robô depois do
+  carregamento da página — o mesmo defeito que a 1.11.0 consertou na caixa de entrada.
 - **O que é resposta** (robô 1.11.0): a linha de hoje com "Confirmação" no assunto, ou que cita
   "conta XP <n>" — a resposta do cliente pode vir sem o assunto. A Mesa ignora a linha cuja prévia
   começa pelo "Prezado(a)" de todo modelo do Ordens: é o e-mail da própria mesa (a pasta Itens

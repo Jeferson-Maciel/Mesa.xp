@@ -125,6 +125,10 @@ Um script do Tampermonkey (`src/modulos/ordens/platform/robo-hub.user.js`), em a
 - **a aba que ele abre para a pessoa é dela** (1.10.0, o botão Boleta da Fila): à vista, ele só a leva
   até a boleta do fundo ou ao Tesouro do cliente, e a larga — não preenche a boleta (só a busca de
   cliente, com a conta do pedido), não clica em Próximo;
+- **o print da venda sai numa aba do Hub à vista** (1.12.0), que a Mesa abre e fecha a cada pedido:
+  numa aba escondida, o Chrome segura os relógios do JavaScript em um despertar por minuto (o
+  estrangulamento intensivo, 10 s depois de a página carregar escondida), e o print, feito de esperas
+  curtas, não terminava. Trabalho que vive de relógio não vai para a aba escondida;
 - uma tarefa por vez, numa fila, e tudo com prazo: nada que trave numa aba prende os pedidos seguintes;
 - mudou o robô, sobe a `@version` **e** a constante `VERSAO`; a Mesa mostra "Copiar robô" até a
   versão instalada ser a que ela espera.

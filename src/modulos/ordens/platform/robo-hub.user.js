@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.11.0
+// @version      1.12.0
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
 // @match        https://hub.xpi.com.br/*
 // @match        https://mesa-xp.vercel.app/*
@@ -119,7 +119,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.11.0';
+  const VERSAO = '1.12.0';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -144,7 +144,9 @@
   const PAPEIS = {
     prateleira: { nome: NOME_DA_ABA, bilhete: 'abaPedida', atendendo: 'atendendo', abriuEm: 'abriuHubEm' },
     clientes: { nome: NOME_DA_ABA_DE_CLIENTES, bilhete: 'abaPedidaClientes', atendendo: 'atendendoClientes', abriuEm: 'abriuClientesEm' },
-    tesouro: { nome: 'mesa-xp-tesouro', bilhete: 'abaPedidaTesouro', atendendo: 'atendendoTesouro', abriuEm: 'abriuTesouroEm' }
+    tesouro: { nome: 'mesa-xp-tesouro', bilhete: 'abaPedidaTesouro', atendendo: 'atendendoTesouro', abriuEm: 'abriuTesouroEm' },
+    // A aba do print (1.12.0): aberta à vista para cada pedido de prints, fechada no fim.
+    print: { nome: 'mesa-xp-print', bilhete: 'abaPedidaPrint', atendendo: 'atendendoPrint', abriuEm: 'abriuPrintEm' }
   };
   const PRATELEIRA = '#/secundario/prateleira';
   const LISTA = /investment-funds-secondary(\?|$)/;
@@ -217,6 +219,24 @@
       if (pedidoDeExecucao && Date.now() - pedidoDeExecucao.em < 30000) {
         GM_setValue('abaPedidaExecucao', null);
         destinoDeExecucao = pedidoDeExecucao.destino;
+      }
+    }
+
+    /*
+     * A aba do print (1.12.0). O print da venda não saía na aba do robô: ela vive escondida, e o Chrome
+     * segura os relógios de uma página escondida (10 s depois de carregada, ou 5 min) em um despertar
+     * por minuto — o "estrangulamento intensivo" dos relógios encadeados, desde o Chrome 88. O print é
+     * feito de esperas curtas (o estoque, a quantidade, a conta, o detalhe), e com um despertar por
+     * minuto não terminava; a cotação, que anda pelas respostas do Hub, não sofre. Nos passos repetidos
+     * à mão numa aba à vista, em 20/10, tudo funcionava. Agora cada pedido de prints abre uma aba do Hub
+     * à vista, que faz os prints e é fechada pela Mesa no fim. Vale para a primeira aba do Hub nova e à
+     * vista, na Prateleira, que nasce nos 30 s seguintes ao pedido.
+     */
+    if (!destinoDeExecucao && !pagina.name && pagina.history.length <= 2 && visibilidadeReal() !== 'hidden' && location.pathname.startsWith('/new/fundos-de-investimento')) {
+      const pedidoDoPrint = GM_getValue(PAPEIS.print.bilhete, null);
+      if (pedidoDoPrint && Date.now() - pedidoDoPrint.em < 30000) {
+        GM_setValue(PAPEIS.print.bilhete, null);
+        pagina.name = PAPEIS.print.nome;
       }
     }
 
@@ -295,7 +315,7 @@
 
     // O título diz, na barra de abas, que esta é a aba do robô.
     const marcarTitulo = () => {
-      if (doRobo && !document.title.startsWith('🤖')) document.title = `🤖 ${{ clientes: 'Clientes', tesouro: 'Tesouro' }[papel] || 'Robô'} · ${document.title}`;
+      if (doRobo && !document.title.startsWith('🤖')) document.title = `🤖 ${{ clientes: 'Clientes', tesouro: 'Tesouro', print: 'Print' }[papel] || 'Robô'} · ${document.title}`;
     };
 
     // O registro de tempos: o que a aba do robô fez e o que o Hub chamou, com a hora. Sem nada do
@@ -1075,7 +1095,7 @@
       if (visibilidadeReal() === 'visible' && !naRotaDoRobo()) {
         doRobo = false;
         pagina.name = '';
-        document.title = document.title.replace(/^🤖 (Robô|Clientes) · /, '');
+        document.title = document.title.replace(/^🤖 (Robô|Clientes|Tesouro|Print) · /, '');
         darSinal();
         return;
       }
@@ -1121,8 +1141,9 @@
     };
 
     // Os prints: fundo e conta na forma exata; a quantidade é número positivo, ou null para o total.
+    // Só na aba do print (1.12.0), à vista: a aba do robô, escondida, não os faz mais.
     const receberPrints = (pedido) => {
-      if (papel !== 'prateleira' || !pedido || !Array.isArray(pedido.itens)) return;
+      if (papel !== 'print' || !pedido || !Array.isArray(pedido.itens)) return;
       const itens = pedido.itens
         .filter((item) => item && FUNDO.test(String(item.fundoId)) && CONTA.test(String(item.conta)))
         .filter((item) => item.quantidade === null || (typeof item.quantidade === 'number' && item.quantidade > 0))
@@ -1205,7 +1226,10 @@
    * tabela como trata as dele. Nunca clica em Enviar, nem em nada.
    */
   const naAbaDoOutlook = () => {
-    if (!location.pathname.includes('/deeplink/compose')) return;
+    // O compor aberto pelo link da Mesa (`/mail/deeplink/compose`), ou o compor para onde o Outlook o
+    // leve (1.12.0). Fora de um compor (a caixa de entrada, por exemplo), nada: senão a aba da caixa
+    // responderia "sem corpo" ao pedido antes da aba do e-mail colar.
+    if (!/\/compose(\/|$)/.test(location.pathname)) return;
     const reservado = GM_getValue('corpoParaOutlook', null);
     if (!reservado || Date.now() - reservado.em > 2 * 60 * 1000) return;
     // A Mesa abre a janela no clique, antes de os prints ficarem prontos — senão o navegador a
@@ -1236,11 +1260,15 @@
       GM_setValue('corpoParaOutlook', null);
       GM_setValue('corpoColado', { id: pedido.id, ok, motivo, em: Date.now() });
     };
+    const normalizar = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+    // O corpo pelo rótulo dele; se o Outlook mudar o rótulo (1.12.0), o campo editável que já começa
+    // com o texto que a Mesa mandou — é ele, e só ele, que recebe o HTML.
     const acharCorpo = () =>
       [...document.querySelectorAll('div[role="textbox"][contenteditable="true"]')].find((el) =>
         /corpo|body|mensagem|message/i.test(el.getAttribute('aria-label') || '')
-      ) || null;
-    const normalizar = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+      ) ||
+      [...document.querySelectorAll('[contenteditable="true"]')].find((el) => inicio && normalizar(el.innerText).startsWith(inicio)) ||
+      null;
 
     const colar = (corpo) => {
       corpo.focus();
@@ -1474,6 +1502,18 @@
     };
     const abrirHub = (opcoes) => abrirAba('prateleira', ABA_DO_ROBO, opcoes);
 
+    // A aba do print aberta por esta Mesa (1.12.0): o id do pedido e o controle do Tampermonkey.
+    let abaDoPrint = null;
+    const fecharAbaDoPrint = () => {
+      const aberta = abaDoPrint;
+      abaDoPrint = null;
+      try {
+        aberta?.aba?.close?.();
+      } catch {
+        /* a pessoa já a fechou */
+      }
+    };
+
     // Sem aba do papel viva, abre uma. Com ela, espera o aviso de que ela pegou o pedido: a aba
     // pode ter sido fechada há pouco, ou posta para dormir pelo Chrome, e ainda contar como viva
     // pelo último sinal.
@@ -1544,8 +1584,18 @@
           enviar({ tipo: 'prints-fim', id });
           return;
         }
-        const abriuHub = encaminhar('pedidoPrints', { id, itens, em: Date.now() });
-        enviar({ tipo: 'pedido-recebido', id, abriuHub });
+        // Numa aba do Hub à vista (1.12.0), que a Mesa fecha no fim: escondida, o Chrome segura os
+        // relógios dela, e o print não terminava.
+        GM_setValue('pedidoPrints', { id, itens, em: Date.now() });
+        GM_setValue(PAPEIS.print.bilhete, { em: Date.now() });
+        if (abaDoPrint) fecharAbaDoPrint();
+        abaDoPrint = { id, aba: GM_openInTab(ABA_DO_ROBO, { active: true, insert: true }) };
+        // Se a aba pegou o pedido e não terminou (a tarefa tem prazo), fecha depois do prazo; se nunca
+        // pegou (o Hub pediu login), fica aberta, para a pessoa ver.
+        setTimeout(() => {
+          if (abaDoPrint?.id === id && GM_getValue(PAPEIS.print.atendendo, null)?.id === id) fecharAbaDoPrint();
+        }, TAREFA_MS + 30000);
+        enviar({ tipo: 'pedido-recebido', id, abriuHub: true });
       }
 
       // O corpo em HTML para o e-mail que a Mesa vai abrir no Outlook: vale por 2 minutos, uma vez.
@@ -1671,6 +1721,8 @@
       if (nova.fim) {
         enviar({ tipo: 'prints-fim', id: nova.id });
         GM_setValue('prints', null);
+        // O último print chegou: a aba do print fecha, e a pessoa volta para onde estava.
+        if (abaDoPrint?.id === nova.id) setTimeout(fecharAbaDoPrint, 300);
       }
     });
     // A boleta que a pessoa abriu para executar também deixa o preço exato do fundo, com a hora.

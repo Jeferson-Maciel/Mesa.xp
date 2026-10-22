@@ -280,6 +280,22 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
     (`estoque-diferente`): o outro estoque daria um print com outra conta;
   - tira o print do painel, recortado da caixa do total ao último valor do detalhe, com a SnapDOM;
   - apaga o campo e volta à Prateleira.
+
+  **Numa aba à vista (1.12.0).** O print não saía na aba do robô, e a razão era o navegador, não a
+  boleta (a mesma lição da caixa de entrada na 1.11.0: o código supunha um navegador que o Chrome de
+  verdade não é). A aba do robô vive escondida, e o Chrome segura os relógios encadeados de uma página
+  escondida em **um despertar por minuto** — o estrangulamento intensivo do Chrome 88, que depois passou
+  a valer 10 s depois de a página carregar escondida
+  ([Chrome 88](https://developer.chrome.com/blog/timer-throttling-in-chrome-88),
+  [a mudança dos 10 s](https://groups.google.com/a/chromium.org/g/blink-dev/c/5SZB2CFFGqE/m/-mtBskjyAgAJ)).
+  O print é feito de esperas curtas (o estoque, a quantidade, a conta, o detalhe, a foto), e cada uma
+  passava a levar um minuto; a cotação, que anda pelas respostas do Hub, não sofre. Os passos repetidos
+  à mão numa aba à vista, em 20/10, funcionavam. Agora, a cada pedido de prints, a Mesa abre uma aba do
+  Hub **à vista** com o bilhete `abaPedidaPrint` (só a aba nova, à vista e na Prateleira o pega, como
+  a aba de execução da 1.10.0), ela faz os prints, e a Mesa a fecha quando o último chega — a pessoa
+  vê o Hub por alguns segundos e volta para onde estava. Se a aba pegou o pedido e não terminou, é
+  fechada depois do prazo da tarefa; se nunca pegou (o Hub pediu login), fica aberta, para a pessoa
+  ver. A aba do robô, escondida, não faz mais prints.
   Os cliques ficam numa lista fechada (`CLIQUES_PERMITIDOS`, conferida por teste): **nunca Próximo**,
   nem a caixa de notificação ao cliente. Fora dela, só dois rótulos fixos que a própria tarefa passa ao
   `clicarSo`: a aba "Tesouro Direto" e o resultado da busca "Conta XP: <a conta do pedido>". A Mesa tira os prints que faltam na hora de copiar ou de abrir

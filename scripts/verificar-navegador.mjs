@@ -783,7 +783,9 @@ try {
     await pagina.fill('[data-op="editor"] textarea', 'texto de teste');
     await pagina.click('[data-op="editor"] button[type="submit"]');
     await pagina.waitForFunction(() => location.hash.startsWith('#operacional/post/'));
-    await pagina.waitForSelector('.op-titulo');
+    // A página do tópico também tem um .op-titulo ("Disparos"): espera o do post novo, senão a
+    // conferência corre na frente do desenho numa máquina lenta (o GitHub, 22/10/2026).
+    await pagina.waitForFunction((t) => document.querySelector('.op-titulo')?.textContent === t, XSS, { timeout: 5_000 }).catch(() => null);
     ok((await pagina.textContent('.op-titulo')) === XSS, 'post novo: o título com <img onerror> aparece como texto');
     ok((await pagina.evaluate(() => window.__xss)) === undefined && (await pagina.$$eval('#modulo-operacional img', (i) => i.length)) === 0, 'post novo: o onerror não rodou e nenhum <img> foi criado');
     ok((await contagem('Disparos')) === '4', 'post novo: a árvore passa a contar 4 em Disparos');

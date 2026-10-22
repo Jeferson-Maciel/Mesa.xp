@@ -5,11 +5,12 @@ import { criarCena } from '../../ui/cena.js';
 import { abrirJanela } from '../../ui/janela.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
-import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, inicioDaVista, linkDaBoleta, mudarEstado, ordensDoLote, pedidosDaVista, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
+import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, inicioDaVista, linkDaBoleta, mudarEstado, ordensDoLote, pedidosDaVista, prazoPerto, resumoDoDia, vencidosDaGuarda } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
 import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlLote, htmlPastas, pastaDoEstado } from './render.js';
 import { criarVigiaDoOutlook } from './vigiaOutlook.js';
+import { criarVigiaDePrazos } from './vigiaPrazos.js';
 import './fila.css';
 
 /**
@@ -71,6 +72,17 @@ export const iniciarFila = (secao) => {
     // não a cada 30 s, nem a cada letra da busca.
     encenar(`${estado.dia}|${estado.pasta}|${estado.pedidos.filter((p) => pastaDoEstado(p.estado) === estado.pasta).map((p) => p.id).join(',')}`);
     ui.lista.dataset.pasta = estado.pasta;
+    // O pedido que a busca, o aviso de prazo ou o histórico do Ordens pediu: à vista uma vez, e aceso
+    // até a pessoa mudar de pasta ou de busca (o redesenho de 30 s não o apaga).
+    if (estado.destaque) {
+      const alvo = ui.lista.querySelector(`[data-id="${CSS.escape(estado.destaque.id)}"]`);
+      alvo?.classList.add('fl-destaque');
+      if (alvo && !estado.destaque.visto) {
+        estado.destaque.visto = true;
+        alvo.classList.add('fl-acende');
+        alvo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
     ui.dia.value = estado.dia;
     const [ano, mes, d] = estado.dia.split('-');
     const nome = estado.dia === hoje() ? 'hoje' : new Date(Number(ano), Number(mes) - 1, Number(d)).toLocaleDateString('pt-BR', { weekday: 'long' });
@@ -107,6 +119,7 @@ export const iniciarFila = (secao) => {
     const pasta = e.target.closest('[data-pasta]')?.dataset.pasta;
     if (!pasta || pasta === estado.pasta) return;
     estado.pasta = pasta;
+    estado.destaque = null;
     render();
   });
 
@@ -257,6 +270,7 @@ export const iniciarFila = (secao) => {
   ui.dia.addEventListener('change', () => ui.dia.value && irParaODia(ui.dia.value));
   ui.busca.addEventListener('input', () => {
     estado.busca = ui.busca.value;
+    estado.destaque = null;
     render();
   });
   el('resumo').addEventListener('click', async () => {
@@ -264,12 +278,13 @@ export const iniciarFila = (secao) => {
     aviso(ok ? 'Resumo do dia copiado.' : 'Não foi possível copiar o resumo.', { tipo: ok ? 'info' : 'erro' });
   });
 
-  // A busca da Mesa (Ctrl+K) abre um pedido: a Fila vai ao dia e à pasta dele, já filtrada pela conta.
+  // A busca da Mesa (Ctrl+K), o aviso de prazo e o histórico do Ordens abrem um pedido: a Fila vai ao dia e à pasta dele, já filtrada pela conta.
   registrarServico('fila.mostrar', (pedido) => {
     estado.dia = pedido.dia;
     estado.pasta = pastaDoEstado(pedido.estado);
     estado.busca = pedido.conta;
     ui.busca.value = pedido.conta;
+    estado.destaque = { id: pedido.id, visto: false };
     carregar();
   });
 
@@ -310,7 +325,8 @@ export const iniciarVigiaDaFila = () => {
 /**
  * O contador da aba Fila: quantos pedidos estão em Aprovação e execução — o cliente respondeu, ou foi
  * aprovado, e falta executar. Começa com a página, como o vigia das Anotações: quem está no Ordens
- * também vê.
+ * também vê. Fica âmbar com um prazo perto (Fase 3: os 15 min de Aprovação e execução, os 30 min dos
+ * Enviados), e então conta também o e-mail sem resposta de prazo perto.
  */
 export const iniciarContadorDaFila = () => {
   const contador = document.querySelector('[data-contador="fila"]');
@@ -320,10 +336,20 @@ export const iniciarContadorDaFila = () => {
   const contar = async () => {
     try {
       const agora = Date.now();
-      const n = pedidosDaVista(await repo.listarDesde(inicioDaVista(agora)), diaDe(agora), agora).filter((p) => paraExecutar.includes(p.estado)).length;
+      const daVista = pedidosDaVista(await repo.listarDesde(inicioDaVista(agora)), diaDe(agora), agora);
+      const perto = daVista.filter((p) => prazoPerto(p, agora));
+      const contados = daVista.filter((p) => paraExecutar.includes(p.estado) || perto.includes(p));
+      const n = contados.length;
       contador.hidden = n === 0;
       contador.textContent = n;
-      contador.title = n ? `${n} ${n === 1 ? 'pedido para aprovar e executar' : 'pedidos para aprovar e executar'}` : '';
+      contador.classList.toggle('perto', perto.length > 0);
+      const executar = contados.length - perto.filter((p) => !paraExecutar.includes(p.estado)).length;
+      contador.title = [
+        executar ? `${executar} ${executar === 1 ? 'pedido para aprovar e executar' : 'pedidos para aprovar e executar'}` : '',
+        perto.length ? `${perto.length} com o prazo perto` : ''
+      ]
+        .filter(Boolean)
+        .join(' · ');
     } catch {
       contador.hidden = true;
     }
@@ -331,6 +357,26 @@ export const iniciarContadorDaFila = () => {
   aoMudarAFila(contar);
   setInterval(contar, 30000);
   contar();
+};
+
+/**
+ * O aviso de prazo (`vigiaPrazos.js`), em qualquer aba: confere a cada 30 s e a cada mudança na Fila.
+ * "Ver na Fila" leva ao cartão.
+ */
+export const iniciarAvisosDePrazo = () => {
+  const vigia = criarVigiaDePrazos({
+    repo: filaDaPagina(),
+    avisar: aviso,
+    abrir: (pedido) => {
+      location.hash = 'fila';
+      quandoHouver('fila.mostrar', (mostrar) => mostrar(pedido));
+    }
+  });
+  aoMudarAFila((origem) => origem !== 'prazos' && vigia.conferir());
+  setInterval(() => vigia.conferir(), 30000);
+  // Ao voltar para a aba do navegador, na hora: escondida, o Chrome só roda o relógio uma vez por minuto.
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && vigia.conferir());
+  vigia.conferir();
 };
 
 const MARCACAO = `

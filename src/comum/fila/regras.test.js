@@ -22,7 +22,11 @@ import {
   repetidosHoje,
   resumoDoDia,
   situacaoDoPrazo,
-  vencidosDaGuarda
+  vencidosDaGuarda,
+  marcarPrazoAvisado,
+  prazoPerto,
+  prazosParaAvisar,
+  textoDoAvisoDePrazo
 } from './regras.js';
 
 // Contas fictícias. 21/10/2026, uma quarta-feira.
@@ -448,5 +452,70 @@ describe('o que pede atenção', () => {
     const respondido = registrarResposta(bolsa(), { de: 'FULANO', previa: 'De acordo', em: em(10, 30) }, em(10, 30));
     expect(pedeAtencao(respondido, em(11))).toBe(false);
     expect(pedeAtencao(respondido, em(16, 30))).toBe(true);
+  });
+});
+
+// Fase 3 (Q31, 21/10/2026): o aviso de prazo — 15 min antes em Aprovação e execução, 30 min antes nos
+// Enviados sem resposta; uma vez por pedido e por prazo.
+describe('o aviso de prazo', () => {
+  const bolsa = (extra = {}) =>
+    novoPedido({ conta: '1234567', grupo: 'bolsa', formato: 'email', assunto: 'Confirmação de ordem', ordens: [{ ativo: 'PETR4', operacao: 'C', quantidade: 100 }], texto: '', em: em(10), ...extra });
+  const respondido = () => registrarResposta(bolsa(), { id: 'r1', de: 'Fulano', previa: 'ok', em: em(11) }, em(11));
+
+  it('nos Enviados, a partir de 30 min antes do leilão (16h55)', () => {
+    expect(prazosParaAvisar([bolsa()], em(16, 24))).toEqual([]);
+    const [aviso] = prazosParaAvisar([bolsa()], em(16, 25));
+    expect(aviso).toMatchObject({ pasta: 'enviados', prazo: { tipo: 'leilao', ate: em(16, 55) } });
+    expect(aviso.pedido.conta).toBe('1234567');
+  });
+
+  it('em Aprovação e execução (respondido ou aprovado), a partir de 15 min antes', () => {
+    expect(prazosParaAvisar([respondido()], em(16, 25))).toEqual([]);
+    expect(prazosParaAvisar([respondido()], em(16, 40))).toMatchObject([{ pasta: 'executar' }]);
+    expect(prazosParaAvisar([mudarEstado(bolsa(), 'aprovado', em(11))], em(16, 40))).toHaveLength(1);
+  });
+
+  it('o prazo que já passou, o executado e o cancelado não avisam', () => {
+    expect(prazosParaAvisar([bolsa()], em(16, 55))).toEqual([]);
+    expect(prazosParaAvisar([mudarEstado(bolsa(), 'executado', em(11))], em(16, 50))).toEqual([]);
+    expect(prazosParaAvisar([mudarEstado(bolsa(), 'cancelado', em(11))], em(16, 50))).toEqual([]);
+  });
+
+  it('uma vez por pedido e por prazo: o avisado não avisa de novo, nem ao mudar de pasta', () => {
+    const [aviso] = prazosParaAvisar([bolsa()], em(16, 30));
+    const marcado = marcarPrazoAvisado(aviso.pedido, aviso.prazo, em(16, 30));
+    expect(prazosParaAvisar([marcado], em(16, 31))).toEqual([]);
+    const respondeu = registrarResposta(marcado, { id: 'r1', de: 'Fulano', previa: 'ok', em: em(16, 35) }, em(16, 35));
+    expect(prazosParaAvisar([respondeu], em(16, 45))).toEqual([]);
+  });
+
+  it('cada prazo do pedido avisa por si: o Estoque clientes às 14h e o secundário às 16h30', () => {
+    const fundos = bolsa({ grupo: 'fundos-compra', ordens: [{ ativo: 'Fundo Fictício FII', operacao: 'C', financeiro: 1000, estoque: 'clientes' }] });
+    const [primeiro] = prazosParaAvisar([fundos], em(13, 40));
+    expect(primeiro.prazo.tipo).toBe('estoque-clientes');
+    const marcado = marcarPrazoAvisado(fundos, primeiro.prazo, em(13, 40));
+    expect(prazosParaAvisar([marcado], em(16, 10))).toMatchObject([{ prazo: { tipo: 'secundario' } }]);
+  });
+
+  it('o e-mail refeito guarda o que já foi avisado', () => {
+    const [aviso] = prazosParaAvisar([bolsa()], em(16, 30));
+    const marcado = marcarPrazoAvisado(aviso.pedido, aviso.prazo, em(16, 30));
+    const refeito = registrarEnvio([marcado], { conta: '1234567', grupo: 'bolsa', formato: 'email', assunto: 'Confirmação de ordem', ordens: [{ ativo: 'PETR4', operacao: 'C', quantidade: 200 }], texto: 'outro', em: em(16, 32) });
+    expect(prazosParaAvisar([refeito], em(16, 33))).toEqual([]);
+  });
+
+  it('o prazo perto, para o contador âmbar: dentro da antecedência e ainda não passou', () => {
+    expect(prazoPerto(bolsa(), em(16, 24))).toBe(false);
+    expect(prazoPerto(bolsa(), em(16, 30))).toBe(true);
+    expect(prazoPerto(respondido(), em(16, 30))).toBe(false);
+    expect(prazoPerto(respondido(), em(16, 45))).toBe(true);
+    expect(prazoPerto(bolsa(), em(17))).toBe(false);
+  });
+
+  it('o texto do aviso: a conta, o grupo, o prazo, quanto falta e o que falta fazer', () => {
+    const [enviado] = prazosParaAvisar([bolsa()], em(16, 25));
+    expect(textoDoAvisoDePrazo(enviado, em(16, 25))).toBe('Conta 1234567 · Bolsa: leilão da B3 16:55, falta 30 min. O cliente ainda não respondeu.');
+    const [executar] = prazosParaAvisar([respondido()], em(16, 41));
+    expect(textoDoAvisoDePrazo(executar, em(16, 41))).toBe('Conta 1234567 · Bolsa: leilão da B3 16:55, falta 14 min. Falta executar.');
   });
 });

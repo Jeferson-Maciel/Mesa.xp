@@ -7,7 +7,7 @@ import { repositorioDasAnotacoes } from './modulos/anotacoes/banco.js';
 import { linkDaNota } from './modulos/anotacoes/render.js';
 import { iniciarVigia } from './modulos/anotacoes/vigia.js';
 import { iniciarCalendario } from './modulos/calendario/index.js';
-import { iniciarContadorDaFila, iniciarFila, iniciarVigiaDaFila } from './modulos/fila/index.js';
+import { iniciarAvisosDePrazo, iniciarContadorDaFila, iniciarFila, iniciarVigiaDaFila } from './modulos/fila/index.js';
 import { iniciarFotosDaPrateleira, iniciarFundos } from './modulos/fundos/index.js';
 import { iniciarOperacional } from './modulos/operacional/index.js';
 import { iniciarOrdens } from './modulos/ordens/index.js';
@@ -67,7 +67,6 @@ try {
   console.error('Os lembretes das Anotações não iniciaram:', erro);
 }
 
-// O contador da Fila também: a resposta do cliente e o prazo perto aparecem em qualquer aba.
 /*
  * As fontes da busca (Ctrl+K), na ordem em que aparecem: as abas, os modelos e passos do Operacional
  * (a base do Slab que vem no arquivo), as anotações e os cartões da Fila (os dois no navegador). O
@@ -157,6 +156,7 @@ try {
 try {
   iniciarContadorDaFila();
   iniciarVigiaDaFila();
+  iniciarAvisosDePrazo();
 } catch (erro) {
   console.error('O contador da Fila não iniciou:', erro);
 }

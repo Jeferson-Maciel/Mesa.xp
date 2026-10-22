@@ -1,5 +1,5 @@
 import { chaveDoDia } from '../dia.js';
-import { HORARIOS, proximoHorario } from '../horarios.js';
+import { HORARIOS, proximoHorario, quantoFalta } from '../horarios.js';
 
 /**
  * A Fila do dia: o caminho de cada pedido depois que o e-mail sai — o cliente responde, aprova, a
@@ -167,6 +167,41 @@ export const prazoMaisUrgente = (pedido, agora = Date.now()) => {
 export const pedeAtencao = (pedido, agora = Date.now()) => {
   const prazo = prazoMaisUrgente(pedido, agora);
   return Boolean(prazo) && situacaoDoPrazo(prazo, agora) !== 'ok';
+};
+
+/**
+ * O aviso de prazo (Fase 3, decidido com o usuário em 21/10/2026): em qualquer aba, com som e "Ver na
+ * Fila" — 15 min antes em Aprovação e execução (falta executar), 30 min antes nos Enviados (o cliente
+ * ainda não respondeu: dá tempo de ligar). Uma vez por pedido e por prazo: o avisado fica no cartão
+ * (`prazosAvisados`), e mudar de pasta não avisa de novo.
+ */
+export const ANTECEDENCIA_DO_AVISO = { enviados: 30 * 60000, executar: 15 * 60000 };
+const PASTA_DO_AVISO = { enviado: 'enviados', respondeu: 'executar', aprovado: 'executar' };
+const chaveDoPrazo = (prazo) => `${prazo.tipo}@${prazo.ate}`;
+
+const prazosNaAntecedencia = (pedido, agora) => {
+  const pasta = PASTA_DO_AVISO[pedido.estado];
+  if (!pasta) return [];
+  const antes = ANTECEDENCIA_DO_AVISO[pasta];
+  return pedido.prazos.filter((p) => agora >= p.ate - antes && agora < p.ate).map((prazo) => ({ pedido, prazo, pasta }));
+};
+
+/** Os prazos a avisar agora: dentro da antecedência, ainda não passaram e ainda não foram avisados. */
+export const prazosParaAvisar = (pedidos, agora = Date.now()) =>
+  pedidos.flatMap((p) => prazosNaAntecedencia(p, agora)).filter(({ pedido, prazo }) => !(pedido.prazosAvisados ?? []).includes(chaveDoPrazo(prazo)));
+
+/** O cartão com o prazo avisado: não avisa de novo. */
+export const marcarPrazoAvisado = (pedido, prazo, em = Date.now()) =>
+  (pedido.prazosAvisados ?? []).includes(chaveDoPrazo(prazo)) ? pedido : { ...pedido, prazosAvisados: [...(pedido.prazosAvisados ?? []), chaveDoPrazo(prazo)], atualizadoEm: em };
+
+/** Um prazo do pedido está na antecedência do aviso (o contador da aba Fila fica âmbar). */
+export const prazoPerto = (pedido, agora = Date.now()) => prazosNaAntecedencia(pedido, agora).length > 0;
+
+/** "Conta 1234567 · Bolsa: leilão da B3 16:55, falta 30 min. O cliente ainda não respondeu." */
+export const textoDoAvisoDePrazo = ({ pedido, prazo, pasta }, agora = Date.now()) => {
+  const quando = diaDe(prazo.ate) === diaDe(agora) ? hora(prazo.ate) : diaEHora(prazo.ate);
+  const resto = pasta === 'enviados' ? 'O cliente ainda não respondeu.' : 'Falta executar.';
+  return `Conta ${pedido.conta} · ${NOMES_DOS_GRUPOS[pedido.grupo] ?? pedido.grupo}: ${prazo.rotulo} ${quando}, falta ${quantoFalta(prazo.ate - agora)}. ${resto}`;
 };
 
 /**

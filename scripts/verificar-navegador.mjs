@@ -594,6 +594,60 @@ try {
     await contexto.close();
   }
 
+  /* ── Fila: o aviso de prazo, o som e os avisos à vista (Fase 3) ─────────────────── */
+  // Uma quarta-feira às 16h30: o e-mail que sai agora está a 25 min do leilão (16h55), dentro dos 30
+  // min dos Enviados. O som é contado pelo AudioContext de mentira.
+  titulo('Fila: o aviso de prazo, o som e no máximo 3 avisos');
+  {
+    const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T16:30:00-03:00' });
+    await pagina.evaluate(() => {
+      window.__sons = 0;
+      const Original = window.AudioContext;
+      window.AudioContext = class extends Original {
+        createOscillator() {
+          window.__sons++;
+          return super.createOscillator();
+        }
+      };
+    });
+    const sons = () => pagina.evaluate(() => window.__sons);
+    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await pagina.locator('[data-copiar="email"]').first().click();
+    await pagina.waitForSelector('.toast.prazo', { timeout: 5000 }).catch(() => {});
+    ok(
+      (await pagina.textContent('.toast.prazo').catch(() => '')).includes('Conta 1234567 · Bolsa: leilão da B3 16:55, falta 25 min. O cliente ainda não respondeu.'),
+      'no Ordens, o aviso de prazo do e-mail que espera o cliente (30 min antes do leilão)'
+    );
+    ok((await sons()) === 1, `só o aviso de prazo tocou: o "copiado" fica em silêncio (${await sons()} som)`);
+    ok(await pagina.$eval('[data-contador="fila"]', (c) => !c.hidden && c.classList.contains('perto') && c.textContent === '1'), 'o contador da aba Fila fica âmbar, contando o e-mail de prazo perto');
+
+    // Mais avisos: no máximo 3 à vista.
+    await pagina.fill('#entrada', '');
+    for (let i = 0; i < 5; i++) await pagina.click('#btn-analisar');
+    ok((await pagina.$$eval('#toasts .toast:not(.saindo)', (t) => t.length)) <= 3, 'no máximo 3 avisos à vista');
+
+    // Recarregar não avisa de novo: o avisado fica no cartão.
+    await pagina.reload();
+    await pagina.waitForTimeout(800);
+    ok(!(await pagina.$('.toast.prazo')), 'recarregada a página, o mesmo prazo não avisa de novo');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+  {
+    // "Ver na Fila" leva ao cartão, aceso.
+    const { pagina, contexto } = await abrir({ relogio: '2026-10-21T16:30:00-03:00' });
+    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await pagina.locator('[data-copiar="email"]').first().click();
+    await pagina.waitForSelector('.toast.prazo .toast-acao');
+    await pagina.click('.toast.prazo .toast-acao');
+    await pagina.waitForSelector('.fl-destaque', { timeout: 5000 }).catch(() => {});
+    ok(
+      (await pagina.evaluate(() => location.hash)) === '#fila' && (await pagina.textContent('.fl-destaque').catch(() => '')).includes('1234567'),
+      '"Ver na Fila" abre a Fila no cartão do pedido, aceso'
+    );
+    await contexto.close();
+  }
+
   /* ── O topo: os horários do mercado e a busca ───────────────────────────────────── */
   // Uma quarta-feira às 13h10: o que fecha primeiro é o Estoque clientes, às 14h.
   titulo('O topo: os horários do mercado e a busca (Ctrl+K)');

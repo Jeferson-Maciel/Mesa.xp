@@ -331,6 +331,18 @@
   animation: fl-entrar var(--t-lento) var(--curva-saida) both, fl-acender 1.4s var(--curva) 0.2s 1;
 }
 
+/* O pedido aberto de outro lugar (a busca, o aviso de prazo, o histórico do Ordens): acende uma vez, na
+   pedra da aba, até a pessoa mudar de pasta ou de busca; o brilho, só na primeira vez. */
+.fl .fl-destaque {
+  --brilho: var(--acento);
+  outline: 2px solid color-mix(in srgb, var(--acento) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.fl .fl-destaque.fl-acende {
+  animation: fl-acender 1.4s var(--curva) 0.2s 1;
+}
+
 /* A resposta do cliente é a novidade: na pedra da aba. */
 .fl .fl-cartao.fl-atencao[data-estado='respondeu'] {
   --brilho: var(--acento);
@@ -803,6 +815,7 @@
   .fl.em-cena .fl-resposta,
   .fl.em-cena .fl-linhas,
   .fl.em-cena .fl-conferir,
+  .fl .fl-destaque.fl-acende,
   .fl .fl-outlook[data-tipo='vigiando']::before {
     animation: none;
   }

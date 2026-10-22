@@ -409,6 +409,25 @@
   animation: estalar var(--t-lento) var(--curva-mola);
 }
 
+/* O da Fila tem a cor dela; fica âmbar com um prazo perto (src/modulos/fila/index.js). */
+.aba-contador[data-contador='fila'] {
+  background: var(--kunzita);
+}
+
+.aba-contador[data-contador='fila'].perto {
+  background: var(--atencao);
+  animation: estalar var(--t-lento) var(--curva-mola), aba-alerta-atencao 2.4s var(--curva) 0.4s infinite;
+}
+
+@keyframes aba-alerta-atencao {
+  0% {
+    box-shadow: 0 0 0 2px var(--superficie), 0 0 0 2px color-mix(in srgb, var(--atencao) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--superficie), 0 0 0 7px transparent;
+  }
+}
+
 .aba-contador.vencidas {
   background: var(--negativo);
   animation: estalar var(--t-lento) var(--curva-mola), aba-alerta 2.4s var(--curva) 0.4s infinite;

@@ -196,6 +196,17 @@ try {
       lotes.split('\n').filter((l) => l.startsWith('Estratégia')).length === 1 && lotes.includes('PETR4') && lotes.includes('VALE3'),
       '"Copiar todos os Lote Simples" junta as duas contas num TSV com um cabeçalho só'
     );
+    // F9 (22/10/2026): o lote baixado é o texto do Copiar, num .tsv.
+    const baixado = async (seletor) => {
+      const [download] = await Promise.all([pagina.waitForEvent('download'), pagina.click(seletor)]);
+      return { nome: download.suggestedFilename(), texto: readFileSync(await download.path(), 'utf8') };
+    };
+    const juntos = await baixado('#lotes-juntos [data-lotes="lote"][data-baixar-lotes]');
+    ok(/^lote-simples-2-contas-\d{4}-\d{2}-\d{2}\.tsv$/.test(juntos.nome) && juntos.texto === lotes, `"Baixar" dos Juntos: o mesmo TSV, num arquivo (${juntos.nome})`);
+    await pagina.click('[data-solicitacao="0"] [data-copiar="lote"]');
+    const copiadoUm = await areaDeTransferencia();
+    const um = await baixado('[data-solicitacao="0"] [data-baixar="lote"]');
+    ok(/^lote-simples-1234567-\d{4}-\d{2}-\d{2}\.tsv$/.test(um.nome) && um.texto === copiadoUm, `"Baixar" do Lote Simples de uma conta: o texto do Copiar, byte a byte (${um.nome})`);
     await pagina.click('[data-solicitacao="0"] .btn-remover');
     ok((await pagina.$$('[data-solicitacao="0"] tbody tr')).length === 0, 'a linha sai do cartão');
     await pagina.locator('body').click({ position: { x: 5, y: 5 } });

@@ -82,7 +82,6 @@ Ideias, com o custo grosseiro:
 | --- | --- | --- |
 | F5 | Colar a ordem enviada junto do pedido e receber as divergências | alto |
 | F6 | Um clique põe a cesta inteira em Venda | baixo |
-| F9 | Baixar o lote como arquivo, além de copiar | baixo |
 | F12 | Fila do dia: trabalhar o despejo da conversa solicitação por solicitação | médio |
 | F15 | Pedido por print (OCR) — só como sugestão que obriga conferir campo a campo: OCR troca dígito de conta | alto |
 | F16 | Cestas favoritas, depois de o uso mostrar quais se repetem | médio |

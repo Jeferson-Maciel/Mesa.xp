@@ -159,6 +159,12 @@ const DICAS_DO_OUTLOOK = {
   auditoria: 'Abre um e-mail novo no Outlook na web, com o assunto “Confirmação de ordem” e a tabela em texto. Para a tabela em grade, use o Copiar'
 };
 
+// O lote vai para a planilha: além de copiar, baixa como arquivo (F9), com o mesmo texto.
+const botaoDeBaixar = (formato, grupo) =>
+  formato === 'lote' || formato === 'twap'
+    ? `<button class="copy-btn" data-baixar="${formato}" data-grupo="${grupo}" title="Baixa um arquivo .tsv com o mesmo texto do Copiar">Baixar</button>`
+    : '';
+
 const botaoDoOutlook = (formato, grupo) =>
   DICAS_DO_OUTLOOK[formato]
     ? `<button class="copy-btn btn-outlook" data-outlook="${formato}" title="${DICAS_DO_OUTLOOK[formato]}" data-grupo="${grupo}">Abrir no Outlook</button>`
@@ -173,7 +179,7 @@ const renderSaida = (formato, { texto, html }, solicitacao, grupo = 'bolsa', var
   <div class="saida" data-formato="${formato}" data-grupo="${grupo}">
     <div class="panel-header-row">
       <h3 class="panel-title">${tituloDa(formato, grupo, varios)}</h3>
-      <div class="acoes-saida">${botoesDeCopiar(formato, solicitacao, grupo)}${botaoDoOutlook(formato, grupo)}</div>
+      <div class="acoes-saida">${botoesDeCopiar(formato, solicitacao, grupo)}${botaoDeBaixar(formato, grupo)}${botaoDoOutlook(formato, grupo)}</div>
     </div>
     ${
       html

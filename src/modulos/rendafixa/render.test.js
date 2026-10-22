@@ -5,6 +5,7 @@ import { trechosDaMensagem } from './analise.js';
 import { montarTexto, processRows } from './motor.js';
 import {
   htmlBloqueados,
+  htmlBotaoHub,
   htmlCartoes,
   htmlDetalhesFunil,
   htmlFunil,
@@ -12,6 +13,7 @@ import {
   htmlRegistro,
   htmlSemResultado,
   mensagemEmHTML,
+  nomeDaPuxada,
   quando
 } from './render.js';
 
@@ -175,3 +177,49 @@ describe('histórico', () => {
     expect(html).not.toContain('rf-hist-arquivo');
   });
 });
+
+describe('botão Puxar do Hub', () => {
+  it('formata o nome sugerido para o arquivo com dia e hora', () => {
+    // 22/10 às 16:47
+    const data = new Date(2026, 9, 22, 16, 47);
+    expect(nomeDaPuxada(data.getTime())).toBe('Hub · 22/10 16:47');
+  });
+
+  it('sem robô: oferece Instalar robô', () => {
+    const html = htmlBotaoHub({ estado: 'sem-robo' });
+    expect(html).toContain('Instalar robô');
+    expect(html).toContain('data-estado="sem-robo"');
+    expect(html).not.toContain('disabled');
+  });
+
+  it('robô desatualizado: oferece Atualizar robô com a versão escapada', () => {
+    const html = htmlBotaoHub({ estado: 'desatualizado', versao: '1.13.4' });
+    expect(html).toContain('Atualizar robô');
+    expect(html).toContain('v1.13.4');
+    expect(html).toContain('data-estado="desatualizado"');
+  });
+
+  it('escapa versão maliciosa no botão desatualizado', () => {
+    const html = htmlBotaoHub({ estado: 'desatualizado', versao: XSS });
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
+  it('puxando: fica desabilitado e com indicador de carga', () => {
+    const html = htmlBotaoHub({ estado: 'puxando' });
+    expect(html).toContain('Puxando do Hub…');
+    expect(html).toContain('data-estado="puxando"');
+    expect(html).toContain('disabled');
+    expect(html).toContain('rf-puxar-hub-spinner');
+  });
+
+  it('pronto: oferece Puxar do Hub com atalho P', () => {
+    const html = htmlBotaoHub({ estado: 'pronto' });
+    expect(html).toContain('Puxar do Hub');
+    expect(html).toContain('data-estado="pronto"');
+    expect(html).toContain('btn-primario');
+    expect(html).toContain('(P)');
+    expect(html).not.toContain('disabled');
+  });
+});
+

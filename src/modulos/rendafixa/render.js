@@ -71,6 +71,52 @@ const fmtPct = (pct) => {
 // Renderiza o negrito do WhatsApp (*texto*) depois de escapar o resto
 export const mensagemEmHTML = (mensagem) => esc(mensagem).replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
 
+/** Formata o nome do arquivo para a puxada do Hub: ex. Hub · 22/10 16:47 */
+export const nomeDaPuxada = (em = Date.now()) => {
+  const d = new Date(em);
+  const dia = String(d.getDate()).padStart(2, '0');
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const hora = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `Hub · ${dia}/${mes} ${hora}:${min}`;
+};
+
+/**
+ * O botão "Puxar do Hub" no painel da Planilha:
+ * - 'sem-robo': oferece "Instalar robô"
+ * - 'desatualizado': oferece "Atualizar robô" (com a versão escapada)
+ * - 'puxando': "Puxando do Hub…", desabilitado
+ * - 'pronto': "Puxar do Hub"
+ *
+ * @param {{ estado?: 'sem-robo'|'desatualizado'|'puxando'|'pronto', versao?: string|null }} param0
+ */
+export const htmlBotaoHub = ({ estado = 'sem-robo', versao = null } = {}) => {
+  const v = esc(versao ?? '');
+  switch (estado) {
+    case 'puxando':
+      return `<button type="button" class="copy-btn rf-puxar-hub rf-puxando" data-rf="puxar-hub" data-estado="puxando" disabled title="Puxando a planilha de Emissão Bancária do Hub…">
+  <span class="rf-puxar-hub-spinner" aria-hidden="true"></span>
+  <span class="rf-puxar-hub-rotulo">Puxando do Hub…</span>
+</button>`;
+    case 'desatualizado':
+      return `<button type="button" class="copy-btn rf-puxar-hub rf-desatualizado" data-rf="puxar-hub" data-estado="desatualizado" title="O robô precisa ser atualizado${versao ? ` (versão ${v})` : ''}">
+  <span class="rf-puxar-hub-icone" aria-hidden="true"></span>
+  <span class="rf-puxar-hub-rotulo">Atualizar robô${versao ? ` <small>(v${v})</small>` : ''}</span>
+</button>`;
+    case 'sem-robo':
+      return `<button type="button" class="copy-btn rf-puxar-hub rf-sem-robo" data-rf="puxar-hub" data-estado="sem-robo" title="O robô do Hub não está instalado — clique para instalar">
+  <span class="rf-puxar-hub-icone" aria-hidden="true"></span>
+  <span class="rf-puxar-hub-rotulo">Instalar robô</span>
+</button>`;
+    case 'pronto':
+    default:
+      return `<button type="button" class="copy-btn btn-primario rf-puxar-hub" data-rf="puxar-hub" data-estado="pronto" title="Puxar a planilha de Emissão Bancária direto do Hub da XP (P)">
+  <span class="rf-puxar-hub-icone" aria-hidden="true"></span>
+  <span class="rf-puxar-hub-rotulo">Puxar do Hub</span>
+</button>`;
+  }
+};
+
 /* ── Estados da área de resultado ─────────────────────────────────────────────────────── */
 
 // A ilustração da tela vazia: uma planilha cujas linhas viram uma curva de taxas. Desenha-se uma vez,

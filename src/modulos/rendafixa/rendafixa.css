@@ -109,6 +109,94 @@
 
 /* ── Planilha ───────────────────────────────────────────────────────────────────────── */
 
+.rf .rf-hub-caixa {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--esp-2);
+}
+
+.rf .rf-puxar-hub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  width: 100%;
+  padding: var(--esp-3) var(--esp-4);
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background-color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva),
+    box-shadow var(--t-rapido) var(--curva), transform var(--t-rapido) var(--curva), opacity var(--t-rapido) var(--curva);
+}
+
+.rf .rf-puxar-hub:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+
+.rf .rf-puxar-hub-icone {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: var(--i-robo) center / contain no-repeat;
+  mask: var(--i-robo) center / contain no-repeat;
+}
+
+.rf .rf-puxar-hub-spinner {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rf-girar 750ms linear infinite;
+}
+
+@keyframes rf-girar {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rf .rf-puxar-hub.rf-sem-robo,
+.rf .rf-puxar-hub.rf-desatualizado {
+  background: var(--superficie-afundada);
+  border: 1px dashed color-mix(in srgb, var(--aviso, #f59e0b) 60%, var(--borda));
+  color: var(--texto-forte);
+}
+
+.rf .rf-puxar-hub.rf-sem-robo:hover,
+.rf .rf-puxar-hub.rf-desatualizado:hover {
+  background: color-mix(in srgb, var(--aviso, #f59e0b) 12%, var(--superficie-afundada));
+  border-color: var(--aviso, #f59e0b);
+}
+
+.rf .rf-ou-divisor {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: var(--esp-1) 0 var(--esp-2);
+  color: var(--texto-fraco);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.rf .rf-ou-divisor::before,
+.rf .rf-ou-divisor::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--borda);
+}
+
+.rf .rf-ou-divisor span {
+  padding: 0 var(--esp-2);
+}
+
 .rf .rf-soltar {
   display: flex;
   flex-direction: column;

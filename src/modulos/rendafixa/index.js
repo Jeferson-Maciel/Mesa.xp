@@ -8,10 +8,12 @@ import { desenharImagem, layoutDaImagem } from './imagem.js';
 import { diasUteisAte, simularPre } from './simulador.js';
 import { MARCACAO_DAS_REGRAS, ligarRegras } from './telaDasRegras.js';
 import { ehDiaUtil } from '../../comum/diasUteis.js';
+import { quandoHouver, servico } from '../../comum/servicos.js';
 import {
   DICAS_MERCADO,
   formatBytes,
   htmlBloqueados,
+  htmlBotaoHub,
   htmlCartoes,
   htmlDetalhesFunil,
   htmlErro,
@@ -22,12 +24,15 @@ import {
   htmlMensagem,
   htmlSemResultado,
   htmlVazio,
+  nomeDaPuxada,
   numero,
   htmlResultadoDaSimulacao,
   opcoesDoSimulador
 } from './render.js';
 import { abrirJanela } from '../../ui/janela.js';
 import './rendafixa.css';
+
+const ENDERECO_DO_ROBO = 'https://mesa-xp.vercel.app/robo-hub.user.js';
 
 /**
  * O RendaFixa Pro dentro da Mesa XP.
@@ -73,7 +78,9 @@ export const iniciarRendaFixa = (secao) => {
     bloqueados: el('bloqueados'),
     historico: el('historico'),
     historicoContagem: el('historico-contagem'),
-    atalhos: el('atalhos')
+    atalhos: el('atalhos'),
+    hubCaixa: el('hub-caixa'),
+    ouDivisor: el('ou-divisor')
   };
 
   const EXTENSOES = /\.(xlsx|xls|csv)$/i;
@@ -89,7 +96,8 @@ export const iniciarRendaFixa = (secao) => {
     texto: '', // mensagem final: é o que Copiar e Salvar usam
     salvo: false,
     visao: 'cartoes',
-    leitura: 0 // incrementa a cada arquivo, para descartar leituras antigas
+    leitura: 0, // incrementa a cada arquivo, para descartar leituras antigas
+    puxando: false // se está aguardando a resposta do robô
   };
 
   // As regras de cada mercado (a gaveta "Regras", 21/10/2026): mudou, a análise é refeita.
@@ -109,23 +117,32 @@ export const iniciarRendaFixa = (secao) => {
 
   const abrirSeletor = () => ui.entradaArquivo.click();
 
-  async function lerArquivo(file) {
-    if (!EXTENSOES.test(file.name)) {
-      aviso('Formato não suportado. Use .xlsx, .xls ou .csv.', { tipo: 'erro' });
-      return;
-    }
+  function obterEstadoDoRobo() {
+    if (estado.puxando) return { estado: 'puxando' };
+    const robo = servico('robo');
+    const atende = servico('roboAtende');
+    if (!robo?.presente) return { estado: 'sem-robo' };
+    if (!atende?.(robo.versao)) return { estado: 'desatualizado', versao: robo.versao };
+    return { estado: 'pronto', versao: robo.versao };
+  }
 
+  function renderBotaoHub() {
+    if (!ui.hubCaixa) return;
+    ui.hubCaixa.innerHTML = htmlBotaoHub(obterEstadoDoRobo());
+  }
+
+  async function lerDados({ nome, tamanho, dados }) {
     const leitura = ++estado.leitura;
-    Object.assign(estado, { rows: null, porMercado: null, resultado: null, texto: '', trechos: {}, salvo: false, arquivo: { nome: file.name, tamanho: file.size, aba: '' } });
+    Object.assign(estado, { rows: null, porMercado: null, resultado: null, texto: '', trechos: {}, salvo: false, arquivo: { nome, tamanho, aba: '' } });
     mostrarArquivo();
     atualizarAcoes();
     ui.subtitulo.textContent = 'Lendo a planilha…';
     ui.bloqueados.innerHTML = '';
-    ui.corpo.innerHTML = htmlLendo(file.name);
+    ui.corpo.innerHTML = htmlLendo(nome);
 
     try {
-      const dados = await file.arrayBuffer();
-      const { aba, rows } = lerPlanilha(dados, sheetjs());
+      const bytes = dados instanceof Promise ? await dados : dados;
+      const { aba, rows } = lerPlanilha(bytes, sheetjs());
       if (leitura !== estado.leitura) return;
       estado.rows = rows;
       estado.arquivo.aba = aba;
@@ -139,6 +156,43 @@ export const iniciarRendaFixa = (secao) => {
       renderFunilVazio();
       atualizarAcoes();
       aviso('Não foi possível ler a planilha.', { tipo: 'erro' });
+    }
+  }
+
+  async function lerArquivo(file) {
+    if (!EXTENSOES.test(file.name)) {
+      aviso('Formato não suportado. Use .xlsx, .xls ou .csv.', { tipo: 'erro' });
+      return;
+    }
+    await lerDados({ nome: file.name, tamanho: file.size, dados: await file.arrayBuffer() });
+  }
+
+  async function puxarDoHub() {
+    if (estado.puxando) return;
+    const robo = servico('robo');
+    const atende = servico('roboAtende');
+    if (!robo?.presente) {
+      window.open(ENDERECO_DO_ROBO, '_blank', 'noopener');
+      aviso('O Tampermonkey abre a tela do robô: clique em Instalar. Depois, recarregue as abas do Hub.');
+      return;
+    }
+    if (!atende?.(robo.versao)) {
+      window.open(ENDERECO_DO_ROBO, '_blank', 'noopener');
+      aviso('O Tampermonkey abre a tela do robô: clique em Atualizar. Depois, recarregue as abas do Hub.');
+      return;
+    }
+
+    estado.puxando = true;
+    renderBotaoHub();
+    try {
+      const { dados, tamanho, em } = await robo.pedirPlanilhaRendaFixa();
+      await lerDados({ nome: nomeDaPuxada(em), tamanho, dados });
+    } catch (erro) {
+      console.error(erro);
+      aviso(erro.message || 'Não consegui obter a planilha do Hub.', { tipo: 'erro' });
+    } finally {
+      estado.puxando = false;
+      renderBotaoHub();
     }
   }
 
@@ -166,6 +220,7 @@ export const iniciarRendaFixa = (secao) => {
 
   function mostrarArquivo() {
     ui.soltar.hidden = true;
+    if (ui.ouDivisor) ui.ouDivisor.hidden = true;
     ui.arquivo.hidden = false;
     ui.arquivoNome.textContent = estado.arquivo.nome;
     ui.arquivoNome.title = estado.arquivo.nome;
@@ -198,6 +253,7 @@ export const iniciarRendaFixa = (secao) => {
     ui.entradaArquivo.value = '';
     ui.arquivo.hidden = true;
     ui.soltar.hidden = false;
+    if (ui.ouDivisor) ui.ouDivisor.hidden = false;
     ui.bloqueados.innerHTML = '';
     renderVazio();
     renderFunilVazio();
@@ -446,6 +502,7 @@ export const iniciarRendaFixa = (secao) => {
       c: () => !ui.copiar.disabled && copiarMensagem(),
       i: () => !ui.imagem.disabled && baixarImagem(),
       s: () => !ui.salvar.disabled && salvarAnalise(),
+      p: () => puxarDoHub(),
       t: () => document.getElementById('btn-tema')?.click(),
       r: () => regras.abrir(mercadoAtual()),
       '?': () => abrirJanela(ui.atalhos, el('abrir-atalhos'))
@@ -593,6 +650,18 @@ export const iniciarRendaFixa = (secao) => {
     if (e.target === ui.atalhos || e.target.closest('[data-fechar]')) ui.atalhos.close();
   });
 
+  ui.hubCaixa?.addEventListener('click', (e) => {
+    const botao = e.target.closest('[data-rf="puxar-hub"]');
+    if (!botao || botao.disabled) return;
+    puxarDoHub();
+  });
+
+  quandoHouver('robo', (robo) => {
+    robo.aoMudar?.(renderBotaoHub);
+    renderBotaoHub();
+  });
+  renderBotaoHub();
+
   document.addEventListener('keydown', atalhos);
   ligarArrastar();
 
@@ -602,6 +671,8 @@ export const iniciarRendaFixa = (secao) => {
   renderFunilVazio();
   renderHistorico();
   atualizarAcoes();
+
+  return { lerDados, lerArquivo, puxarDoHub, renderBotaoHub, estado };
 };
 
 const MARCACAO = `
@@ -614,6 +685,12 @@ const MARCACAO = `
       <section class="panel">
         <div class="panel-header-row">
           <h2 class="panel-title">Planilha</h2>
+        </div>
+
+        <div class="rf-hub-caixa" data-rf="hub-caixa"></div>
+
+        <div class="rf-ou-divisor" data-rf="ou-divisor" aria-hidden="true">
+          <span>ou</span>
         </div>
 
         <button type="button" class="rf-soltar" data-rf="soltar" title="Escolher planilha (A)">
@@ -691,6 +768,7 @@ const MARCACAO = `
       <button type="button" class="icon-close-btn" data-fechar aria-label="Fechar">&times;</button>
     </div>
     <dl>
+      <div><dt><kbd>P</kbd></dt><dd>Puxar planilha do Hub</dd></div>
       <div><dt><kbd>A</kbd></dt><dd>Abrir planilha</dd></div>
       <div><dt><kbd>M</kbd></dt><dd>Alternar mercado primário / secundário</dd></div>
       <div><dt><kbd>V</kbd></dt><dd>Alternar cartões / mensagem</dd></div>

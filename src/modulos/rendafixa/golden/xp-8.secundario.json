@@ -1,0 +1,144 @@
+{
+  "texto": "*Oportunidades de RENDA FIXA hoje!* ⭐ (MERCADO SECUNDÁRIO)\n\n*Taxas pré fixadas:*\n-> 2 anos - CDB 13,46% a.a. (PICPAY)\n-> 3 anos - CDB 12,90% a.a. (XP)\n-> 4 anos - CDB 12,90% a.a. (XP)\n\n*Taxas Pós-fixadas:*\n-> 2 anos - CDB 120% CDI (DIGIMAIS)\n-> 4 anos - CDB 120% CDI (DIGIMAIS)\n\n*Taxas IPCA+:*\n-> 1 ano - CDB IPCA + 7,90% a.a. (BMG)\n-> 2 anos - CDB IPCA + 8,10% a.a. (C6 CONSIGNADO)\n-> 3 anos - CDB IPCA + 7,10% a.a. (XP)\n\n*LCAs/LCIs ISENTA DE IR*\n-> 1 ano – LCA 10,69% a.a. (BV)\n-> 2 anos – LCI 86,30% CDI (XP)",
+  "resultado": {
+    "secundario": true,
+    "linhaCabecalho": 0,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 460,
+      "noMercado": 419,
+      "elegiveis": 70,
+      "vencedores": 15,
+      "exibidos": 10
+    },
+    "descartes": {
+      "modo": 41,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 316,
+      "tipo": 0,
+      "isento": 33
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 13.46,
+            "indexador": "PRE",
+            "emissor": "PICPAY",
+            "ativo": "CDB PICPAY - JUN/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 12.9,
+            "indexador": "PRE",
+            "emissor": "XP",
+            "ativo": "CDB BANCO XP S.A. - AGO/2029"
+          },
+          {
+            "prazo": 4,
+            "tipo": "CDB",
+            "taxa": 12.9,
+            "indexador": "PRE",
+            "emissor": "XP",
+            "ativo": "CDB BANCO XP S.A. - SET/2030"
+          }
+        ]
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": [
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 120,
+            "indexador": "CDI",
+            "emissor": "DIGIMAIS",
+            "ativo": "CDB BANCO DIGIMAIS S.A. - AGO/2028"
+          },
+          {
+            "prazo": 4,
+            "tipo": "CDB",
+            "taxa": 120,
+            "indexador": "CDI",
+            "emissor": "DIGIMAIS",
+            "ativo": "CDB BANCO DIGIMAIS S.A. - OUT/2030"
+          }
+        ]
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "CDB",
+            "taxa": 7.9,
+            "indexador": "IPCA",
+            "emissor": "BMG",
+            "ativo": "CDB BMG - JUL/2027"
+          },
+          {
+            "prazo": 2,
+            "tipo": "CDB",
+            "taxa": 8.1,
+            "indexador": "IPCA",
+            "emissor": "C6 CONSIGNADO",
+            "ativo": "CDB BANCO C6 CONSIGNADO S.A. - AGO/2028"
+          },
+          {
+            "prazo": 3,
+            "tipo": "CDB",
+            "taxa": 7.1,
+            "indexador": "IPCA",
+            "emissor": "XP",
+            "ativo": "CDB BANCO XP S.A. - SET/2029"
+          }
+        ]
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": [
+          {
+            "prazo": 1,
+            "tipo": "LCA",
+            "taxa": 10.69,
+            "indexador": "PRE",
+            "emissor": "BV",
+            "ativo": "LCA BANCO BV S/A - OUT/2027",
+            "sub": "PRE"
+          },
+          {
+            "prazo": 2,
+            "tipo": "LCI",
+            "taxa": 86.3,
+            "indexador": "CDI",
+            "emissor": "XP",
+            "ativo": "LCI BANCO XP S.A. - JUN/2028",
+            "sub": "CDI"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -120,6 +120,7 @@ texto, caractere por caractere, e o mesmo resultado.
   pasta funda e o Git no Windows não conseguia fazer o checkout.
 - `fixtures/sintetica.js` é uma planilha inventada, com as 34 colunas da XP e uma linha por regra do
   motor. O golden dela roda sempre, inclusive no repositório público.
+- `xp-8` é a primeira exportação puxada pelo botão Exportar do Hub (22/10/2026).
 - Os goldens das exportações reais estão versionados: são texto derivado (taxas e nomes de produto
   da prateleira da XP, o mesmo tipo de dado do exemplo do README original).
 - Uma exportação nova em `fixtures/` sem golden reprova o teste: rode o gerador.

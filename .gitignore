@@ -35,3 +35,6 @@ src/modulos/rendafixa/fixtures/*.xlsx
 # Sistema operacional / OneDrive
 Thumbs.db
 desktop.ini
+
+# Estudos e capturas locais (nunca vão para o git)
+.tmp/

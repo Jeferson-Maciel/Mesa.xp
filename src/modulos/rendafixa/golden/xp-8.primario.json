@@ -1,0 +1,58 @@
+{
+  "texto": "",
+  "resultado": {
+    "secundario": false,
+    "linhaCabecalho": 0,
+    "colunas": {
+      "tipo": "Ticker",
+      "instrumento": "Instrumento",
+      "taxa": "Tax.Mín",
+      "indexador": "Indexador",
+      "vencimento": "Vencimento",
+      "liquidez": "Carência",
+      "emissao": "Data de Emissão",
+      "publico": "Público",
+      "isento": "Isento"
+    },
+    "totais": {
+      "lidos": 460,
+      "noMercado": 41,
+      "elegiveis": 0,
+      "vencedores": 0,
+      "exibidos": 0
+    },
+    "descartes": {
+      "modo": 419,
+      "pu": 0,
+      "publico": 0,
+      "liquidez": 0,
+      "taxa": 0,
+      "prazo": 41,
+      "tipo": 0,
+      "isento": 0
+    },
+    "bloqueados": [],
+    "secoes": [
+      {
+        "id": "pre",
+        "titulo": "Pré-fixadas",
+        "itens": []
+      },
+      {
+        "id": "pos",
+        "titulo": "Pós-fixadas",
+        "itens": []
+      },
+      {
+        "id": "ipca",
+        "titulo": "IPCA+",
+        "itens": []
+      },
+      {
+        "id": "isentos",
+        "titulo": "Isentos de IR",
+        "itens": []
+      }
+    ]
+  }
+}

@@ -40,71 +40,15 @@
     color-mix(in srgb, var(--acento-ambiente) 20%, transparent) 60%, transparent);
 }
 
+/* Só o nome (22/10/2026, pedido do usuário: sem o selo XP e sem o "back office"). */
 .logo {
-  display: flex;
   flex: none;
-  align-items: center;
-  gap: var(--esp-3);
-}
-
-.logo strong,
-.logo .sub-badge {
-  white-space: nowrap;
-}
-
-.logo > div {
-  display: flex;
-  align-items: baseline;
-  gap: var(--esp-2);
-}
-
-.logo strong {
   font-family: var(--fonte-titulo);
   font-size: 1.04rem;
   font-weight: 700;
   color: var(--texto-forte);
   letter-spacing: -0.015em;
-}
-
-/* O selo XP: ouro, com um brilho que passa quando o mouse chega. */
-.logo-icon {
-  position: relative;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-md);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--marca) 92%, white), color-mix(in srgb, var(--marca) 78%, black));
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 16px -6px color-mix(in srgb, var(--marca) 60%, transparent);
-  color: #1b1405;
-  font-family: var(--fonte-titulo);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.logo-icon::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
-  transform: translateX(-100%);
-}
-
-.logo:hover .logo-icon::after {
-  animation: varrer 900ms var(--curva) both;
-}
-
-.sub-badge {
-  padding: 0.05rem 0.45rem;
-  border-radius: var(--r-pilula);
-  background: var(--fundo-sutil);
-  color: var(--texto-fraco);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .header-actions {
@@ -360,9 +304,6 @@
     flex: 0 0 auto;
   }
 
-  .sub-badge {
-    display: none;
-  }
 }
 
 @media (max-width: 480px) {
@@ -560,7 +501,20 @@
   stroke-linecap: round;
 }
 
-.busca-tecla,
+/* A cápsula de busca (22/10/2026): com cara de campo, sem a tecla à vista — o Ctrl+K segue valendo, e
+   aparece no title. Abaixo de 1500px, só a lupa. */
+.busca-botao {
+  min-width: 10.5rem;
+  border-radius: var(--r-pilula);
+  background: var(--fundo-sutil);
+  color: var(--texto-fraco);
+  font-weight: 500;
+}
+
+.busca-botao:hover {
+  color: var(--texto-forte);
+}
+
 .busca kbd {
   padding: 0 5px;
   border: 1px solid var(--borda-forte);
@@ -685,18 +639,17 @@
 }
 
 /* Com as sete abas e as ações do topo, os botões da busca e do histórico ficam no ícone (e no
-   contador), e o logo sem o "back office", abaixo de 1500px: a 1400px, com a Segoe UI, o topo cabia com zero de folga, e uma fonte
+   contador) abaixo de 1500px: a 1400px, com a Segoe UI, o topo cabia com zero de folga, e uma fonte
    mais larga (a do Linux, outra do sistema) o empurrava para fora da tela (21/10/2026). */
 @media (max-width: 1500px) {
   .busca-rotulo,
-  .busca-tecla,
-  .historico-rotulo,
-  .logo .sub-badge {
+  .historico-rotulo {
     display: none;
   }
 
   .busca-botao {
     width: 34px;
+    min-width: 0;
     padding: 0;
     justify-content: center;
   }

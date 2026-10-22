@@ -54,6 +54,13 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: o topo mais limpo
+
+Pedido do usuário: "tudo menos poluído". O topo fica só com o nome "Mesa XP" (sem o selo XP e sem o
+"back office"), e a busca vira uma cápsula com cara de campo, sem o "Ctrl K" à vista (o atalho segue
+valendo e aparece ao passar o mouse; abaixo de 1500px, só a lupa). O corte dos textos de explicação
+em todas as abas espera as respostas das perguntas Q36 a Q42.
+
 ## 22/10: a revisão das duas sessões da nuvem
 
 - **Recarregar logo depois de gravar no `localStorage` perdia a gravação no GitHub** (e na máquina

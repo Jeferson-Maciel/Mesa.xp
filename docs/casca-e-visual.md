@@ -126,7 +126,7 @@ A ferramenta fica aberta o dia inteiro, e isso governa a paleta:
 - **Uma cor por aba — a pedra dela.** Safira no Ordens, kunzita na Fila do dia, peridoto na Prateleira
   de fundos, água-marinha no Renda Fixa, ametista no Calendário, turmalina no Operacional, prata nas
   Anotações (Argentum; neutra de propósito, para o amarelo e o vermelho dos lembretes falarem); o ouro
-  é a marca (o selo XP). As duas de 21/10/2026, medidas: a kunzita (289°) mora no único vão limpo do
+  é a marca (o selo XP saiu do topo em 22/10/2026, a pedido do usuário: fica só o nome "Mesa XP"). As duas de 21/10/2026, medidas: a kunzita (289°) mora no único vão limpo do
   círculo, entre a ametista (252°) e a turmalina (327°), e é da Fila, onde o âmbar e o vermelho dos
   prazos têm de falar sozinhos; o peridoto (73°) é o ponto mais longe do âmbar (36°) e do verde (151°)
   que sobrou. As quatro passam de 6:1 sobre o cartão e de 7:1 com o texto sobre elas, nos dois temas. A pedra fica em `--acento`

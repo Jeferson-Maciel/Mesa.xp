@@ -1227,6 +1227,50 @@ table.preview .btn-remover {
   overflow-wrap: anywhere;
 }
 
+/* O selo de cada cartão da Fila (Fase 3): em que pé o e-mail está; o clique leva ao cartão. Na cor da
+   Fila (a kunzita), âmbar esperando o cliente, verde executado, apagado cancelado. */
+.history-selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+  margin-top: var(--esp-2);
+}
+
+.history-fila {
+  --cor: var(--kunzita);
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--cor) 40%, transparent);
+  border-radius: var(--r-pilula);
+  background: color-mix(in srgb, var(--cor) 10%, transparent);
+  color: var(--texto-forte);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-fila[data-estado='enviado'] {
+  --cor: var(--atencao);
+}
+
+.history-fila[data-estado='executado'] {
+  --cor: var(--positivo);
+}
+
+.history-fila[data-estado='cancelado'] {
+  --cor: var(--texto-fraco);
+  color: var(--texto-fraco);
+}
+
+.history-fila:hover {
+  border-color: var(--cor);
+}
+
+.history-fila:focus-visible {
+  box-shadow: var(--foco);
+  outline: none;
+}
+
 .history-actions {
   display: flex;
   align-items: center;

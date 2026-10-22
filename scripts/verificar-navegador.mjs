@@ -676,6 +676,37 @@ try {
     await contexto.close();
   }
 
+  /* ── O histórico do Ordens ligado à Fila (Fase 3) ────────────────────────────────── */
+  // O e-mail copiado com a quantidade corrigida no cartão: o histórico mostra o estado na Fila, o selo
+  // leva ao cartão, e o Reabrir volta com a correção.
+  titulo('Ordens: o histórico com o estado na Fila e o Reabrir com as correções');
+  {
+    const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T11:00:00-03:00' });
+    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await pagina.fill('[data-solicitacao="0"] [data-ordem="0"] .campo-valor', '9');
+    await pagina.press('[data-solicitacao="0"] [data-ordem="0"] .campo-valor', 'Tab');
+    await pagina.locator('[data-copiar="email"]').first().click();
+    await pagina.waitForTimeout(400);
+    await pagina.click('#btn-historico');
+    await pagina.waitForSelector('.history-fila', { timeout: 5000 }).catch(() => {});
+    ok((await pagina.textContent('.history-fila').catch(() => '')) === 'Esperando o cliente', 'o histórico mostra o estado do e-mail na Fila: esperando o cliente');
+    ok((await pagina.textContent('[data-reabrir]')) === 'Reabrir com as correções', 'e o Reabrir diz que volta com as correções do cartão');
+    await pagina.click('.history-fila');
+    await pagina.waitForSelector('.fl-destaque', { timeout: 5000 }).catch(() => {});
+    ok((await pagina.evaluate(() => location.hash)) === '#fila' && Boolean(await pagina.$('.fl-destaque')), 'o selo leva ao cartão na Fila');
+
+    await pagina.keyboard.press(altDe('ordens'));
+    await pagina.fill('#entrada', '');
+    await pagina.click('#btn-historico');
+    await pagina.waitForSelector('[data-reabrir]');
+    await pagina.click('[data-reabrir]');
+    await pagina.waitForSelector('[data-solicitacao="0"] .campo-valor');
+    ok((await pagina.inputValue('[data-solicitacao="0"] [data-ordem="0"] .campo-valor')).replace(/\D/g, '') === '9', 'o Reabrir volta com a quantidade corrigida no cartão (9, e não os 7 do texto)');
+    ok([...(await pagina.$$eval('#toasts .toast', (t) => t.map((x) => x.textContent)))].some((t) => t.includes('Reaberto com as correções do cartão')), 'e diz que voltou com as correções');
+    ok(erros.length === 0, `console sem erros ${erros.length ? JSON.stringify(erros) : ''}`);
+    await contexto.close();
+  }
+
   /* ── O topo: os horários do mercado e a busca ───────────────────────────────────── */
   // Uma quarta-feira às 13h10: o que fecha primeiro é o Estoque clientes, às 14h.
   titulo('O topo: os horários do mercado e a busca (Ctrl+K)');

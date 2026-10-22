@@ -19,6 +19,8 @@ import { copiar, colar } from './platform/clipboard.js';
 import { enderecoDoFavorito } from './platform/favoritoDoHub.js';
 import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, criarRoboHub, roboAtende, scriptDoRobo } from './platform/roboHub.js';
 import * as historico from './platform/historico.js';
+import { aplicarCorrecoes, correcoesDoCartao, marcarOrigem } from './ui/correcoes.js';
+import { htmlItemDoHistorico } from './ui/historico.js';
 import { abrirNoOutlook, enderecoDoEmail } from '../../comum/outlook.js';
 import * as guardado from './platform/secundario.js';
 import { renderCliente } from './ui/cliente.js';
@@ -30,7 +32,7 @@ import { aviso } from '../../ui/avisos.js';
 import { aoMudarAFila, avisarMudancaNaFila } from '../../comum/fila/eventos.js';
 import { contasConhecidas, diaDe, registrarEnvio, repetidosHoje } from '../../comum/fila/regras.js';
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
-import { registrarServico } from '../../comum/servicos.js';
+import { quandoHouver, registrarServico } from '../../comum/servicos.js';
 import { pedirAnotacao } from '../../comum/anotarDeFora.js';
 import { acharEm, registrarFonteDeBusca } from '../../comum/busca.js';
 import './ordens.css';
@@ -149,6 +151,8 @@ export const iniciarOrdens = (secao) => {
     if (!texto.trim()) return aviso('Cole uma solicitação para analisar.');
 
     const { solicitacoes, ignoradas } = parseSolicitacoes(texto);
+    // Cada linha sabe de que lugar do texto veio: é por aí que o Reabrir acha as correções (correcoes.js).
+    marcarOrigem(solicitacoes);
     mostrarEstoque(); // a página pode ter ficado aberta de um dia para o outro
 
     estado.solicitacoes = solicitacoes;
@@ -344,8 +348,10 @@ export const iniciarOrdens = (secao) => {
       estado.fila.hoje = [...estado.fila.hoje.filter((p) => p.id !== pedido.id), pedido];
       estado.fila.contas.add(pedido.conta);
       avisarMudancaNaFila('ordens');
+      return pedido.id;
     } catch (erro) {
       aviso(`O e-mail saiu, mas não entrou na Fila do dia: ${erro.message}`, { tipo: 'erro' });
+      return null;
     }
   }
 
@@ -487,7 +493,7 @@ export const iniciarOrdens = (secao) => {
     aviso(ok ? `${ROTULOS[formato]} de ${textos.length} contas copiados, com um cabeçalho só.` : 'Não consegui copiar.', { tipo: ok ? 'info' : 'erro' });
     if (!ok) return;
     for (const [s] of contasComLote(formato)) {
-      historico.registrar({ conta: s.conta, ativos: recorte(s, 'bolsa', formato).ordens.map((o) => o.ativo), formato: ROTULOS[formato], textoOriginal: estado.textoOriginal });
+      historico.registrar({ conta: s.conta, ativos: recorte(s, 'bolsa', formato).ordens.map((o) => o.ativo), formato: ROTULOS[formato], textoOriginal: estado.textoOriginal, correcoes: correcoesAgora() });
       estado.contasDoHistorico.add(String(s.conta));
     }
     atualizarContadorHistorico();
@@ -722,14 +728,7 @@ export const iniciarOrdens = (secao) => {
         outlookBotao.classList.add('copiado');
         setTimeout(() => outlookBotao.classList.remove('copiado'), 1600);
       }
-      historico.registrar({
-        conta: solicitacao.conta,
-        ativos: recorte(solicitacao, grupo ?? 'bolsa', formato).ordens.map((o) => o.ativo),
-        formato: rotuloNoHistorico(solicitacao, formato, grupo),
-        textoOriginal: estado.textoOriginal
-      });
-      estado.contasDoHistorico.add(String(solicitacao.conta));
-      registrarNaFila(solicitacao, iSolicitacao, formato, grupo, saida.texto);
+      registrarNoHistorico(solicitacao, iSolicitacao, formato, grupo, saida.texto);
       return atualizarContadorHistorico();
     }
 
@@ -762,18 +761,30 @@ export const iniciarOrdens = (secao) => {
       }
 
       if (ok) {
-        historico.registrar({
-          conta: solicitacao.conta,
-          ativos: recorte(solicitacao, grupo ?? 'bolsa', formato).ordens.map((o) => o.ativo),
-          formato: rotuloNoHistorico(solicitacao, formato, grupo),
-          textoOriginal: estado.textoOriginal
-        });
-        estado.contasDoHistorico.add(String(solicitacao.conta));
-        registrarNaFila(solicitacao, iSolicitacao, formato, grupo, saida.texto);
+        registrarNoHistorico(solicitacao, iSolicitacao, formato, grupo, saida.texto);
         atualizarContadorHistorico();
       }
     }
   });
+
+  // As correções do cartão (o que o operador mudou no que o texto disse), para o Reabrir (correcoes.js).
+  const correcoesAgora = () => correcoesDoCartao(marcarOrigem(parseSolicitacoes(estado.textoOriginal).solicitacoes), estado.solicitacoes, estado.confirmados);
+
+  /*
+   * A saída usada vai para o histórico, com as correções do cartão; o e-mail, também para a Fila do dia,
+   * e a entrada do histórico fica ligada ao cartão (o selo da gaveta mostra em que pé ele está).
+   */
+  function registrarNoHistorico(solicitacao, iSolicitacao, formato, grupo, texto) {
+    const entrada = historico.registrar({
+      conta: solicitacao.conta,
+      ativos: recorte(solicitacao, grupo ?? 'bolsa', formato).ordens.map((o) => o.ativo),
+      formato: rotuloNoHistorico(solicitacao, formato, grupo),
+      textoOriginal: estado.textoOriginal,
+      correcoes: correcoesAgora()
+    });
+    estado.contasDoHistorico.add(String(solicitacao.conta));
+    registrarNaFila(solicitacao, iSolicitacao, formato, grupo, texto).then((id) => id && historico.vincularPedido(entrada.id, id));
+  }
 
   function rotuloNoHistorico(solicitacao, formato, grupo) {
     const varios = gruposDe(solicitacao).length > 1;
@@ -1427,30 +1438,42 @@ export const iniciarOrdens = (secao) => {
     $('contador-historico').textContent = historico.listar().length;
   }
 
-  function renderHistorico(termo = '') {
+  // Os itens, com o selo de cada cartão da Fila (lidos do banco dela; sem ele, sem selo).
+  async function renderHistorico(termo = '') {
     const itens = historico.buscar(termo);
+    let pedidos = [];
+    try {
+      if (itens.some((e) => e.pedidos?.length)) pedidos = await filaRepo.listarTodos();
+    } catch {
+      // Sem IndexedDB, o histórico aparece sem os selos.
+    }
+    const porId = new Map(pedidos.map((p) => [p.id, p]));
     $('lista-historico').innerHTML = itens.length
-      ? itens
-          .map((e) => {
-            const quando = new Date(e.quando);
-            return `
-              <div class="history-item" data-id="${esc(e.id)}">
-                <div class="history-item-header">
-                  <span class="badge">${esc(e.formato)}</span>
-                  <span class="history-time">${quando.toLocaleDateString('pt-BR')} ${quando.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div class="history-item-body">
-                  <div class="history-client-row"><span class="history-client">Conta ${esc(e.conta)}</span></div>
-                  <div class="history-tickers">${esc((e.ativos ?? []).join(', '))}</div>
-                </div>
-                <div class="history-actions">
-                  <button class="btn-history-load" data-reabrir="${esc(e.id)}">Reabrir</button>
-                  <button class="btn-history-delete" data-remover="${esc(e.id)}">&times;</button>
-                </div>
-              </div>`;
-          })
-          .join('')
+      ? itens.map((e) => htmlItemDoHistorico(e, porId)).join('')
       : '<div class="empty-state pequeno"><p>Nada no histórico ainda.</p></div>';
+  }
+
+  /*
+   * Reabrir passa o texto original pelas regras de agora, de novo, em vez de restaurar uma saída
+   * congelada; e então aplica as correções do cartão, avisando das que não couberem (correcoes.js).
+   */
+  function reabrir(item) {
+    location.hash = 'ordens';
+    entrada.value = item.textoOriginal;
+    entrada.dispatchEvent(new Event('input'));
+    analisar();
+    if (!item.correcoes) return;
+    const contas = estado.solicitacoes.map((s) => s.conta);
+    const { naoCouberam } = aplicarCorrecoes(estado.solicitacoes, estado.confirmados, item.correcoes);
+    render();
+    // A conta corrigida: o cliente dela, e a lista do Tesouro, vêm do Hub.
+    const mudaram = estado.solicitacoes.filter((s, i) => s.conta !== contas[i]);
+    if (mudaram.length) {
+      buscarClientes(mudaram.map((s) => s.conta));
+      buscarTesouroDe(mudaram);
+    }
+    if (naoCouberam.length) aviso(`Reaberto, mas sem estas correções do cartão — refaça-as: ${naoCouberam.join('; ')}.`, { tipo: 'erro' });
+    else aviso('Reaberto com as correções do cartão.');
   }
 
   $('btn-historico').addEventListener('click', abrirHistorico);
@@ -1474,26 +1497,33 @@ export const iniciarOrdens = (secao) => {
       acharEm(historico.listar(), termo, (h) => ({ titulo: `${h.conta} ${(h.ativos ?? []).join(' ')}`, resto: `${h.formato} ${h.textoOriginal}` })).map((h) => ({
         titulo: `Conta ${h.conta} · ${(h.ativos ?? []).join(', ') || 'sem ativos'}`,
         detalhe: `${h.formato} · ${new Date(h.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '')} · Reabrir`,
-        abrir: () => {
-          location.hash = 'ordens';
-          entrada.value = h.textoOriginal;
-          entrada.dispatchEvent(new Event('input'));
-          analisar();
-        }
+        abrir: () => reabrir(h)
       }))
   });
 
   $('lista-historico').addEventListener('click', (e) => {
-    const reabrir = e.target.closest('[data-reabrir]');
-    if (reabrir) {
-      const item = historico.listar().find((x) => x.id === reabrir.dataset.reabrir);
+    const botaoReabrir = e.target.closest('[data-reabrir]');
+    if (botaoReabrir) {
+      const item = historico.listar().find((x) => x.id === botaoReabrir.dataset.reabrir);
       if (!item) return;
-      // Reabrir passa o texto original pelo pipeline de novo, em vez de restaurar uma
-      // saída congelada: o que o operador vê é sempre o resultado das regras atuais.
-      entrada.value = item.textoOriginal;
-      entrada.dispatchEvent(new Event('input'));
-      analisar();
       fecharHistorico();
+      reabrir(item);
+      return;
+    }
+
+    // O selo da Fila leva ao cartão.
+    const selo = e.target.closest('[data-fila]');
+    if (selo) {
+      filaRepo
+        .listarTodos()
+        .then((todos) => {
+          const pedido = todos.find((p) => p.id === selo.dataset.fila);
+          if (!pedido) return;
+          fecharHistorico();
+          location.hash = 'fila';
+          quandoHouver('fila.mostrar', (mostrar) => mostrar(pedido));
+        })
+        .catch(() => {});
       return;
     }
 

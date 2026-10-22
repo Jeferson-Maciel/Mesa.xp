@@ -7,6 +7,10 @@
  *
  * O registro acontece quando o operador **copia** uma saída, não a cada tecla digitada: o
  * histórico é a lista do que foi de fato usado, não do que foi rascunhado.
+ *
+ * Desde a Fase 3 (21/10/2026), cada entrada guarda também as correções do cartão (`ui/correcoes.js`),
+ * que o Reabrir aplica sobre o texto lido de novo, e os cartões da Fila que o e-mail criou (`pedidos`,
+ * só os ids), para o histórico mostrar em que pé cada e-mail está.
  */
 
 const CHAVE = 'xp_ordens_historico_v2';
@@ -33,12 +37,14 @@ const escrever = (lista) => {
 
 export const listar = () => ler();
 
-export const registrar = ({ conta, ativos, formato, textoOriginal }) => {
+export const registrar = ({ conta, ativos, formato, textoOriginal, correcoes = null }) => {
   const lista = ler();
 
-  // Copiar a mesma coisa duas vezes é um clique repetido, não uma ordem nova.
+  // Copiar a mesma coisa duas vezes é um clique repetido, não uma ordem nova; as correções são as de agora.
   const anterior = lista[0];
   if (anterior && anterior.textoOriginal === textoOriginal && anterior.formato === formato) {
+    anterior.correcoes = correcoes;
+    escrever(lista);
     return anterior;
   }
 
@@ -48,11 +54,22 @@ export const registrar = ({ conta, ativos, formato, textoOriginal }) => {
     conta: conta ?? '—',
     ativos: ativos ?? [],
     formato,
-    textoOriginal: textoOriginal ?? ''
+    textoOriginal: textoOriginal ?? '',
+    correcoes,
+    pedidos: []
   };
 
   escrever([entrada, ...lista]);
   return entrada;
+};
+
+/** O cartão da Fila que o e-mail desta entrada criou (ou atualizou). */
+export const vincularPedido = (id, idDoPedido) => {
+  const lista = ler();
+  const entrada = lista.find((e) => e.id === id);
+  if (!entrada || (entrada.pedidos ?? []).includes(idDoPedido)) return;
+  entrada.pedidos = [...(entrada.pedidos ?? []), idDoPedido];
+  escrever(lista);
 };
 
 export const buscar = (termo) => {

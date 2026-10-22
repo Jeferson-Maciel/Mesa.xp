@@ -119,7 +119,7 @@ const botaoDoTotal = (ordem) =>
     : '';
 
 /** A linha que o botão + acrescenta: tudo em branco, para o operador preencher. */
-const ordemVazia = () => ({
+export const ordemVazia = () => ({
   ativo: '',
   ticker: null,
   fundo: null,

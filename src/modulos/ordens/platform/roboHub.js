@@ -205,7 +205,7 @@ export const criarRoboHub = ({ janela = window } = {}) => {
           de: texto(r.de, 200),
           email: texto(r.email, 200),
           assunto: r.assunto.slice(0, 300),
-          previa: texto(r.previa, 300) ?? '',
+          previa: texto(r.previa, 2000) ?? '',
           hora: texto(r.hora, 5),
           // A conta citada na resposta (1.9.1) e se o assunto tem "RE:".
           conta: typeof r.conta === 'string' && /^\d{5,9}$/.test(r.conta) ? r.conta : null,

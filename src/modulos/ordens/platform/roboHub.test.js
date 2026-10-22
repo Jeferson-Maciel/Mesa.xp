@@ -466,7 +466,7 @@ describe('as respostas no Outlook (robô 1.8.0)', () => {
           lista: true,
           itens: 30,
           respostas: [
-            { id: 'r1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'x'.repeat(500), hora: '10:42' },
+            { id: 'r1', de: 'Fulana Tal', email: 'fulana.tal@exemplo.com', assunto: 'RES: Confirmação de ordem', previa: 'x'.repeat(2500), hora: '10:42' },
             { id: 2, assunto: 'sem id de texto' },
             null
           ]
@@ -476,7 +476,7 @@ describe('as respostas no Outlook (robô 1.8.0)', () => {
     expect(leituras).toHaveLength(1);
     expect(leituras[0]).toMatchObject({ em: 1, lista: true, itens: 30 });
     expect(leituras[0].respostas).toHaveLength(1);
-    expect(leituras[0].respostas[0].previa).toHaveLength(300);
+    expect(leituras[0].respostas[0].previa).toHaveLength(2000);
   });
 
   it('sem o robô, pedir a vigia não manda nada', () => {

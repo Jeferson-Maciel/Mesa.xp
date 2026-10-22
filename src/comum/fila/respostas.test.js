@@ -94,8 +94,67 @@ describe('a conta citada na resposta', () => {
     expect(casarResposta(resposta({ conta: '7654321' }), [a, b])).toEqual({ tipo: 'casou', pedido: b });
   });
 
-  it('dois pedidos esperando da mesma conta, com o mesmo assunto: ambígua', () => {
+  it('dois pedidos esperando da mesma conta, com o mesmo assunto: ambígua se a mensagem for genérica', () => {
     const [a, b] = [pedido({ hora: 10 }), pedido({ grupo: 'fundos-compra', hora: 11 })];
-    expect(casarResposta(resposta({ conta: '1234567', email: null }), [a, b])).toEqual({ tipo: 'ambigua', candidatos: [a, b] });
+    expect(casarResposta(resposta({ conta: '1234567', email: null, previa: 'De acordo.' }), [a, b])).toEqual({ tipo: 'ambigua', candidatos: [a, b] });
+  });
+
+  it('dois pedidos da mesma conta (um de compra e um de venda): identifica compra na mensagem e casa certo', () => {
+    const compra = novoPedido({
+      conta: '1234567',
+      cliente: { nome: 'Fulana Tal', email: 'fulana@exemplo.com' },
+      grupo: 'fundos-compra',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'KJNT11', operacao: 'C', quantidade: 5746 }],
+      texto: 'Ativo: KJNT11;\nQuantidade: 5746;\nOperação: Compra',
+      em: em(10)
+    });
+    const venda = novoPedido({
+      conta: '1234567',
+      cliente: { nome: 'Fulana Tal', email: 'fulana@exemplo.com' },
+      grupo: 'fundos-venda',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'XPHT11', operacao: 'V', quantidade: 100 }],
+      texto: 'Ativo: XPHT11;\nQuantidade: 100;\nOperação: Venda;\nCondições:',
+      em: em(10, 5)
+    });
+
+    const respostaCompra = resposta({
+      conta: '1234567',
+      previa: 'De acordo. Em qui, escreveu: Gostaria de realizar a ordem abaixo na conta XP 1234567: Ativo: KJNT11; Quantidade: 5746; Operação: Compra'
+    });
+    expect(casarResposta(respostaCompra, [compra, venda])).toEqual({ tipo: 'casou', pedido: compra });
+  });
+
+  it('dois pedidos da mesma conta (um de compra e um de venda): identifica venda e condições na mensagem e casa certo', () => {
+    const compra = novoPedido({
+      conta: '1234567',
+      cliente: { nome: 'Fulana Tal', email: 'fulana@exemplo.com' },
+      grupo: 'fundos-compra',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'KJNT11', operacao: 'C', quantidade: 5746 }],
+      texto: 'Ativo: KJNT11;\nQuantidade: 5746;\nOperação: Compra',
+      em: em(10)
+    });
+    const venda = novoPedido({
+      conta: '1234567',
+      cliente: { nome: 'Fulana Tal', email: 'fulana@exemplo.com' },
+      grupo: 'fundos-venda',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'XPHT11', operacao: 'V', quantidade: 100 }],
+      texto: 'Ativo: XPHT11;\nQuantidade: 100;\nOperação: Venda;\nCondições:',
+      em: em(10, 5)
+    });
+
+    const respostaVenda = resposta({
+      conta: '1234567',
+      previa: 'De acordo com a venda. Em qui, escreveu: Gostaria de realizar na conta XP 1234567: Ativo: XPHT11; Operação: Venda; Condições: cotação'
+    });
+    expect(casarResposta(respostaVenda, [compra, venda])).toEqual({ tipo: 'casou', pedido: venda });
   });
 });
+

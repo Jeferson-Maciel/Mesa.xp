@@ -54,6 +54,21 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: Cotas Auditadas na Fila e Desambiguação Compra vs. Venda no Outlook
+
+Demandas resolvidas a pedido do usuário:
+1. **Cotas exatas na Fila iguais às auditadas e enviadas no e-mail**:
+   - `src/modulos/ordens/index.js` (`ordemNaFila`): agora extrai e persiste explicitamente `cotas: cotasAuditadas` em cada ordem (`o.secundario?.cotas` para compras em R$ e `o.venda?.quantidade` para vendas do total). A ordem não depende mais apenas do parsing regex do texto da mensagem.
+   - `src/comum/fila/regras.js` (`quantidadeAprovada`, `numeroDoEmail`, `blocoDaOrdem`): se o bloco do e-mail não estiver legível ou tiver saído sem as cotas antes do recálculo, a Fila recupera instantaneamente as cotas congeladas salvas na ordem (`ordem.cotas`). O `numeroDoEmail` agora suporta números inteiros, números com separador de milhar pt-BR (`5.746`) e decimais com vírgula (`123,45678910`).
+   - Sincronização após envio no Outlook: se o robô injetar o corpo assíncrono `comHtml` com novas cotações/prints no Outlook, a Fila é atualizada imediatamente com `comHtml.texto` para qualquer tipo de ordem (fundos, bolsa, tesouro).
+2. **Desambiguação automática de respostas Compra vs. Venda para a mesma conta no Outlook**:
+   - Quando dois e-mails de confirmação eram disparados para a mesma conta (ex: um de Compra e um de Venda), a resposta do cliente caía como `ambigua` porque ambos tinham o mesmo assunto (`Confirmação de ordem`) e a mesma conta citada.
+   - `src/comum/fila/respostas.js` (`desambiguarPorConteudo`, `casarResposta`): função de pontuação semântica determinística que analisa o conteúdo da resposta (`resposta.previa` e `resposta.assunto`). Identifica termos explícitos de compra (`COMPRA`, `COMPRAR`, `APLICACAO`, `OPERACAO: COMPRA`) vs. venda (`VENDA`, `VENDER`, `RESGATE`, `CONDICOES`, `OPERACAO: VENDA`), ativos e tickers citados (`KJNT11`, `PETR4`, etc.), e linhas literais do e-mail original. Se um candidato tiver pontuação superior, ele casa automaticamente (`tipo: 'casou'`), vinculando ao cartão correto sem intervenção do operador.
+   - `src/modulos/ordens/platform/robo-hub.user.js` e `roboHub.js`: o limite de caracteres da prévia da mensagem no Outlook foi ampliado de 280/300 para 2.000 caracteres, permitindo capturar o bloco completo da ordem citada pelo cliente no histórico do e-mail.
+3. **Comprovante oficial de venda gerado via Canvas 2D nativo**:
+   - `src/modulos/ordens/core/format/imagemVenda.js`: desenha a boleta oficial da XP em alta resolução (Retina 2x, 700px), com caixa superior de total, ícones vetoriais, chevrons e as 7 linhas discriminadas. Geração instantânea (0ms) sem travar a interface e sem depender do SnapDOM.
+- **Verificado**: 1.405 testes unitários passando em 76 suítes (`npm test`), build em 879ms (`npm run build`).
+
 ## 22/10: Correção da Navegação de Prints e Robô 1.13.3
 
 Relato do usuário: ao tentar tirar o print da venda, o sistema mostrava que estava tirando, passava alguns segundos e nada acontecia, com a aba do Hub aberta presa na página geral do mercado secundário (`#/secundario/prateleira`) sem ir para a boleta com a posição do cliente.

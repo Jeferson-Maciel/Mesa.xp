@@ -240,6 +240,53 @@ describe('as cotas do e-mail aprovado', () => {
     expect(fichaDeExecucao(p, em(11))).toContain('- Riza Malls Feeder FII RL: vender 123,4567891 cotas · Estoque XP · o total da posição');
   });
 
+  it('quando o e-mail não tem o bloco, recupera as cotas auditadas salvas na ordem', () => {
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'fundos-compra',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [
+        { ativo: 'KJNT11', operacao: 'C', financeiro: 44000, quantidade: null, cotas: 5746 },
+        { ativo: 'AZ-AXS Energia FIP-IE RL - Subclasse Sênior A1', operacao: 'C', financeiro: 50173.35, quantidade: null, cotas: 464 }
+      ],
+      texto: 'E-mail sem blocos legíveis',
+      em: em(10)
+    });
+    expect(quantidadeAprovada(p, p.ordens[0])).toBe(5746);
+    expect(quantoParaExecutar(p, p.ordens[0])).toEqual({
+      principal: '5.746 cotas',
+      detalhes: ['pedido R$ 44.000,00'],
+      ativo: 'KJNT11'
+    });
+    expect(quantidadeAprovada(p, p.ordens[1])).toBe(464);
+    expect(quantoParaExecutar(p, p.ordens[1])).toEqual({
+      principal: '464 cotas',
+      detalhes: ['pedido R$ 50.173,35'],
+      ativo: 'AZ-AXS Energia FIP-IE RL - Subclasse Sênior A1'
+    });
+  });
+
+  it('lê números do e-mail com ponto de milhar ou vírgula decimal corretamente', () => {
+    const emailComMilhar = [
+      'Prezado(a) Cliente,',
+      'Ativo: KJNT11;',
+      'Quantidade: 5.746;',
+      'Preço: A mercado',
+      'Operação: Compra'
+    ].join('\n');
+    const p = novoPedido({
+      conta: '1234567',
+      grupo: 'fundos-compra',
+      formato: 'email',
+      assunto: 'Confirmação de ordem',
+      ordens: [{ ativo: 'KJNT11', operacao: 'C', financeiro: 44000 }],
+      texto: emailComMilhar,
+      em: em(10)
+    });
+    expect(quantidadeAprovada(p, p.ordens[0])).toBe(5746);
+  });
+
   it('a boleta pela rota do Hub, com a conta no caminho; bolsa não tem', () => {
     expect(linkDaBoleta({ operacao: 'V', fundoId: FUNDO }, '1234567', 'fundos-venda')).toBe(
       `https://hub.xpi.com.br/new/fundos-de-investimento#/secundario/vender/${FUNDO}/1234567`

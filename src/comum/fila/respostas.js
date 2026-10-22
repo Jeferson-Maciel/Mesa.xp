@@ -60,9 +60,90 @@ export const momentoDaHora = (hora, agora = Date.now()) => {
 };
 
 /**
+ * Desambigua pedidos candidatos analisando o conteúdo semântico da resposta (prévia e assunto):
+ * - Operação citada (compra vs. venda vs. resgate vs. aplicação)
+ * - Tickers e ativos do pedido presentes no texto da resposta
+ * - Trechos literais do e-mail do pedido citados na mensagem
+ */
+export const desambiguarPorConteudo = (candidatos, resposta) => {
+  if (candidatos.length <= 1) return candidatos;
+  const texto = normalizar(`${resposta?.assunto ?? ''} ${resposta?.previa ?? ''}`);
+  if (!texto) return candidatos;
+
+  const pontuados = candidatos.map((p) => {
+    let pontos = 0;
+    const ordens = p.ordens ?? [];
+    const todosCompra = ordens.length > 0 && ordens.every((o) => o.operacao === 'C');
+    const todosVenda = ordens.length > 0 && ordens.every((o) => o.operacao === 'V');
+    const ehCompra = p.grupo === 'fundos-compra' || p.grupo === 'tesouro' || todosCompra;
+    const ehVenda = p.grupo === 'fundos-venda' || p.grupo === 'tesouro-resgate' || todosVenda;
+
+    // 1. Evidência explícita de operação no texto
+    const temCompra = /\b(?:COMPRA|COMPRAR|APLICACAO|APLICAR)\b/.test(texto);
+    const temOpCompra = /OPERACAO\s*:\s*COMPRA|OPERACAO\s+COMPRA|ESTRATEGIA\s*:\s*COMPRA/.test(texto);
+    const temVenda = /\b(?:VENDA|VENDER|RESGATE|RESGATAR|CONDICOES)\b/.test(texto);
+    const temOpVenda = /OPERACAO\s*:\s*VENDA|OPERACAO\s+VENDA|ESTRATEGIA\s*:\s*VENDA/.test(texto);
+
+    if (ehCompra) {
+      if (temOpCompra) pontos += 30;
+      else if (temCompra) pontos += 10;
+      if (temOpVenda) pontos -= 30;
+    }
+
+    if (ehVenda) {
+      if (temOpVenda) pontos += 30;
+      else if (temVenda) pontos += 10;
+      if (temOpCompra) pontos -= 30;
+    }
+
+    // 2. Evidência de ativos e tickers citados no texto
+    for (const o of ordens) {
+      const ativoNorm = normalizar(o.ativo);
+      if (!ativoNorm) continue;
+      const partes = ativoNorm.split(' ');
+      const ticker = partes.find((part) => /^[A-Z0-9]{4}\d{1,2}[A-Z]?$/.test(part));
+      if (ticker && new RegExp(`\\b${ticker}\\b`).test(texto)) {
+        pontos += 40;
+      } else if (ativoNorm.length >= 4 && texto.includes(ativoNorm)) {
+        pontos += 35;
+      } else {
+        const primeiroTermo = partes.find((part) => part.length >= 4 && !['FII', 'RL', 'FEEDER', 'FIP'].includes(part));
+        if (primeiroTermo && new RegExp(`\\b${primeiroTermo}\\b`).test(texto)) {
+          pontos += 20;
+        }
+      }
+    }
+
+    // 3. Trechos característicos do e-mail citados na prévia
+    if (p.texto) {
+      const textoPedido = normalizar(p.texto);
+      const linhasPedido = textoPedido.split(/\n+/).map((l) => l.trim()).filter((l) => l.length >= 10);
+      for (const linha of linhasPedido) {
+        if (texto.includes(linha)) {
+          pontos += 15;
+          break;
+        }
+      }
+    }
+
+    return { pedido: p, pontos };
+  });
+
+  pontuados.sort((a, b) => b.pontos - a.pontos);
+  const melhor = pontuados[0];
+  const segundo = pontuados[1];
+
+  if (melhor && melhor.pontos > 0 && (!segundo || melhor.pontos > segundo.pontos)) {
+    return [melhor.pedido];
+  }
+
+  return candidatos;
+};
+
+/**
  * Para que cartão vai uma resposta.
  *
- * @param {{email?: string|null, de?: string|null, assunto: string}} resposta
+ * @param {{email?: string|null, de?: string|null, assunto: string, previa?: string|null, conta?: string|null}} resposta
  * @param {object[]} pedidos  os cartões do dia
  * @returns {{tipo: 'casou', pedido: object} | {tipo: 'ambigua'|'pelo-nome', candidatos: object[]} | {tipo: 'nenhum'}}
  */
@@ -73,7 +154,11 @@ export const casarResposta = (resposta, pedidos) => {
     const melhores = lista.filter(criterio);
     return melhores.length ? melhores : lista;
   };
-  const afunilar = (lista) => preferir(preferir(lista, (p) => p.estado === 'enviado'), (p) => normalizar(p.assunto) === assunto);
+  const afunilar = (lista) => {
+    const porEstado = preferir(lista, (p) => p.estado === 'enviado');
+    const porAssunto = preferir(porEstado, (p) => normalizar(p.assunto) === assunto);
+    return desambiguarPorConteudo(porAssunto, resposta);
+  };
 
   // A conta citada na resposta (o "na conta XP 1234567" do e-mail original, que a prévia traz) é o
   // que liga mais certo (pedido do operador em 21/10/2026): vale mesmo sem o e-mail do cliente.
@@ -106,3 +191,4 @@ export const casarResposta = (resposta, pedidos) => {
   }
   return { tipo: 'nenhum' };
 };
+

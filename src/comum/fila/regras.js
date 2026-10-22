@@ -236,11 +236,19 @@ const verbo = (ordem, grupo) => {
   return ordem.operacao === 'V' ? 'vender' : 'comprar';
 };
 
-// "1193" → 1193, "123,45678910" → 123.4567891: como o e-mail escreve a quantidade (sem milhar).
+// "1193" → 1193, "1.193" → 1193, "123,45678910" → 123.4567891: como o e-mail escreve a quantidade.
 const numeroDoEmail = (texto) => {
   const t = String(texto ?? '').trim();
   if (!/^\d[\d.,]*$/.test(t)) return null;
-  const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t);
+  if (t.includes(',')) {
+    const n = Number(t.replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  if (/^\d{1,3}(?:\.\d{3})+$/.test(t)) {
+    const n = Number(t.replace(/\./g, ''));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const n = Number(t);
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
@@ -259,9 +267,9 @@ export const blocosDoEmail = (texto) => {
   const blocos = [];
   const linhas = String(texto ?? '').split(/\r?\n/);
   linhas.forEach((linha, i) => {
-    const ativo = /^Ativo:\s*(.+?);?\s*$/.exec(linha.trim());
+    const ativo = /^Ativo:\s*(.+?);?\s*$/i.exec(linha.trim());
     if (!ativo) return;
-    const quantidade = /^Quantidade:\s*([\d.,]+);?\s*$/.exec((linhas[i + 1] ?? '').trim());
+    const quantidade = /^Quantidade:\s*([\d.,]+);?\s*$/i.exec((linhas[i + 1] ?? '').trim());
     blocos.push({ ativo: normalizar(ativo[1]), quantidade: quantidade ? numeroDoEmail(quantidade[1]) : null });
   });
   // O E-mail em tabela: a linha de cabeçalho com Ativo e Qtd. Total, e as linhas embaixo dela.
@@ -291,11 +299,17 @@ const blocoDaOrdem = (pedido, ordem) => {
   if (naPosicao?.ativo === ativo) return naPosicao;
   const doAtivo = blocos.filter((b) => b.ativo === ativo);
   const noPedido = pedido.ordens.filter((o) => normalizar(o.ativo) === ativo);
-  return doAtivo.length === 1 && noPedido.length === 1 ? doAtivo[0] : null;
+  if (doAtivo.length === 1 && noPedido.length === 1) return doAtivo[0];
+  const aproximado = blocos.find((b) => b.ativo.includes(ativo) || ativo.includes(b.ativo));
+  return aproximado ?? null;
 };
 
-/** A quantidade da ordem como o e-mail aprovado a escreveu; sem ela no e-mail, a da própria ordem. */
-export const quantidadeAprovada = (pedido, ordem) => blocoDaOrdem(pedido, ordem)?.quantidade ?? ordem.quantidade ?? null;
+/** A quantidade da ordem como o e-mail aprovado a escreveu; se ausente no e-mail, as cotas auditadas da ordem. */
+export const quantidadeAprovada = (pedido, ordem) => {
+  const doEmail = blocoDaOrdem(pedido, ordem)?.quantidade;
+  if (doEmail !== null && doEmail !== undefined && doEmail > 0) return doEmail;
+  return ordem.cotas ?? ordem.quantidade ?? null;
+};
 
 // "R$ 2.000,00" → 2000.
 const reaisDoEmail = (texto) => {

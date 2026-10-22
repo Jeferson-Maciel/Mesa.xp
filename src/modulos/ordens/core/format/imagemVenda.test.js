@@ -29,36 +29,43 @@ describe('imagemVenda — Comprovante de Cotação de Venda', () => {
     }
   };
 
-  it('monta o layout puro com todos os elementos da boleta do secundário', () => {
+  it('monta o layout fiel à boleta do Hub XP com caixa superior e as 7 linhas oficiais', () => {
     const layout = layoutDoComprovanteVenda(ordemExemplo, { conta: '11062084' });
-    expect(layout.largura).toBe(620);
-    expect(layout.altura).toBeGreaterThan(250);
+    expect(layout.largura).toBe(700);
+    expect(layout.altura).toBeGreaterThan(400);
 
     const textos = layout.itens.filter((i) => i.tipo === 'texto').map((i) => i.texto);
-    expect(textos).toContain('MERCADO SECUNDÁRIO XP');
-    expect(textos).toContain('Estoque XP');
-    expect(textos).toContain('Cotação de Venda · CYHF11');
+    expect(textos).toContain('Valor total da operação');
+    expect(textos).toContain('Visualizar mais detalhes da operação');
     expect(textos).toContain('Quantidade de cotas');
     expect(textos).toContain('985');
-    expect(textos).toContain('Preço unitário (PU)');
-    expect(textos.some((t) => t.includes('9,907923'))).toBe(true);
+    expect(textos).toContain('Preço unitário da cota');
+    expect(textos).toContain('Valor total da posição (R$)');
     expect(textos).toContain('Deságio da operação');
     expect(textos.some((t) => t.includes('1,75%'))).toBe(true);
-    expect(textos).toContain('VALOR LÍQUIDO A RECEBER');
+    expect(textos).toContain('Valor da posição com deságio');
+    expect(textos).toContain('Corretagem (R$)');
     expect(textos.some((t) => t.includes('9.588,52'))).toBe(true);
+
+    const icones = layout.itens.filter((i) => i.tipo === 'icone-info');
+    expect(icones.length).toBeGreaterThanOrEqual(2);
+
+    const chevrons = layout.itens.filter((i) => i.tipo === 'chevron');
+    expect(chevrons.length).toBe(1);
   });
 
-  it('adapta a etiqueta para Estoque clientes', () => {
-    const ordemClientes = {
+  it('calcula o valor da posição e deságio mesmo sem objeto conta pré-calculado', () => {
+    const ordemSemConta = {
       ...ordemExemplo,
       venda: {
         ...ordemExemplo.venda,
-        modalidade: 'clientes'
+        conta: null
       }
     };
-    const layout = layoutDoComprovanteVenda(ordemClientes);
+    const layout = layoutDoComprovanteVenda(ordemSemConta);
     const textos = layout.itens.filter((i) => i.tipo === 'texto').map((i) => i.texto);
-    expect(textos).toContain('Estoque clientes');
+    expect(textos).toContain('Valor total da operação');
+    expect(textos.some((t) => t.includes('9.588,52'))).toBe(true);
   });
 
   it('formata cotas fracionadas com 8 casas decimais', () => {
@@ -74,7 +81,7 @@ describe('imagemVenda — Comprovante de Cotação de Venda', () => {
     expect(textos).toContain('123,45678910');
   });
 
-  it('pinta o layout em um canvas mockado', () => {
+  it('pinta o layout em um canvas mockado com ícones vetoriais', () => {
     const layout = layoutDoComprovanteVenda(ordemExemplo);
     const mockCtx = {
       save: vi.fn(),
@@ -84,6 +91,7 @@ describe('imagemVenda — Comprovante de Cotação de Venda', () => {
       beginPath: vi.fn(),
       rect: vi.fn(),
       roundRect: vi.fn(),
+      arc: vi.fn(),
       fill: vi.fn(),
       stroke: vi.fn(),
       moveTo: vi.fn(),
@@ -103,6 +111,7 @@ describe('imagemVenda — Comprovante de Cotação de Venda', () => {
     expect(mockCtx.restore).toHaveBeenCalled();
     expect(mockCtx.scale).toHaveBeenCalledWith(2, 2);
     expect(mockCtx.fillText).toHaveBeenCalled();
+    expect(mockCtx.arc).toHaveBeenCalled();
   });
 
   it('retorna null se a ordem não tiver venda pronta', () => {

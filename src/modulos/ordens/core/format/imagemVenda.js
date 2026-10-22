@@ -1,61 +1,63 @@
 import { formatarCotas } from '../secundario/venda.js';
 import { formatarFinanceiro, formatarPercentual } from '../util/dinheiro.js';
-import { diaEHora, hora } from '../../../../comum/fila/regras.js';
 
 /**
  * Geração determinística do Comprovante de Cotação de Venda (Mercado Secundário).
  *
- * Ao invés de depender de automação frágil de navegador (abrir abas externas no Chrome,
- * esperar renderização do Hub da XP, depender de SnapDOM sobre Shadow DOM complexo que
- * colapsa em 1px de altura ou exige cliques manuais do operador), este módulo gera
- * a imagem oficial da cotação diretamente a partir dos dados auditados do pre-check.
+ * Replica visualmente, com precisão milimétrica, o painel oficial da boleta de venda do Hub XP:
+ * - Caixa superior cinza clara: "Valor total da operação ⓘ" à esquerda e valor em negrito à direita;
+ * - Seção expandida: "Visualizar mais detalhes da operação ˄";
+ * - Tabela com as 7 linhas oficiais:
+ *     1. Quantidade de cotas
+ *     2. Preço unitário da cota
+ *     3. Valor total da posição (R$)
+ *     4. Deságio da operação (R$ e %)
+ *     5. Valor da posição com deságio
+ *     6. Corretagem (R$) ⓘ
+ *     7. Valor total da operação
  *
- * Arquitetura (DDD e Clean Code):
- * - `layoutDoComprovanteVenda`: função pura (regras e posições geométricas, testável isoladamente);
- * - `desenharComprovanteVenda`: pintor em canvas 2D nativo com suporte a alta densidade (Retina);
- * - `gerarComprovanteVendaPng`: serializador para data URL de imagem PNG.
+ * Arquitetura (Clean Code & DDD):
+ * - `layoutDoComprovanteVenda`: função pura com cálculo geométrico;
+ * - `desenharComprovanteVenda`: pintor Canvas 2D nativo em alta resolução (Retina 2x);
+ * - `gerarComprovanteVendaPng`: serializador para data URL PNG.
  */
 
 const CORES = {
   fundo: '#ffffff',
-  fundoSecundario: '#f8fafc',
-  borda: '#e2e8f0',
-  bordaForte: '#cbd5e1',
-  texto: '#0f172a',
-  textoSuave: '#475569',
-  textoMudo: '#64748b',
-  ouro: '#ca8a04',
-  ouroFundo: '#fefce8',
-  ouroBorda: '#fef08a',
-  azulTag: '#1d4ed8',
-  azulTagFundo: '#eff6ff',
-  verdeDestaque: '#166534',
-  verdeFundo: '#f0fdf4',
-  verdeBorda: '#bbf7d0',
-  linhaDivisoria: '#f1f5f9'
+  fundoCaixa: '#f4f4f6',
+  textoDestaque: '#000000',
+  textoCorpo: '#141414',
+  textoRotulo: '#595959',
+  linhaDivisoria: '#f0f0f2',
+  icone: '#141414'
 };
 
-const FONTE_FAMILIA = "'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif";
-const LARGURA = 620;
-const MARGEM = 28;
-
-const NOME_DA_MODALIDADE = {
-  xp: 'Estoque XP',
-  clientes: 'Estoque clientes'
-};
+const FONTE_FAMILIA = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif";
+const LARGURA = 700;
+const MARGEM = 24;
 
 /**
  * @param {object} ordem  ordem com `ordem.venda` pronto
  * @param {{conta?: string|number, cliente?: object, hoje?: Date}} [opcoes]
  * @returns {{largura: number, altura: number, itens: Array<object>}}
  */
-export const layoutDoComprovanteVenda = (ordem, { conta, cliente, hoje = new Date() } = {}) => {
+export const layoutDoComprovanteVenda = (ordem, { conta: _conta, cliente: _cliente, hoje: _hoje = new Date() } = {}) => {
   const v = ordem?.venda;
   const c = v?.conta;
   const condicoes = v?.condicoes;
   const itens = [];
 
-  const texto = (x, y, t, tamanho, { peso = 400, cor = CORES.texto, alinhar = 'left' } = {}) =>
+  const cotas = v?.quantidade ?? ordem?.quantidade ?? 0;
+  const valorDaCota = v?.valorDaCota ?? (c?.posicao && cotas ? c.posicao / cotas : 0);
+  const posicao = c?.posicao ?? (cotas * valorDaCota);
+  const desagioPct = condicoes?.desagio !== null && condicoes?.desagio !== undefined ? condicoes.desagio : 0;
+  const desagioFin = c?.desagio ?? ((posicao * desagioPct) / 100);
+  const comDesagio = c?.comDesagio ?? (posicao - desagioFin);
+  const corretagemPct = condicoes?.corretagem ?? 0;
+  const corretagemFin = c?.corretagem ?? ((comDesagio * corretagemPct) / 100);
+  const total = c?.total ?? (comDesagio - corretagemFin);
+
+  const texto = (x, y, t, tamanho, { peso = 400, cor = CORES.textoCorpo, alinhar = 'left' } = {}) =>
     itens.push({ tipo: 'texto', x, y, texto: String(t ?? ''), tamanho, peso, cor, alinhar });
 
   const caixa = (x, y, w, h, cor, { raio = 0, borda = null, bordaLargura = 1 } = {}) =>
@@ -64,116 +66,74 @@ export const layoutDoComprovanteVenda = (ordem, { conta, cliente, hoje = new Dat
   const linha = (x1, y1, x2, y2, cor = CORES.linhaDivisoria, largura = 1) =>
     itens.push({ tipo: 'linha', x1, y1, x2, y2, cor, largura });
 
+  const iconeInfo = (x, y, raio = 7, cor = CORES.icone) =>
+    itens.push({ tipo: 'icone-info', x, y, raio, cor });
+
+  const chevron = (x, y, largura = 10, altura = 6, cor = CORES.textoDestaque) =>
+    itens.push({ tipo: 'chevron', x, y, largura, altura, cor });
+
   const larguraUtil = LARGURA - 2 * MARGEM;
-  let y = MARGEM;
+  let y = 18;
 
-  // Cabeçalho da XP / Mercado Secundário
-  texto(MARGEM, y + 16, 'MERCADO SECUNDÁRIO XP', 12, { peso: 700, cor: CORES.ouro });
-  const modalidadeTexto = NOME_DA_MODALIDADE[v?.modalidade] ?? 'Estoque XP';
-  
-  // Badge da modalidade à direita
-  const larguraBadge = modalidadeTexto.length * 8 + 20;
-  caixa(LARGURA - MARGEM - larguraBadge, y, larguraBadge, 24, CORES.azulTagFundo, { raio: 6, borda: CORES.borda });
-  texto(LARGURA - MARGEM - larguraBadge / 2, y + 16, modalidadeTexto, 12, { peso: 600, cor: CORES.azulTag, alinhar: 'center' });
+  // Caixa superior cinza clara ("Valor total da operação")
+  const alturaCaixaTopo = 64;
+  caixa(MARGEM, y, larguraUtil, alturaCaixaTopo, CORES.fundoCaixa, { raio: 6 });
 
-  y += 34;
-  // Título e Ativo
-  const nomeAtivo = ordem?.ativo || 'Fundo Cetipado';
-  texto(MARGEM, y + 22, `Cotação de Venda · ${nomeAtivo}`, 22, { peso: 700, cor: CORES.texto });
+  // Texto "Valor total da operação"
+  texto(MARGEM + 16, y + 40, 'Valor total da operação', 16, { peso: 400, cor: CORES.textoCorpo });
+  iconeInfo(MARGEM + 16 + 182, y + 35, 7, CORES.icone);
 
-  y += 32;
-  // Subtítulo de data, validade e conta
-  const lidaEm = v?.lidaEm ? hora(v.lidaEm) : hora(hoje);
-  const validaAte = v?.validaAte ? diaEHora(new Date(v.validaAte)) : diaEHora(hoje);
-  const contaFormatada = conta ? ` · Conta: ${conta}` : '';
-  texto(MARGEM, y + 14, `Cotação das ${lidaEm} · Válido até ${validaAte}${contaFormatada}`, 13, { cor: CORES.textoMudo });
+  // Valor total à direita da caixa cinza
+  texto(LARGURA - MARGEM - 16, y + 40, formatarFinanceiro(total), 19, { peso: 700, cor: CORES.textoDestaque, alinhar: 'right' });
 
-  y += 24;
-  linha(MARGEM, y, LARGURA - MARGEM, y, CORES.borda);
-  y += 16;
+  y += alturaCaixaTopo + 34;
 
-  // Grid de Detalhes da Operação
-  const detalhes = [];
+  // Título "Visualizar mais detalhes da operação" com chevron recolher/expandir à direita
+  texto(MARGEM, y + 15, 'Visualizar mais detalhes da operação', 16, { peso: 700, cor: CORES.textoDestaque });
+  chevron(LARGURA - MARGEM - 8, y + 9, 12, 6, CORES.textoDestaque);
 
-  const quantidadeFormatada = formatarCotas(v?.quantidade ?? ordem?.quantidade ?? 0);
-  detalhes.push({ rotulo: 'Quantidade de cotas', valor: quantidadeFormatada });
+  y += 26;
 
-  const puFormatado = v?.valorDaCota
-    ? `R$ ${Number(v.valorDaCota).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
-    : '—';
-  detalhes.push({ rotulo: 'Preço unitário (PU)', valor: puFormatado });
+  // Tabela com as 7 linhas
+  const desagioFormatado = `${formatarFinanceiro(desagioFin)} (${formatarPercentual(desagioPct)})`;
+  const corretagemFormatada = `${formatarFinanceiro(corretagemFin)} (${corretagemPct === 0 ? '0%' : formatarPercentual(corretagemPct)})`;
 
-  if (c?.posicao) {
-    detalhes.push({ rotulo: 'Valor bruto da posição', valor: formatarFinanceiro(c.posicao) });
-  }
+  const linhas = [
+    { rotulo: 'Quantidade de cotas', valor: formatarCotas(cotas), peso: 400 },
+    { rotulo: 'Preço unitário da cota', valor: formatarFinanceiro(valorDaCota), peso: 400 },
+    { rotulo: 'Valor total da posição (R$)', valor: formatarFinanceiro(posicao), peso: 400 },
+    { rotulo: 'Deságio da operação', valor: desagioFormatado, peso: 400 },
+    { rotulo: 'Valor da posição com deságio', valor: formatarFinanceiro(comDesagio), peso: 400 },
+    { rotulo: 'Corretagem (R$)', valor: corretagemFormatada, peso: 400, comInfo: true },
+    { rotulo: 'Valor total da operação', valor: formatarFinanceiro(total), peso: 600 }
+  ];
 
-  const desagioPct = condicoes?.desagio !== null && condicoes?.desagio !== undefined ? formatarPercentual(condicoes.desagio) : '—';
-  const desagioFin = c?.desagio ? ` (- ${formatarFinanceiro(c.desagio)})` : '';
-  detalhes.push({ rotulo: 'Deságio da operação', valor: `${desagioPct}${desagioFin}` });
+  const alturaLinha = 44;
+  for (let i = 0; i < linhas.length; i++) {
+    const item = linhas[i];
+    const yLinha = y + i * alturaLinha;
 
-  if (c?.corretagem) {
-    detalhes.push({ rotulo: 'Corretagem', valor: `- ${formatarFinanceiro(c.corretagem)}` });
-  } else {
-    detalhes.push({ rotulo: 'Corretagem', valor: 'Isenta (R$ 0,00)' });
-  }
-
-  // Desenhar as linhas de detalhes
-  for (let i = 0; i < detalhes.length; i++) {
-    const item = detalhes[i];
-    const alturaLinha = 28;
-    
-    // Fundo zebrado sutil
-    if (i % 2 === 1) {
-      caixa(MARGEM, y - 4, larguraUtil, alturaLinha, CORES.fundoSecundario, { raio: 4 });
+    texto(MARGEM, yLinha + 28, item.rotulo, 14, { cor: CORES.textoRotulo, peso: 400 });
+    if (item.comInfo) {
+      iconeInfo(MARGEM + 115, yLinha + 23, 6.5, CORES.textoRotulo);
     }
+    texto(LARGURA - MARGEM, yLinha + 28, item.valor, 14, { cor: CORES.textoCorpo, peso: item.peso, alinhar: 'right' });
 
-    texto(MARGEM + 12, y + 16, item.rotulo, 14, { cor: CORES.textoSuave, peso: 500 });
-    texto(LARGURA - MARGEM - 12, y + 16, item.valor, 14, { cor: CORES.texto, peso: 600, alinhar: 'right' });
-
-    y += alturaLinha;
+    if (i < linhas.length - 1) {
+      linha(MARGEM, yLinha + alturaLinha, LARGURA - MARGEM, yLinha + alturaLinha, CORES.linhaDivisoria);
+    }
   }
 
-  y += 12;
+  y += linhas.length * alturaLinha + 16;
 
-  // Caixa de Destaque Final: Total da Operação / Valor que o cliente recebe
-  const alturaDestaque = 68;
-  caixa(MARGEM, y, larguraUtil, alturaDestaque, CORES.verdeFundo, {
-    raio: 10,
-    borda: CORES.verdeBorda,
-    bordaLargura: 1.5
-  });
-
-  texto(MARGEM + 16, y + 26, 'VALOR LÍQUIDO A RECEBER', 12, { peso: 700, cor: CORES.verdeDestaque });
-  texto(MARGEM + 16, y + 48, 'Creditado na conta do cliente após liquidação', 12, { cor: CORES.textoSuave });
-
-  const totalCliente = c?.total ? formatarFinanceiro(c.total) : (v?.valorDaCota && v?.quantidade ? formatarFinanceiro(v.valorDaCota * v.quantidade) : '—');
-  texto(LARGURA - MARGEM - 16, y + 42, totalCliente, 24, { peso: 700, cor: CORES.verdeDestaque, alinhar: 'right' });
-
-  y += alturaDestaque + 20;
-
-  // Rodapé com aviso legal sutil
-  texto(
-    MARGEM,
-    y + 12,
-    'Condições garantidas pela XP no momento da cotação. Sujeito à confirmação e liquidação D+2.',
-    11,
-    { cor: CORES.textoMudo }
-  );
-
-  y += 12 + MARGEM;
-
-  // Caixa de contorno geral em volta de tudo (card completo)
-  // O primeiro item do array deve ser o fundo do card com a borda externa
+  // Fundo branco total
   itens.unshift({
     tipo: 'caixa',
     x: 0,
     y: 0,
     w: LARGURA,
     h: y,
-    cor: CORES.fundo,
-    raio: 12,
-    borda: CORES.borda,
-    bordaLargura: 1.5
+    cor: CORES.fundo
   });
 
   return { largura: LARGURA, altura: y, itens };
@@ -226,6 +186,37 @@ export const desenharComprovanteVenda = (canvas, layout, { escala = 2 } = {}) =>
       ctx.textAlign = item.alinhar;
       ctx.textBaseline = 'alphabetic';
       ctx.fillText(item.texto, item.x, item.y);
+    } else if (item.tipo === 'icone-info') {
+      const { x, y, raio, cor } = item;
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.arc(x, y, raio, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Ponto do "i"
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.arc(x, y - raio * 0.38, 1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Haste do "i"
+      ctx.beginPath();
+      ctx.lineWidth = 1.2;
+      ctx.moveTo(x, y - raio * 0.05);
+      ctx.lineTo(x, y + raio * 0.48);
+      ctx.stroke();
+    } else if (item.tipo === 'chevron') {
+      const { x, y, largura, altura, cor } = item;
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - largura / 2, y + altura / 2);
+      ctx.lineTo(x, y - altura / 2);
+      ctx.lineTo(x + largura / 2, y + altura / 2);
+      ctx.stroke();
     }
   }
 

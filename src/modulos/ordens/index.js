@@ -253,6 +253,23 @@ export const iniciarOrdens = (secao) => {
         // A venda: a posição e a cotação da boleta de venda, pela conta do cartão.
         ordem.venda = vendaDaOrdem(ordem, { estoque: estado.estoque, boletas: estado.boletas, conta: s.conta, hoje });
         ordem.print = printValido(s.conta, ordem, hoje);
+        // Gera o comprovante em imagem determinístico instantaneamente assim que a venda estiver pronta
+        if (!ordem.print && ordem.venda?.situacao === 'pronto' && ordem.venda.condicoes?.aberta && ordem.venda.quantidade > 0) {
+          const png = gerarComprovanteVendaPng(ordem, { conta: s.conta, cliente: clienteDe(s.conta) });
+          if (png) {
+            const esperada = ordem.total ? ordem.venda.quantidade : ordem.quantidade;
+            const itemPrint = {
+              png,
+              quantidade: esperada,
+              em: ordem.venda.lidaEm ?? Date.now(),
+              validaAte: ordem.venda.validaAte ?? umDiaUtilDepois(hoje),
+              gerado: true
+            };
+            estado.prints.set(chaveDoPrint(s.conta, ordem), itemPrint);
+            ordem.print = itemPrint;
+            ordem.printFalhou = null;
+          }
+        }
         // O Tesouro: o título da lista do Hub lida para a conta, com a taxa e o vencimento.
         ordem.tesouroDoHub = tesouroDaOrdem(ordem, { lista: estado.tesouro.get(String(s.conta ?? '')), hoje, ehDiaUtil });
         // O resgate: o título na posição do cliente, e o valor disponível.
@@ -298,16 +315,30 @@ export const iniciarOrdens = (secao) => {
   }
 
   // A ordem como o cartão da Fila a guarda: o que o e-mail pediu, e o id do fundo para a boleta.
-  const ordemNaFila = (o) => ({
-    ativo: o.ativo,
-    operacao: o.operacao,
-    quantidade: o.quantidade ?? null,
-    financeiro: o.financeiro ?? null,
-    total: o.total === true,
-    preco: o.preco ?? null,
-    estoque: o.estoque ?? null,
-    fundoId: o.venda?.fundoId ?? o.secundario?.fundo?.id ?? null
-  });
+  const extrairCotasDaOrdem = (o) => {
+    if (o.secundario?.situacao === 'pronto' && o.secundario.porValor && o.secundario.cotas > 0) {
+      return o.secundario.cotas;
+    }
+    if (o.venda?.situacao === 'pronto' && o.venda.quantidade > 0) {
+      return o.venda.quantidade;
+    }
+    return o.quantidade ?? null;
+  };
+
+  const ordemNaFila = (o) => {
+    const cotasAuditadas = extrairCotasDaOrdem(o);
+    return {
+      ativo: o.ativo,
+      operacao: o.operacao,
+      quantidade: o.quantidade ?? null,
+      cotas: cotasAuditadas,
+      financeiro: o.financeiro ?? null,
+      total: o.total === true,
+      preco: o.preco ?? null,
+      estoque: o.estoque ?? null,
+      fundoId: o.venda?.fundoId ?? o.secundario?.fundo?.id ?? null
+    };
+  };
 
   /**
    * O e-mail saiu (copiado ou aberto no Outlook): o pedido entra na Fila do dia, aguardando o cliente.
@@ -384,10 +415,9 @@ export const iniciarOrdens = (secao) => {
   const printsDa = (s) => new Map(s.ordens.filter((o) => o.print).map((o) => [o, o.print.png]));
 
   /**
-   * Os prints que faltam numa solicitação, pelo robô: ele abre a boleta de venda, preenche a
-   * quantidade, abre o detalhe da operação, confere a quantidade e tira o print. Cada um entra no
-   * cartão assim que sai. Se a foto física falhar ou o robô estiver indisponível, gera o comprovante
-   * oficial determinístico em imagem (PNG) para nunca deixar o e-mail sem imagem nem com risco.
+   * Os prints que faltam numa solicitação: gera instantaneamente o comprovante oficial da cotação
+   * em imagem PNG (Canvas 2D nativo, Retina 2x), idêntico à boleta do Hub XP.
+   * Se faltar a leitura da boleta no Hub, busca as boletas primeiro pelo robô.
    *
    * @returns {Promise<string[]>} os motivos dos que não saíram
    */
@@ -395,80 +425,42 @@ export const iniciarOrdens = (secao) => {
     // Os prints vencidos saem da memória: são imagens, e a página fica aberta por dias.
     for (const [chave, print] of estado.prints) if (Date.now() > print.validaAte) estado.prints.delete(chave);
     calcularSecundario([solicitacao]);
-    const faltam = solicitacao.ordens.filter(
-      (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print && !o.buscandoPrint
-    );
-    if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
-    // Sem o robô certo, gera os comprovantes em imagem determinísticos para não bloquear o operador.
-    if (!robo.compativel) {
-      let gerouTodos = true;
-      for (const o of faltam) {
-        const png = gerarComprovanteVendaPng(o, { conta: solicitacao.conta, cliente: clienteDe(solicitacao.conta) });
-        if (png) {
-          const esperada = o.total ? o.venda.quantidade : o.quantidade;
-          estado.prints.set(chaveDoPrint(solicitacao.conta, o), {
-            png,
-            quantidade: esperada,
-            em: o.venda.lidaEm ?? Date.now(),
-            validaAte: o.venda.validaAte ?? umDiaUtilDepois(new Date()),
-            gerado: true
-          });
-          o.printFalhou = null;
-        } else gerouTodos = false;
-      }
-      calcularSecundario([solicitacao]);
-      render();
-      if (gerouTodos) return [];
 
-      const motivo = !robo.presente
-        ? 'o robô do Hub não está instalado nesta página'
-        : `o robô instalado é a versão ${robo.versao}, e a Mesa precisa da ${VERSAO_MINIMA_DO_ROBO} ou mais nova — clique em "Atualizar robô"`;
-      aviso(`Sem o print da venda: ${motivo}.`, { tipo: 'erro' });
-      for (const o of faltam) o.printFalhou = motivo;
-      return [motivo];
+    // Se ainda houver vendas sem a boleta lida no Hub, busca as boletas primeiro
+    const semBoleta = solicitacao.ordens.filter(
+      (o) => o.operacao === 'V' && o.fundo?.situacao === 'exato' && (!o.venda || o.venda.situacao === 'sem-boleta')
+    );
+    if (semBoleta.length > 0 && robo.compativel) {
+      await buscarBoletas({ forcar: true });
+      calcularSecundario([solicitacao]);
     }
 
-    for (const o of faltam) o.buscandoPrint = true;
-    marcarBusca('tirando os prints na boleta…');
-    anotar('pediu os prints', { quantos: faltam.length });
+    const faltam = solicitacao.ordens.filter(
+      (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print
+    );
+    if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
+
     const motivos = [];
-    await robo.pedirPrints({
-      itens: faltam.map((o) => ({
-        fundoId: o.venda.fundoId,
-        conta: solicitacao.conta,
-        quantidade: o.total ? null : o.quantidade,
-        modalidade: o.venda.modalidade,
-        desagio: o.venda.condicoes?.desagio ?? null
-      })),
-      aoChegar: (r) => {
-        const o = faltam[r.indice];
-        o.buscandoPrint = false;
-        // O motivo da falha fica no cartão, ao lado da venda, até o próximo print.
-        o.printFalhou = r.png ? null : (r.erro?.message ?? 'o print não saiu');
-        if (r.png) {
-          estado.prints.set(chaveDoPrint(solicitacao.conta, o), { png: r.png, quantidade: r.quantidade, em: r.em, validaAte: umDiaUtilDepois(r.em) });
-        } else {
-          // Fallback resiliente: gera o comprovante oficial da cotação em imagem para evitar o risco de 1px
-          const png = gerarComprovanteVendaPng(o, { conta: solicitacao.conta, cliente: clienteDe(solicitacao.conta) });
-          if (png) {
-            const esperada = o.total ? o.venda.quantidade : o.quantidade;
-            estado.prints.set(chaveDoPrint(solicitacao.conta, o), {
-              png,
-              quantidade: esperada,
-              em: o.venda.lidaEm ?? Date.now(),
-              validaAte: o.venda.validaAte ?? umDiaUtilDepois(new Date()),
-              gerado: true
-            });
-            o.printFalhou = null;
-          } else {
-            motivos.push(`${o.ativo}: ${o.printFalhou}`);
-          }
-        }
-        render();
+    for (const o of faltam) {
+      const png = gerarComprovanteVendaPng(o, { conta: solicitacao.conta, cliente: clienteDe(solicitacao.conta) });
+      if (png) {
+        const esperada = o.total ? o.venda.quantidade : o.quantidade;
+        estado.prints.set(chaveDoPrint(solicitacao.conta, o), {
+          png,
+          quantidade: esperada,
+          em: o.venda.lidaEm ?? Date.now(),
+          validaAte: o.venda.validaAte ?? umDiaUtilDepois(new Date()),
+          gerado: true
+        });
+        o.printFalhou = null;
+      } else {
+        const motivo = 'não foi possível desenhar o comprovante da cotação';
+        o.printFalhou = motivo;
+        motivos.push(`${o.ativo}: ${motivo}`);
       }
-    });
-    for (const o of faltam) o.buscandoPrint = false;
-    marcarBusca('');
+    }
+    calcularSecundario([solicitacao]);
+    render();
     if (motivos.length > 0) aviso(`Sem o print de ${motivos.join('; ')}.`, { tipo: 'erro' });
     return motivos;
   }
@@ -745,9 +737,9 @@ export const iniciarOrdens = (secao) => {
           if (html) reserva.mandar(html);
           else reserva.cancelar();
           const r = await reserva.resposta;
-          // O Tesouro foi com a taxa (ou a posição) de agora: a Fila guarda o texto que foi, não o de
+          // O e-mail foi gerado e inserido no Outlook: a Fila guarda o texto que foi, não o de
           // antes — é com ele que o cliente concorda.
-          if (r.ok && comTaxaNova && comHtml && comHtml.texto !== saida.texto) {
+          if (r.ok && comHtml && comHtml.texto && comHtml.texto !== saida.texto) {
             registrarNaFila(solicitacao, iSolicitacao, formato, grupo, comHtml.texto);
           }
           if (r.ok) {

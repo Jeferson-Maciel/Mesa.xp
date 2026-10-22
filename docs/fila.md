@@ -154,19 +154,28 @@ ou ordem lote, para executarmos; que apareçam os e-mails de Tesouro lá; que o 
 até o certo; e que, igual aos fundos, apareçam as quantidades também".
 
 - **As cotas para executar** (pedido do operador em 21/10/2026: "ter também a quantidade de cotas que
-  foi auditada, para executar com base nas cotas"): cada ordem mostra, em destaque, a quantidade que
+  foi auditada, para executar com base nas cotas", e revisão de 22/10): cada ordem mostra, em destaque, a quantidade que
   **o e-mail aprovado levou** — lida do texto do e-mail guardado no cartão (`blocosDoEmail`): o
-  `Quantidade:` de cada `Ativo:`, ou a coluna `Qtd. Total` do E-mail em tabela. Cada ordem casa com o
-  bloco **da mesma posição**, conferido o ativo (revisão de 21/10: com o mesmo ativo duas vezes no
-  pedido, o último bloco valia para os dois, e a ordem em R$ virava cotas); fora de posição, só o bloco
-  único de um ativo que também é único no pedido. Sem casar com certeza, nada vem do e-mail. Na compra de fundo em
-  R$, são as cotas da conversão, com o ROA escolhido no Copiar; na venda do total, a posição lida na
-  boleta. Embaixo, menores, o valor pedido (ou "o total da posição") e o estoque (Estoque XP ou
-  clientes). O e-mail que saiu com `Valor:` (sem os fundos carregados) não tem cotas: o valor fica em
-  âmbar, com "sem as cotas no e-mail", e nada é convertido na Fila. Vale também para os cartões que já
-  estavam lá, porque o texto do e-mail sempre foi guardado.
-- **O Tesouro aberto no Outlook com a taxa de agora** (o robô troca o corpo quando a lista tem mais de
-  2 minutos): a Fila guarda o texto que foi, não o de antes (revisão de 21/10).
+  `Quantidade:` de cada `Ativo:` (com suporte a números inteiros, ponto de milhar pt-BR como `5.746` e decimais
+  com vírgula como `123,45678910`), ou a coluna `Qtd. Total` do E-mail em tabela. Se o texto do e-mail não tiver
+  o bloco legível ou foi gerado antes de uma cotação, a Fila recupera instantaneamente **as cotas auditadas
+  congeladas salvas no objeto da ordem** (`ordem.cotas`): na compra de fundos em R$, as cotas da conversão do
+  secundário com o ROA escolhido no envio; na venda do total, a posição lida na boleta. Embaixo, menores, o valor pedido (ou "o total da posição") e o estoque (Estoque XP ou
+  clientes). O e-mail que saiu com `Valor:` (sem os fundos carregados e sem cotas) não tem cotas: o valor fica em
+  âmbar, com "sem as cotas no e-mail", e nada é convertido na Fila.
+- **Desambiguação automática de respostas Compra vs. Venda no Outlook** (revisão de 22/10): quando dois
+  e-mails são disparados para a mesma conta (ex: um de Compra e um de Venda), o vigia do Outlook não depende
+  apenas da conta e do assunto genérico ("Confirmação de ordem"). Ele analisa semânticamente a prévia ampliada da
+  mensagem (até 2.000 caracteres lidos pelo robô 1.13.4):
+  - identifica termos explícitos de operação (`Operação: Compra`, `Compra`, `Aplicação` vs. `Operação: Venda`, `Venda`, `Resgate`, `Condições`);
+  - identifica tickers e nomes dos ativos de cada pedido citados no histórico do e-mail (`KJNT11`, `XPHT11`, etc.);
+  - desempata e casa automaticamente (`tipo: 'casou'`) com o pedido exato que o cliente respondeu, passando
+    o cartão correspondente para "Aprovação e execução" e mantendo o outro aguardando sua respectiva resposta sem
+    gerar ambiguidade indevida.
+- **O e-mail aberto no Outlook sincronizado com a Fila** (revisão de 22/10): quando o robô injeta o corpo
+  assíncrono no Outlook com as cotações, comprovantes de venda ou taxas atualizadas de agora (`comHtml`), a Fila
+  é atualizada automaticamente com esse texto e ordens finais, garantindo perfeita paridade entre o que foi enviado
+  ao cliente e o que a Mesa vê na Fila.
 - **O Tesouro** (aplicação e resgate) entra na Fila como os outros e-mails, e cada título mostra o que o
   e-mail aprovado levou (`titulosDoEmail`, pela ordem dos blocos, a mesma das ordens): o **título como o
   Hub o escreve** (o "LFT" digitado vira "Tesouro Selic 2031"), em destaque **o valor** ("Valor a ser

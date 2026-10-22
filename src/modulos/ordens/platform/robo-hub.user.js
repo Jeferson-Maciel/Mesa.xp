@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.13.3
+// @version      1.13.4
 // @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js
 // @downloadURL  https://mesa-xp.vercel.app/robo-hub.user.js
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
@@ -121,7 +121,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.13.3';
+  const VERSAO = '1.13.4';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -839,12 +839,15 @@
         return { erro: 'estoque-diferente' };
       }
 
-      // A região: da caixa do total ao último valor do detalhe, recortada no lugar exato.
+      // A região: da caixa do total ao último valor do detalhe, recortada no lugar exato com respiro lateral.
       const rotulosDoTotal = todos.filter((el) => textoProprio(el) === 'Valor total da operação' && visivel(el));
       const primeiro = rotulosDoTotal[0];
       const ultimo = valorDoRotulo(todos, rotulosDoTotal[rotulosDoTotal.length - 1], /^R\$/);
-      const regiao = primeiro && ultimo ? ancestralComum(primeiro, ultimo) : null;
+      let regiao = primeiro && ultimo ? ancestralComum(primeiro, ultimo) : null;
       if (!regiao) return { erro: 'sem-regiao' };
+      if (regiao.parentElement && regiao.parentElement.clientWidth >= regiao.clientWidth) {
+        regiao = regiao.parentElement;
+      }
 
       const biblioteca = carregarSnapdom();
       if (!biblioteca) return { erro: 'sem-snapdom' };
@@ -869,10 +872,14 @@
         registrar('a foto da boleta colapsou sem altura suficiente', { altura: alturaRecorte });
         return { erro: 'print-invalido' };
       }
+      const respiroX = Math.round(18 * escala);
       const recorte = document.createElement('canvas');
-      recorte.width = tela.width;
+      recorte.width = Math.round(tela.width + respiroX * 2);
       recorte.height = alturaRecorte;
-      recorte.getContext('2d').drawImage(tela, 0, topo, tela.width, recorte.height, 0, 0, tela.width, recorte.height);
+      const ctx = recorte.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, recorte.width, recorte.height);
+      ctx.drawImage(tela, 0, topo, tela.width, recorte.height, respiroX, 0, tela.width, recorte.height);
       const png = recorte.toDataURL('image/png');
 
       // O campo volta a ficar vazio: a boleta não fica preenchida na aba do robô.
@@ -1487,7 +1494,7 @@
       const previa = (iAssunto >= 0 ? linhas.slice(iAssunto + 1) : linhas)
         .filter((l) => !normalizarHora(l))
         .join(' ')
-        .slice(0, 280);
+        .slice(0, 2000);
       const chave = item.getAttribute('data-convid') || item.id || `${de}|${linhaAssunto}|${hora}`;
       return { id: 'r' + resumo(chave), de, email, assunto: linhaAssunto, previa, hora, conta, prefixo: PREFIXO_DE_RESPOSTA.test(linhaAssunto) };
     };

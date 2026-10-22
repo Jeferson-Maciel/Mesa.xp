@@ -148,6 +148,16 @@ describe("um e-mail por grupo", () => {
     expect(venda.endsWith("atte,")).toBe(true);
   });
 
+  it("o e-mail de venda em HTML leva a imagem do comprovante na tag img abaixo de Condições:", () => {
+    const s = misto();
+    const ordemVenda = s.ordens[2];
+    const prints = new Map([[ordemVenda, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA']]);
+    const saida = gerar(s, "email", new Set(), { grupo: "fundos-venda", prints });
+    expect(saida.html).toContain('Condições:<br><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA"');
+    const htmlTela = renderSaidas(s, ["email"], new Set(), { prints });
+    expect(htmlTela).toContain('<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA"');
+  });
+
   it("o lote é só de bolsa: os fundos pelo nome ficam de fora", () => {
     const texto = gerar(misto(), "lote", new Set()).texto;
     expect(texto).toContain("KLBN11");

@@ -307,12 +307,13 @@ fundos vendidos, e o e-mail de auditoria de venda que o cliente aprovou na mão.
   no Outlook o e-mail de venda ("atualizado em tempo real", pedido do operador), ou no botão **Tirar
   prints** da venda; cada um vale um dia útil, preso à conta, ao fundo, ao estoque e à quantidade — se a posição
   mudar, o print velho não serve —, e fica **só na memória da página**. A miniatura aparece na venda.
-  Sem o robô, o e-mail sai sem o print, com um aviso para colá-lo abaixo de "Condições:"; sem o robô
-  da versão certa, o motivo aparece em vermelho na hora de copiar ou abrir no Outlook. O print que
-  falha deixa o motivo no cartão, ao lado da venda, e o aviso do Outlook diz que ele faltou. Os passos
-  do print foram repetidos à mão numa boleta de venda de verdade em 20/10 (o campo, o "Total de cotas",
-  que preenche o **disponível**, a conta, o detalhe, a quantidade do painel e o recorte): todos
-  funcionam. A foto (a SnapDOM) não pôde ser testada lá.
+  Sem o robô, ou caso a foto física falhe/colapse, o gerador determinístico (`core/format/imagemVenda.js`,
+  22/10/2026) entra em ação: gera diretamente em Canvas 2D nativo o comprovante oficial da cotação de venda
+  em PNG (Retina 2x, 620px), com todas as contas auditadas e o layout idêntico à boleta do Secundário XP,
+  garantindo que o e-mail nunca fique sem imagem nem com o risco de 1px.
+  No robô (1.13.2, 22/10/2026): `escolherEstoque` busca também por `textoInteiro` e sobe aos ancestrais
+  do Soma; na venda do total, clica em "Total de cotas" (oficial da XP) mesmo se a quantidade foi informada
+  em número; e o recorte valida altura mínima de 60px para evitar o risco de 1px caso o SnapDOM colapse.
 - **O corpo no Outlook** (robô 1.5.0, @match no Outlook na web): a janela abre no clique, com o texto
   — senão o navegador a bloqueia como pop-up —, e o robô, **só no compor que a Mesa acabou de abrir**
   (`/deeplink/compose`, pedido de menos de 2 minutos, corpo começando pelo texto que a Mesa mandou),

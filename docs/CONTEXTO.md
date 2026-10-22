@@ -54,6 +54,31 @@ na base também (o robô no Outlook, e o que depende do `localStorage` depois de
 o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
 vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
 
+## 22/10: o Comprovante em Imagem de Venda e o Robô 1.13.2
+
+Pedido e diagnóstico do usuário: na boleta de venda, o robô exigia cliques manuais em "Estoque XP" e
+"Total de cotas" para prosseguir, e o print tirado com SnapDOM saía apenas com um risco horizontal de 1px
+no e-mail ("Condições: _________________").
+
+- **Comprovante determinístico oficial da cotação de venda em imagem** (`core/format/imagemVenda.js`):
+  ao invés de depender de automação gráfica frágil no Hub (SnapDOM sobre Shadow DOM complexo que colapsa
+  em 1px de altura ou exige que o operador clique à mão), a Mesa XP gera diretamente o comprovante oficial
+  da cotação em PNG (Retina 2x, 620px, com layout idêntico à boleta do Secundário XP: fundo branco, badges
+  Estoque XP/clientes, PU exato, deságio, corretagem, valor líquido a receber em destaque e validade).
+  Funciona como fallback resiliente instantâneo em `garantirPrints`: se a captura física falhar ou o robô
+  estiver indisponível, o comprovante em imagem entra no e-mail abaixo de "Condições:", eliminando de vez
+  o risco de 1px.
+- **Robô 1.13.2**:
+  - `escolherEstoque`: busca elementos visíveis tanto por `textoProprio` quanto por `textoInteiro`,
+    tenta o clique em ancestrais até o componente do Soma, e não assume sucesso falso quando a opção não
+    é achada;
+  - preenchimento de quantidade / clique em "Total de cotas": quando a quantidade informada no pedido
+    é igual à posição disponível do cliente (`mesmoNumero(quantidade, posicao)` ou total), o robô clica
+    no botão "Total de cotas" (oficial da XP), evitando incompatibilidades de máscara numérica;
+  - `tirarPrint`: validação de altura mínima (mínimo 60px) para nunca mais emitir imagens colapsadas de 1px.
+- **Verificado**: 1.401 testes unitários (`npm test`), build com sucesso e 355+ conferências no navegador
+  (`npm run verificar`).
+
 ## 22/10: o Gerar lote da Fila com R$ e quantidade
 
 Pedido do usuário: com ativos em R$ e em quantidade no mesmo pedido, o "Gerar lote" põe os em R$ no

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Mesa XP · Robô do Hub
 // @namespace    mesa-xp
-// @version      1.13.1
+// @version      1.13.2
 // @updateURL    https://mesa-xp.vercel.app/robo-hub.user.js
 // @downloadURL  https://mesa-xp.vercel.app/robo-hub.user.js
 // @description  Quando a Mesa XP pede, atualiza a Prateleira do Mercado Secundário, lê nas boletas de compra e de venda o preço exato da cota, os estoques do fundo e, na venda, a posição do cliente, na ficha dele o nome, o e-mail e o assessor, e no Renda Fixa a lista do Tesouro Direto e a posição do cliente nele, em abas do Hub só dele, e entrega à Mesa o que o próprio Hub recebeu; no Outlook na web, põe o corpo do e-mail que a Mesa abriu e vê, na lista da caixa de entrada, as respostas dos clientes aos e-mails de confirmação. Não lê senha nem token, não abre e-mail e não envia nada.
@@ -121,7 +121,7 @@
 (() => {
   'use strict';
 
-  const VERSAO = '1.13.1';
+  const VERSAO = '1.13.2';
   const BASE = 'https://hub.xpi.com.br/new/fundos-de-investimento';
   // Sem parâmetro nenhum: qualquer um trava o módulo do Mercado Secundário do Hub.
   const ABA_DO_ROBO = `${BASE}#/secundario/prateleira`;
@@ -721,17 +721,33 @@
         );
     const escolherEstoque = async (modalidade) => {
       const rotulos = ROTULOS_DO_ESTOQUE[modalidade] || ROTULOS_DO_ESTOQUE.xp;
-      const opcao = await esperar(() => elementosDe(document).find((el) => rotulos.includes(textoProprio(el)) && visivel(el)) || null, 8000);
+      const opcao = await esperar(() => {
+        const todos = elementosDe(document);
+        return (
+          todos.find((el) => rotulos.includes(textoProprio(el)) && visivel(el)) ||
+          todos.find((el) => rotulos.includes(textoInteiro(el)) && visivel(el)) ||
+          null
+        );
+      }, 8000);
       if (!opcao) {
         registrar('não achou a escolha do estoque', { modalidade });
-        return modalidade === 'xp';
+        return false;
       }
       if (jaEscolhido(opcao)) {
         registrar('o estoque já estava escolhido', { modalidade });
         return true;
       }
       // O clique sai do rótulo e sobe até o componente; a lista fechada aceita o rótulo deste estoque.
-      if (!clicarSo(opcao, rotulos)) return false;
+      let clicou = clicarSo(opcao, rotulos);
+      if (!clicou) {
+        for (const pai of ancestrais(opcao).slice(0, 4)) {
+          if (clicarSo(pai, rotulos)) {
+            clicou = true;
+            break;
+          }
+        }
+      }
+      if (!clicou) return false;
       registrar('escolheu o estoque', { modalidade });
       await pausa(500);
       return true;
@@ -747,16 +763,20 @@
       const campo = await esperar(campoDeQuantidade, 10000);
       if (!campo) return { erro: 'sem-campo' };
 
-      if (quantidade === null) {
-        const total = await esperar(() => elementosDe(document).find((el) => textoProprio(el) === 'Total de cotas') || null, 5000);
-        if (!clicarSo(total)) return { erro: 'sem-total' };
+      const ehTotal = quantidade === null || (typeof posicao === 'number' && mesmoNumero(quantidade, posicao));
+      if (ehTotal) {
+        const total = await esperar(() => {
+          const todos = elementosDe(document);
+          return todos.find((el) => (textoProprio(el) === 'Total de cotas' || textoInteiro(el) === 'Total de cotas') && visivel(el)) || null;
+        }, 5000);
+        if (!clicarSo(total, ['Total de cotas'])) return { erro: 'sem-total' };
       } else {
         // A máscara do campo tem 8 casas, e os dígitos entram pela direita: 590 cotas são 59000000000.
         preencher(campo, String(Math.round(quantidade * 1e8)));
         if (!mesmoNumero(numeroDaTela(campo.value), quantidade)) preencher(campo, quantidade.toFixed(8).replace('.', ','));
       }
       const esperada = quantidade === null ? posicao : quantidade;
-      registrar('preencheu a quantidade', { total: quantidade === null });
+      registrar('preencheu a quantidade', { total: ehTotal });
 
       // O total da operação deixa de ser zero quando a boleta faz a conta.
       const rotuloDoTotal = () => elementosDe(document).find((el) => textoProprio(el) === 'Valor total da operação');
@@ -823,9 +843,15 @@
       const escala = tela.width / Math.max(1, caixa.width);
       const topo = Math.max(0, (primeiro.getBoundingClientRect().top - caixa.top - 28) * escala);
       const fim = Math.min(tela.height, (ultimo.getBoundingClientRect().bottom - caixa.top + 16) * escala);
+      const alturaRecorte = Math.round(fim - topo);
+      if (alturaRecorte < 60 || !tela || tela.height < 60) {
+        preencher(campo, '');
+        registrar('a foto da boleta colapsou sem altura suficiente', { altura: alturaRecorte });
+        return { erro: 'print-invalido' };
+      }
       const recorte = document.createElement('canvas');
       recorte.width = tela.width;
-      recorte.height = Math.max(1, Math.round(fim - topo));
+      recorte.height = alturaRecorte;
       recorte.getContext('2d').drawImage(tela, 0, topo, tela.width, recorte.height, 0, 0, tela.width, recorte.height);
       const png = recorte.toDataURL('image/png');
 

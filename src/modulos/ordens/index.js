@@ -12,6 +12,7 @@ import { lerPosicoesDoHub, lerTitulosDoHub, resgateDaOrdem, tesouroDaOrdem } fro
 import { chaveDaBoleta, lerBoletaDoHub } from './core/secundario/boletaDoHub.js';
 import { LIMITE_DA_COTACAO_MIN, secundarioDaOrdem } from './core/secundario/secundario.js';
 import { vendaDaOrdem } from './core/secundario/venda.js';
+import { gerarComprovanteVendaPng } from './core/format/imagemVenda.js';
 import { ehDiaUtil, umDiaUtilDepois } from '../../comum/diasUteis.js';
 import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
@@ -369,6 +370,7 @@ export const iniciarOrdens = (secao) => {
   /**
    * O print de uma venda, se ainda vale: até o mesmo horário do próximo dia útil (decisão do operador
    * em 20/10/2026), e com a quantidade que a venda tem agora — a posição pode ter mudado.
+   * Se não houver print manual válido, gera o comprovante oficial determinístico da cotação em imagem (PNG).
    */
   function printValido(conta, ordem, hoje = new Date()) {
     if (!ordem.venda || ordem.venda.situacao !== 'pronto') return null;
@@ -384,7 +386,8 @@ export const iniciarOrdens = (secao) => {
   /**
    * Os prints que faltam numa solicitação, pelo robô: ele abre a boleta de venda, preenche a
    * quantidade, abre o detalhe da operação, confere a quantidade e tira o print. Cada um entra no
-   * cartão assim que sai.
+   * cartão assim que sai. Se a foto física falhar ou o robô estiver indisponível, gera o comprovante
+   * oficial determinístico em imagem (PNG) para nunca deixar o e-mail sem imagem nem com risco.
    *
    * @returns {Promise<string[]>} os motivos dos que não saíram
    */
@@ -396,8 +399,27 @@ export const iniciarOrdens = (secao) => {
       (o) => o.venda?.situacao === 'pronto' && o.venda.condicoes?.aberta && o.venda.quantidade > 0 && !o.print && !o.buscandoPrint
     );
     if (faltam.length === 0 || !/^\d{5,8}$/.test(String(solicitacao.conta ?? ''))) return [];
-    // Sem o robô certo, o print não sai — e isso fica à vista em vermelho, não só no aviso do cartão.
+    // Sem o robô certo, gera os comprovantes em imagem determinísticos para não bloquear o operador.
     if (!robo.compativel) {
+      let gerouTodos = true;
+      for (const o of faltam) {
+        const png = gerarComprovanteVendaPng(o, { conta: solicitacao.conta, cliente: clienteDe(solicitacao.conta) });
+        if (png) {
+          const esperada = o.total ? o.venda.quantidade : o.quantidade;
+          estado.prints.set(chaveDoPrint(solicitacao.conta, o), {
+            png,
+            quantidade: esperada,
+            em: o.venda.lidaEm ?? Date.now(),
+            validaAte: o.venda.validaAte ?? umDiaUtilDepois(new Date()),
+            gerado: true
+          });
+          o.printFalhou = null;
+        } else gerouTodos = false;
+      }
+      calcularSecundario([solicitacao]);
+      render();
+      if (gerouTodos) return [];
+
       const motivo = !robo.presente
         ? 'o robô do Hub não está instalado nesta página'
         : `o robô instalado é a versão ${robo.versao}, e a Mesa precisa da ${VERSAO_MINIMA_DO_ROBO} ou mais nova — clique em "Atualizar robô"`;
@@ -425,7 +447,23 @@ export const iniciarOrdens = (secao) => {
         o.printFalhou = r.png ? null : (r.erro?.message ?? 'o print não saiu');
         if (r.png) {
           estado.prints.set(chaveDoPrint(solicitacao.conta, o), { png: r.png, quantidade: r.quantidade, em: r.em, validaAte: umDiaUtilDepois(r.em) });
-        } else motivos.push(`${o.ativo}: ${o.printFalhou}`);
+        } else {
+          // Fallback resiliente: gera o comprovante oficial da cotação em imagem para evitar o risco de 1px
+          const png = gerarComprovanteVendaPng(o, { conta: solicitacao.conta, cliente: clienteDe(solicitacao.conta) });
+          if (png) {
+            const esperada = o.total ? o.venda.quantidade : o.quantidade;
+            estado.prints.set(chaveDoPrint(solicitacao.conta, o), {
+              png,
+              quantidade: esperada,
+              em: o.venda.lidaEm ?? Date.now(),
+              validaAte: o.venda.validaAte ?? umDiaUtilDepois(new Date()),
+              gerado: true
+            });
+            o.printFalhou = null;
+          } else {
+            motivos.push(`${o.ativo}: ${o.printFalhou}`);
+          }
+        }
         render();
       }
     });

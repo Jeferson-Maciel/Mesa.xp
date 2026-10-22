@@ -21,6 +21,7 @@ import { ABAS, ligarAbas } from './shell/abas.js';
 import { ligarBusca } from './shell/busca.js';
 import { ligarRelogio } from './shell/relogio.js';
 import { esc } from './ui/html.js';
+import { ligarManual } from './ui/manual.js';
 import { ligarBotaoDeTema } from './ui/tema.js';
 import { ligarBotaoDeSom } from './ui/avisos.js';
 
@@ -43,6 +44,7 @@ ligarBotaoDeTema(document.getElementById('btn-tema'));
 ligarBotaoDeSom(document.getElementById('btn-som'));
 ligarRelogio();
 ligarBusca();
+const manual = ligarManual(document.getElementById('btn-manual'));
 
 // O Ordens inicia com a página, como sempre: é a aba padrão e não depende de rede.
 iniciarOrdens(document.getElementById('modulo-ordens'));
@@ -81,6 +83,32 @@ registrarFonteDeBusca({
       titulo: `Ir para ${NOMES_DAS_ABAS[aba] ?? aba}`,
       detalhe: `Alt + ${ABAS.indexOf(aba) + 1}`,
       abrir: () => (location.hash = aba)
+    }))
+});
+const ITENS_DO_MANUAL = [
+  { titulo: 'Manual da Mesa XP (Guia Completo e Onboarding)', detalhe: 'Como usar a mesa, fluxos, atalhos, regras e segurança', idSecao: 'cap-visao-geral' },
+  { titulo: 'Instalação da Extensão e Robô Tampermonkey', detalhe: 'Como instalar, atualizar, permissões e comunicação do robô', idSecao: 'cap-instalacao-robo' },
+  { titulo: 'As 3 Abas Abertas (Trio Operacional do Navegador)', detalhe: 'Mesa XP, Hub XP e Outlook na Web integrados', idSecao: 'cap-trio-de-abas' },
+  { titulo: 'Ordens e Boletas (Ações, Opções, Termo, Bovespa)', detalhe: 'Padrões de solicitação, boletas, prints e envio por e-mail', idSecao: 'cap-ordens' },
+  { titulo: 'Fila do Dia e Vigia do Outlook', detalhe: 'Ciclo de vida dos pedidos, automação de respostas e prazos', idSecao: 'cap-fila' },
+  { titulo: 'Renda Fixa e Puxar do Hub', detalhe: 'Emissão bancária, filtros de segmento e cálculo automático de boletas', idSecao: 'cap-rendafixa' },
+  { titulo: 'Prateleira de Fundos no Secundário', detalhe: 'Estoque, deságio, foto diária e ordens de fundos', idSecao: 'cap-fundos' },
+  { titulo: 'Dúvidas Frequentes e Resolução de Problemas', detalhe: 'Robô desconectado, bloqueios de boleta e mensagens de erro', idSecao: 'cap-troubleshooting' }
+];
+registrarFonteDeBusca({
+  id: 'manual',
+  nome: 'Manual e Ajuda',
+  buscar: (termo) =>
+    acharEm(ITENS_DO_MANUAL, termo, (item) => ({ titulo: item.titulo, resto: item.detalhe })).map((item) => ({
+      titulo: item.titulo,
+      detalhe: item.detalhe,
+      abrir: () => {
+        manual.abrir();
+        if (item.idSecao) {
+          const el = document.getElementById(item.idSecao);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     }))
 });
 const NOMES_DOS_TOPICOS = Object.fromEntries(TOPICOS.map((t) => [t.slug, t.nome]));

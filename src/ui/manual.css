@@ -1,0 +1,499 @@
+/* ── Botão do Manual no Cabeçalho ─────────────────────────────────────────────── */
+
+.manual-botao svg {
+  width: 15px;
+  height: 15px;
+  color: var(--acento);
+  transition: transform var(--t-rapido) var(--curva), color var(--t-rapido) var(--curva);
+}
+
+.manual-botao:hover svg {
+  transform: scale(1.1);
+  color: var(--texto-forte);
+}
+
+/* ── Modal do Manual ─────────────────────────────────────────────────────────────── */
+
+.modal-manual {
+  width: min(1080px, 94vw);
+  max-height: 90vh;
+  margin: auto;
+  padding: 0;
+  background: var(--fundo-card);
+  border: 1px solid var(--borda-suave);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-elevada), 0 0 0 1px var(--borda);
+  color: var(--texto);
+  font-family: inherit;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-manual::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  animation: fade-in 200ms ease;
+}
+
+.manual-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.6rem;
+  background: var(--fundo-alt);
+  border-bottom: 1px solid var(--borda-suave);
+  flex-shrink: 0;
+}
+
+.manual-titulo-grupo {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.manual-icone-livro {
+  width: 28px;
+  height: 28px;
+  color: var(--acento);
+  flex-shrink: 0;
+}
+
+.manual-titulo-grupo h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--texto-forte);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.manual-badge-versao {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  background: var(--acento-fundo);
+  border: 1px solid var(--acento-borda);
+  color: var(--acento);
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.manual-subtitulo {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.84rem;
+  color: var(--texto-fraco);
+}
+
+.manual-acoes-topo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-imprimir-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--acento);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--t-rapido), transform var(--t-rapido);
+}
+
+.btn-imprimir-pdf:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.btn-fechar-manual {
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  width: 34px;
+  height: 34px;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--texto);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background var(--t-rapido), color var(--t-rapido);
+}
+
+.btn-fechar-manual:hover {
+  background: var(--perigo-fundo);
+  border-color: var(--perigo-borda);
+  color: var(--perigo);
+}
+
+/* ── Corpo do Manual: Grid Split ────────────────────────────────────────────────────── */
+
+.manual-corpo {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  flex: 1;
+  overflow: hidden;
+  height: calc(90vh - 78px);
+}
+
+.manual-sidebar {
+  background: var(--fundo);
+  border-right: 1px solid var(--borda-suave);
+  padding: 1.2rem 0.8rem;
+  overflow-y: auto;
+  font-size: 0.86rem;
+}
+
+.manual-sidebar-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-fraco);
+  padding: 0 0.6rem 0.6rem 0.6rem;
+}
+
+.manual-nav-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.manual-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--texto);
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  transition: background var(--t-rapido), color var(--t-rapido);
+  font-weight: 500;
+}
+
+.manual-nav-link:hover {
+  background: var(--acento-fundo);
+  color: var(--texto-forte);
+}
+
+.manual-nav-link.ativo {
+  background: var(--acento-fundo);
+  color: var(--acento);
+  font-weight: 700;
+  border-left: 3px solid var(--acento);
+}
+
+.manual-nav-link svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* ── Conteúdo Central do Manual ──────────────────────────────────────────────────────── */
+
+.manual-conteudo {
+  padding: 2rem 2.6rem;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  line-height: 1.65;
+  color: var(--texto);
+}
+
+.manual-secao {
+  margin-bottom: 3.5rem;
+  scroll-margin-top: 1rem;
+}
+
+.manual-secao-topo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 2px solid var(--borda-suave);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.manual-secao-topo h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--texto-forte);
+}
+
+.manual-secao h4 {
+  margin: 1.6rem 0 0.6rem 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--texto-forte);
+}
+
+.manual-secao p {
+  margin: 0.6rem 0 1rem 0;
+}
+
+.manual-callout {
+  margin: 1.2rem 0;
+  padding: 1rem 1.2rem;
+  border-radius: var(--r-md);
+  border-left: 4px solid var(--acento);
+  background: var(--acento-fundo);
+  font-size: 0.92rem;
+}
+
+.manual-callout.destaque {
+  border-left-color: var(--acento);
+  background: var(--acento-fundo);
+}
+
+.manual-callout.atencao {
+  border-left-color: var(--aviso);
+  background: var(--aviso-fundo);
+}
+
+.manual-callout.sucesso {
+  border-left-color: var(--sucesso);
+  background: var(--sucesso-fundo);
+}
+
+.manual-callout strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--texto-forte);
+}
+
+.manual-passos {
+  margin: 1rem 0 1.5rem 0;
+  padding-left: 1.4rem;
+}
+
+.manual-passos li {
+  margin-bottom: 0.8rem;
+}
+
+.manual-passos li strong {
+  color: var(--texto-forte);
+}
+
+.manual-grid-abas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+
+.manual-card-aba {
+  background: var(--fundo-alt);
+  border: 1px solid var(--borda-suave);
+  border-radius: var(--r-md);
+  padding: 1rem;
+}
+
+.manual-card-aba strong {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--texto-forte);
+  margin-bottom: 0.4rem;
+}
+
+.manual-card-aba p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--texto-fraco);
+}
+
+.manual-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2rem 0;
+  font-size: 0.88rem;
+}
+
+.manual-tabela th,
+.manual-tabela td {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--borda-suave);
+  text-align: left;
+}
+
+.manual-tabela th {
+  background: var(--fundo-alt);
+  color: var(--texto-forte);
+  font-weight: 600;
+}
+
+.manual-tabela tr:nth-child(even) {
+  background: rgba(125, 125, 125, 0.03);
+}
+
+.manual-tabela td code {
+  font-size: 0.82rem;
+  padding: 0.1rem 0.3rem;
+  background: var(--fundo-alt);
+  border-radius: var(--r-xs);
+  border: 1px solid var(--borda-suave);
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.78rem;
+  font-family: monospace;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--texto-forte);
+  background: var(--fundo-alt);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-xs);
+  box-shadow: 0 1px 0 var(--borda);
+}
+
+/* ── Estilização de Impressão e PDF (@media print) ──────────────────────────────────── */
+
+@media print {
+  /* Oculta tudo na tela exceto o diálogo do manual */
+  body > *:not(.modal-manual) {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 10.5pt !important;
+    line-height: 1.5 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .modal-manual {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #111 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .manual-cabecalho {
+    background: transparent !important;
+    border-bottom: 2px solid #222 !important;
+    padding: 0 0 1rem 0 !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .manual-titulo-grupo h2 {
+    color: #000 !important;
+    font-size: 18pt !important;
+  }
+
+  .manual-acoes-topo,
+  .manual-sidebar {
+    display: none !important;
+  }
+
+  .manual-corpo {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .manual-conteudo {
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
+  }
+
+  .manual-secao {
+    page-break-before: auto;
+    page-break-inside: avoid;
+    margin-bottom: 2rem !important;
+  }
+
+  .manual-secao:first-of-type {
+    page-break-before: avoid;
+  }
+
+  .manual-secao-topo {
+    border-bottom: 1px solid #444 !important;
+  }
+
+  .manual-secao-topo h3 {
+    color: #000 !important;
+    font-size: 14pt !important;
+  }
+
+  .manual-callout {
+    background: #f7f7f9 !important;
+    border: 1px solid #ddd !important;
+    border-left: 4px solid #333 !important;
+    color: #222 !important;
+  }
+
+  .manual-card-aba {
+    background: #fafafa !important;
+    border: 1px solid #ccc !important;
+    color: #222 !important;
+    page-break-inside: avoid;
+  }
+
+  .manual-tabela {
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+
+  .manual-tabela th {
+    background: #eee !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .manual-tabela td {
+    border: 1px solid #ddd !important;
+  }
+
+  kbd {
+    background: #eee !important;
+    border-color: #999 !important;
+    color: #000 !important;
+  }
+}
+
+/* ── Responsividade em telas pequenas ────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .manual-corpo {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .manual-sidebar {
+    display: none;
+  }
+
+  .manual-conteudo {
+    padding: 1.2rem;
+  }
+
+  .manual-rotulo {
+    display: none;
+  }
+}

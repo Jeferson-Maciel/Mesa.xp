@@ -82,7 +82,7 @@ describe('Aprovação e execução', () => {
   });
 
   it('vazia, diz o que vai aparecer nela', () => {
-    expect(htmlLista([pedido()], 'executar', em(11))).toContain('Quando o cliente responder um e-mail, o pedido aparece aqui.');
+    expect(htmlLista([pedido()], 'executar', em(11))).toContain('Nada para aprovar e executar agora.');
   });
 });
 

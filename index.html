@@ -118,7 +118,7 @@
             <textarea
               id="entrada"
               spellcheck="false"
-              placeholder="Cole aqui a solicitação, do jeito que ela chegou — inclusive colada direto do grupo.&#10;&#10;7000001&#10;COMPRA&#10;IVVB11 - 7 qntds&#10;via email"
+              placeholder="Cole a solicitação"
             ></textarea>
 
             <div class="button-group">
@@ -126,23 +126,22 @@
               <button class="secondary" id="btn-colar">Colar e analisar</button>
               <button class="danger" id="btn-limpar">Limpar</button>
             </div>
-            <p class="atalhos-dica"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> analisa · <kbd>Alt</kbd>+<kbd>H</kbd> histórico</p>
 
             <details class="texto-lido" id="texto-lido" hidden>
               <summary id="texto-lido-resumo"></summary>
               <ol class="texto-lido-linhas" id="texto-lido-linhas"></ol>
             </details>
 
-            <div class="presets-toolbar">
-              <span class="presets-label">Exemplos</span>
+            <details class="exemplos-menu" id="menu-exemplos">
+              <summary>Exemplos</summary>
               <div class="presets-buttons" id="presets"></div>
-            </div>
+            </details>
 
             <div class="secundario-painel">
               <span class="presets-label">Secundário</span>
               <div class="estado-linha" id="estado-cotacao" data-estado="vazio">
                 <span class="estado-nome">Cotação</span>
-                <span id="estoque-status" class="meta-counter">nenhum arquivo carregado</span>
+                <span id="estoque-status" class="meta-counter">sem arquivo</span>
                 <button class="preset-btn" id="btn-atualizar-cotacoes" hidden title="Pede ao robô uma cotação nova da Prateleira do Hub.">Atualizar cotações</button>
               </div>
               <div class="estado-linha" id="estado-robo" data-estado="vazio" title="O robô do Hub roda no Tampermonkey: quando a Mesa pede, ele atualiza a Prateleira na aba do Hub e traz as cotações e o preço exato da cota.">
@@ -150,11 +149,11 @@
                 <span id="robo-status" class="meta-counter">não instalado</span>
                 <button class="preset-btn" id="btn-copiar-tempos" hidden title="Copia quanto levou cada passo da última busca no Hub, para achar onde vão os segundos. Não leva nada do cliente.">Copiar tempos</button>
                 <button class="preset-btn" id="btn-instalar-robo" title="Abre o robô no site: o Tampermonkey mostra a tela de instalar ou atualizar, e depois busca as versões novas sozinho.">Instalar robô</button>
-                <button class="preset-btn" id="btn-copiar-robo" title="A reserva: copia o script do robô para colar no Tampermonkey: + (novo script), colar e salvar.">Copiar robô</button>
               </div>
               <details class="secundario-manual" id="secundario-manual">
-                <summary>Sem o robô: carregar os fundos à mão</summary>
+                <summary title="Carregar os fundos à mão, ou copiar o robô para colar no Tampermonkey">Sem o robô</summary>
                 <div class="secundario-manual-acoes">
+                  <button class="preset-btn" id="btn-copiar-robo" title="A reserva: copia o script do robô para colar no Tampermonkey: + (novo script), colar e salvar.">Copiar robô</button>
                   <button class="preset-btn" id="btn-estoque" title="O arquivo que o favorito do Hub baixa (.json, com o ROA de cada fundo) ou a exportação &quot;Todos os fundos&quot; (.xlsx). Também dá para arrastar o arquivo para cá.">Carregar fundos</button>
                   <a class="preset-btn favorito-hub" id="favorito-hub" title="Favorito do Hub: arraste para a barra de favoritos (Ctrl+Shift+B mostra a barra). No Hub, abra Fundos › Mercado Secundário › Prateleira e clique nele: baixa os fundos com o ROA adicional de cada um, para carregar aqui.">📥 Fundos → Mesa</a>
                 </div>
@@ -201,7 +200,6 @@
           <section class="panel" id="vazio">
             <div class="empty-state">
               <p>Nada analisado ainda.</p>
-              <span>Cole uma solicitação acima, ou comece por um dos exemplos.</span>
             </div>
           </section>
         </div>

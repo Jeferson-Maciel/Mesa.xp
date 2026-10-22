@@ -447,8 +447,6 @@ const MARCACAO = `
     </div>
   </div>
 
-  <p class="fl-nota">O e-mail copiado ou aberto no Outlook pelo Ordens vai para Enviados. Quando o cliente responde (com o Outlook aberto numa aba e o robô instalado), o pedido vem para Aprovação e execução, com a resposta dele; o executado vai para Executados. Quem diz que o cliente aprovou é você. Fica só neste navegador, por 90 dias.</p>
-
   <dialog class="fl-janela" data-fl="janela" aria-labelledby="fl-janela-titulo">
     <div class="panel-header-row">
       <h2 class="panel-title" id="fl-janela-titulo" data-fl="janela-titulo"></h2>

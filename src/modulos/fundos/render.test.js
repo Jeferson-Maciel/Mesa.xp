@@ -22,7 +22,7 @@ describe('a tabela da prateleira', () => {
 
 describe('o que mudou', () => {
   it('sem dia anterior, sem mudança, e as mudanças com o sentido', () => {
-    expect(htmlMudancas(null, null, true)).toContain('primeira foto');
+    expect(htmlMudancas(null, null, true)).toBe('<p class="fu-nota">Primeira foto da prateleira.</p>');
     expect(htmlMudancas({}, '2026-10-20', true)).toBe('<p class="fu-nota">Nada mudou desde 20/10.</p>');
     const html = htmlMudancas({ entraram: ['<b>Novo</b>'], sairam: [], desagio: [{ fundo: 'X', de: 6, para: 6.5 }], roa: [], estoque: [{ fundo: 'Y', zerou: true }] }, '2026-10-20', false);
     expect(html).toContain('&lt;b&gt;Novo');

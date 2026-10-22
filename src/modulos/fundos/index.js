@@ -128,7 +128,6 @@ const MARCACAO = `
   <section class="panel fu-vazio-painel" data-fu="vazio">
     <div class="empty-state">
       <p>A prateleira ainda não chegou.</p>
-      <span>Com o robô do Hub, "Atualizar pelo robô" a traz; sem ele, carregue os fundos no Ordens (Secundário › Sem o robô).</span>
     </div>
   </section>
 
@@ -138,7 +137,5 @@ const MARCACAO = `
   </section>
 
   <div data-fu="tabela"></div>
-
-  <p class="fu-nota">Os fundos do secundário como o Hub os mostra na Prateleira: a mesma captura que o Ordens usa para converter R$ em cotas. Dado de mercado, sem cliente; a foto de cada dia fica neste navegador, para o "o que mudou".</p>
 </div>`;
 

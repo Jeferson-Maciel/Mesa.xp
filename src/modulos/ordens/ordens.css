@@ -118,24 +118,6 @@
   margin: var(--esp-4) 0;
 }
 
-/* Os atalhos à vista (F20, 22/10/2026), e não só no title dos botões. */
-.atalhos-dica {
-  margin: calc(-1 * var(--esp-2)) 0 var(--esp-3);
-  color: var(--texto-fraco);
-  font-size: 0.75rem;
-}
-
-.atalhos-dica kbd {
-  padding: 0 5px;
-  border: 1px solid var(--borda-forte);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
 .button-group button {
   position: relative;
   /* Os secundários ficam do tamanho do rótulo e o primário absorve a sobra: com flex igual
@@ -195,10 +177,42 @@
 
 /* ── Exemplos ───────────────────────────────────────────────────────────────────────── */
 
-.presets-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--esp-2);
+/* Num menu (22/10/2026, "tudo menos poluído"): os 15 exemplos só aparecem quando a pessoa pede. */
+.exemplos-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-pilula);
+  color: var(--texto-fraco);
+  font-size: 0.75rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+  transition: color var(--t-rapido) var(--curva), border-color var(--t-rapido) var(--curva);
+}
+
+.exemplos-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.exemplos-menu summary::after {
+  content: '▾';
+  font-size: 0.7rem;
+}
+
+.exemplos-menu[open] summary::after {
+  content: '▴';
+}
+
+.exemplos-menu summary:hover {
+  border-color: var(--acento-borda);
+  color: var(--texto-forte);
+}
+
+.exemplos-menu .presets-buttons {
+  margin-top: var(--esp-2);
 }
 
 .presets-label {

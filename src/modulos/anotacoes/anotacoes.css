@@ -204,11 +204,6 @@
   gap: 4px;
 }
 
-.an .an-dica {
-  color: var(--texto-fraco);
-  font-size: 0.76rem;
-}
-
 /* ── Etiquetas ──────────────────────────────────────────────────────────────────────── */
 
 .an .an-etiqueta {
@@ -1599,11 +1594,6 @@
 .an .an-modelo strong {
   color: var(--texto-forte);
   font-size: 0.84rem;
-}
-
-.an .an-modelo span {
-  color: var(--texto-fraco);
-  font-size: 0.72rem;
 }
 
 /* ── Checklist ──────────────────────────────────────────────────────────────────────── */

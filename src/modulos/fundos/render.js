@@ -54,7 +54,7 @@ const ddmm = (dia) => dia.split('-').reverse().slice(0, 2).join('/');
 
 /** O que mudou desde o último dia com foto. */
 export const htmlMudancas = (mudancas, diaAnterior, semMudanca) => {
-  if (!diaAnterior) return '<p class="fu-nota">A primeira foto da prateleira é desta captura: na próxima, de outro dia, aparece aqui o que mudou.</p>';
+  if (!diaAnterior) return '<p class="fu-nota">Primeira foto da prateleira.</p>';
   if (semMudanca) return `<p class="fu-nota">Nada mudou desde ${ddmm(diaAnterior)}.</p>`;
   const lista = (titulo, itens) => (itens.length ? `<div class="fu-mudanca"><h3>${titulo}</h3><ul>${itens.join('')}</ul></div>` : '');
   const seta = (de, para) => `<span class="fu-de">${pct(de)}</span> → <b class="${para > de ? 'fu-subiu' : 'fu-caiu'}">${pct(para)}</b>`;

@@ -93,18 +93,19 @@ export const htmlCartao = (nota, agora, selecionada, { termo = '', recemSalva = 
     </article>`;
 };
 
+// Uma linha só (22/10/2026, "tudo menos poluído").
 const VAZIOS = {
-  todas: ['Nenhuma anotação ainda.', 'Escreva na caixa acima — "ligar pro cliente amanhã 10h" já vira lembrete — ou clique em Nova.'],
-  lembretes: ['Nenhum lembrete pendente.', 'Marque um lembrete numa anotação e ele aparece aqui, em amarelo, até o dia chegar.'],
-  vencidas: ['Nada vencido.', 'Quando um lembrete chegar, a anotação fica vermelha e aparece aqui.'],
-  resolvidas: ['Nada resolvido ainda.', 'Clique na bolinha de uma anotação para resolvê-la; ela fica guardada aqui.'],
-  lixeira: ['Lixeira vazia.', 'O que você exclui fica aqui por 30 dias, e dá para restaurar.']
+  todas: 'Nenhuma anotação ainda.',
+  lembretes: 'Nenhum lembrete pendente.',
+  vencidas: 'Nada vencido.',
+  resolvidas: 'Nada resolvido ainda.',
+  lixeira: 'Lixeira vazia.'
 };
 
 export const htmlLista = ({ notas, agora, selecionada, filtro, termo, visao = 'lista', recemSalva = null }) => {
   if (notas.length === 0) {
-    const [titulo, dica] = termo.trim() ? [`Nada encontrado para “${termo.trim()}”.`, 'A busca olha o título, o texto e as etiquetas.'] : VAZIOS[filtro] ?? VAZIOS.todas;
-    return `<div class="empty-state pequeno"><p>${esc(titulo)}</p><span>${esc(dica)}</span></div>`;
+    const titulo = termo.trim() ? `Nada encontrado para “${termo.trim()}”.` : VAZIOS[filtro] ?? VAZIOS.todas;
+    return `<div class="empty-state pequeno"><p>${esc(titulo)}</p></div>`;
   }
   const cartao = (n) => htmlCartao(n, agora, n.id === selecionada, { termo, recemSalva: n.id === recemSalva });
   if (visao !== 'agenda' || filtro === 'lixeira') return notas.map(cartao).join('');
@@ -249,10 +250,10 @@ export const htmlAnexos = (anexos, novos = []) => {
 
 export const htmlModelos = () => `
   <div class="an-modelos">
-    <span class="an-secao">Começar de um modelo</span>
+    <span class="an-secao">Modelos</span>
     <div class="an-modelos-lista">
       ${MODELOS.map(
-        (m) => `<button type="button" class="an-modelo" data-modelo="${m.id}"><strong>${esc(m.nome)}</strong><span>${esc(m.dica)}</span></button>`
+        (m) => `<button type="button" class="an-modelo" data-modelo="${m.id}" title="${esc(m.dica)}"><strong>${esc(m.nome)}</strong></button>`
       ).join('')}
     </div>
   </div>`;
@@ -301,7 +302,7 @@ export const htmlEditor = ({ nota, campos = camposDe(nota), agora, sugestoes, no
     <div data-an="recuperar"></div>
     ${nova ? htmlModelos() : ''}
 
-    <input class="an-titulo" data-campo="titulo" value="${esc(campos.titulo)}" placeholder="${nova ? 'Nova anotação — ex.: Estorno do dia 25' : 'Título'}" maxlength="200" aria-label="Título" autocomplete="off"${bloqueio} />
+    <input class="an-titulo" data-campo="titulo" value="${esc(campos.titulo)}" placeholder="Título" maxlength="200" aria-label="Título" autocomplete="off"${bloqueio} />
 
     <div data-an="lembrete">${naLixeira ? '' : htmlLembrete(vista, agora)}</div>
     <div data-an="etiquetas">${naLixeira ? '' : htmlEtiquetasEditor(campos.etiquetas, sugestoes)}</div>
@@ -312,12 +313,11 @@ export const htmlEditor = ({ nota, campos = camposDe(nota), agora, sugestoes, no
         : `<div class="an-ferramentas">
       <button type="button" class="an-ferramenta" data-acao="inserir-data" title="Escreve a data e a hora de agora no texto">Inserir data</button>
       <button type="button" class="an-ferramenta an-ferramenta-checklist" data-acao="inserir-tarefa" title="Começa uma linha de tarefa: [ ]">Tarefa</button>
-      <button type="button" class="an-ferramenta an-ferramenta-anexar" data-acao="anexar" title="Anexar prints e arquivos">Anexar</button>
-      <span class="an-dica">Cole prints com Ctrl+V ou arraste arquivos para cá.</span>
+      <button type="button" class="an-ferramenta an-ferramenta-anexar" data-acao="anexar" title="Anexar prints e arquivos (ou cole com Ctrl+V, ou arraste para cá)">Anexar</button>
     </div>`
     }
 
-    <textarea class="an-texto" data-campo="texto" spellcheck="true" placeholder="Escreva aqui: o que aconteceu, com quem, o que falta fazer. Links viram botões; linhas com [ ] viram tarefas." aria-label="Texto da anotação"${bloqueio}>${esc(campos.texto)}</textarea>
+    <textarea class="an-texto" data-campo="texto" spellcheck="true" placeholder="Escreva aqui" aria-label="Texto da anotação"${bloqueio}>${esc(campos.texto)}</textarea>
 
     <div data-an="checklist">${htmlChecklist(campos.texto)}</div>
     <div data-an="links">${htmlLinks(campos.texto)}</div>
@@ -325,8 +325,8 @@ export const htmlEditor = ({ nota, campos = camposDe(nota), agora, sugestoes, no
 
     <p class="an-rodape">${
       nova
-        ? 'Ainda não salva. <kbd>Ctrl</kbd>+<kbd>S</kbd> salva sem sair · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> salva e começa outra.'
-        : `Criada em ${esc(dataEHora(nota.criadaEm))} · editada em ${esc(dataEHora(nota.atualizadaEm))} · <kbd>Ctrl</kbd>+<kbd>S</kbd> salva sem sair`
+        ? 'Ainda não salva.'
+        : `Criada em ${esc(dataEHora(nota.criadaEm))} · editada em ${esc(dataEHora(nota.atualizadaEm))}`
     }</p>
     <input type="file" multiple hidden data-an="arquivo" />
   </div>`;

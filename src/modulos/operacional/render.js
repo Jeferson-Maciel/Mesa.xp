@@ -83,9 +83,8 @@ const htmlTrilha = (itens) =>
 
 /* ── Barra lateral ────────────────────────────────────────────────────────────────────── */
 
-export const htmlEquipe = (equipe) => `
-  <span class="op-avatar" aria-hidden="true">${esc(String(equipe).trim().charAt(0).toUpperCase())}</span>
-  <div><strong>${esc(equipe)}</strong><span>base de conhecimento da mesa</span></div>`;
+// Só o nome (22/10/2026, "tudo menos poluído": sem o selo com a inicial e sem o subtítulo).
+export const htmlEquipe = (equipe) => `<strong>${esc(equipe)}</strong>`;
 
 /**
  * @param {{ topicos: object[], posts: object[], ativo: string | null }} dados

@@ -1236,7 +1236,7 @@ const MARCACAO = `
     </div>
 
     <form class="an-rapida" data-an="form-rapida" autocomplete="off">
-      <input data-an="rapida" placeholder="Anotar rápido… ex.: ligar amanhã 10h #retorno" aria-label="Anotar rápido" maxlength="200" />
+      <input data-an="rapida" placeholder="Anotar rápido" title="Ex.: ligar amanhã 10h #retorno — a data vira lembrete, o # vira etiqueta" aria-label="Anotar rápido" maxlength="200" />
       <div class="an-rapida-lido" data-an="rapida-lido" aria-live="polite"></div>
     </form>
 
@@ -1257,7 +1257,7 @@ const MARCACAO = `
     <nav class="an-lista" data-an="lista" aria-label="Anotações"></nav>
 
     <div class="an-lateral-pe">
-      <p class="an-privado">Só neste navegador — ninguém mais vê.
+      <p class="an-privado" title="Só neste navegador: ninguém mais vê">
         <button type="button" class="an-link" data-an="exportar">Exportar backup</button> ·
         <button type="button" class="an-link" data-an="importar">Importar</button>
       </p>

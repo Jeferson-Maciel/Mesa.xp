@@ -1565,63 +1565,6 @@
   animation: estalar var(--t-lento) var(--curva-mola) 1500ms both;
 }
 
-.rf .rf-passos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 12rem));
-  gap: var(--esp-3);
-  margin: var(--esp-4) 0 var(--esp-3);
-  list-style: none;
-  counter-reset: none;
-}
-
-.rf .rf-passos li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--esp-2);
-  padding: var(--esp-3);
-  background: var(--superficie-afundada);
-  border: 1px solid var(--borda);
-  border-radius: var(--r-md);
-  text-align: left;
-  animation: estalar var(--t-lento) var(--curva-mola) both;
-}
-
-.rf .rf-passos li:nth-child(1) {
-  animation-delay: 460ms;
-}
-.rf .rf-passos li:nth-child(2) {
-  animation-delay: 540ms;
-}
-.rf .rf-passos li:nth-child(3) {
-  animation-delay: 620ms;
-}
-
-.rf .rf-passos b {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--acento-fundo);
-  box-shadow: 0 0 0 1px var(--acento-borda);
-  color: var(--acento);
-  font-size: 0.72rem;
-}
-
-.rf .rf-passos span {
-  color: var(--texto-forte);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.rf .rf-passos small {
-  display: block;
-  color: var(--texto-fraco);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
 .rf .rf-escolher {
   animation: entrar var(--t-cena) var(--curva-saida) 700ms both;
 }
@@ -1630,13 +1573,6 @@
 .rf .rf-escolher:not(.copiado)::before {
   -webkit-mask-image: var(--i-planilha);
   mask-image: var(--i-planilha);
-}
-
-@media (max-width: 700px) {
-  .rf .rf-passos {
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
-  }
 }
 
 /* ── Soltar a planilha: a aba inteira vira o alvo ─────────────────────────────────────────
@@ -1696,11 +1632,6 @@
   color: var(--texto-forte);
   font-family: var(--fonte-titulo);
   font-size: 1.3rem;
-}
-
-.rf .rf-soltura span {
-  color: var(--texto-fraco);
-  font-size: 0.84rem;
 }
 
 /* ── Histórico ──────────────────────────────────────────────────────────────────────── */

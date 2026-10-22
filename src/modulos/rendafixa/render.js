@@ -95,13 +95,7 @@ const ILUSTRACAO = `
 export const htmlVazio = () => `
   <div class="rf-boasvindas">
     ${ILUSTRACAO}
-    <h3>Solte aqui a planilha de renda fixa da XP</h3>
-    <p>Em qualquer lugar desta aba. Em segundos, a maior taxa de cada prazo e categoria, e a mensagem pronta para o WhatsApp.</p>
-    <ol class="rf-passos">
-      <li><b>1</b><span>Exporte da XP<small>a planilha de produtos de renda fixa</small></span></li>
-      <li><b>2</b><span>Solte nesta aba<small>lida aqui, sem sair do navegador</small></span></li>
-      <li><b>3</b><span>Copie a mensagem<small>e cole no WhatsApp do cliente</small></span></li>
-    </ol>
+    <h3>Solte a planilha da XP aqui</h3>
     <button type="button" class="copy-btn btn-primario rf-escolher" data-acao="abrir">Escolher a planilha</button>
   </div>`;
 

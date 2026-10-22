@@ -21,7 +21,7 @@ export const PASTAS = [
     id: 'executar',
     titulo: 'Aprovação e execução',
     estados: ['respondeu', 'aprovado'],
-    vazio: 'Nada para aprovar e executar agora. Quando o cliente responder um e-mail, o pedido aparece aqui.'
+    vazio: 'Nada para aprovar e executar agora.'
   },
   { id: 'enviados', titulo: 'Enviados', estados: ['enviado'], vazio: 'Nenhum e-mail esperando o cliente.' },
   { id: 'executados', titulo: 'Executados', estados: ['executado'], vazio: 'Nada executado neste dia.' },
@@ -273,7 +273,7 @@ export const htmlFicha = (pedido, agora = Date.now()) => {
       <button type="button" class="copy-btn btn-primario" data-acao="copiar-ficha">Copiar a ficha</button>
       ${boletas}
     </div>
-    <p class="fl-nota">Sai do que o e-mail aprovado pediu: nada é refeito nem recalculado. Confira na boleta antes de enviar.</p>`;
+    <p class="fl-nota">Confira na boleta antes de enviar.</p>`;
 };
 
 /* ── O lote de um pedido de bolsa ─────────────────────────────────────────────────────── */
@@ -311,5 +311,5 @@ export const htmlLote = (pedido, { simples, twap, fora, semSimples }, agora = Da
     ${secao('Lote TWAP', 'twap', twap, twap && semHorario ? 'O pedido não disse o horário: as colunas de hora saem vazias.' : '')}
     ${fora.length ? `<p class="fl-nota">Fora do lote (não são ticker): ${esc(fora.join(', '))}.</p>` : ''}
     <details class="fl-lote-ficha"><summary>A ficha do pedido</summary><pre class="fl-ficha-texto">${esc(fichaDeExecucao(pedido, agora))}</pre></details>
-    <p class="fl-nota">As quantidades são as do e-mail que o cliente aprovou; a ordem em R$ segue em R$. Nada é recalculado aqui.</p>`;
+    <p class="fl-nota">Quantidades do e-mail aprovado.</p>`;
 };

@@ -60,7 +60,6 @@ export const iniciarRendaFixa = (secao) => {
     trocar: el('trocar'),
     remover: el('remover'),
     mercado: el('mercado'),
-    dicaMercado: el('dica-mercado'),
     funil: el('funil'),
     funilDetalhes: el('funil-detalhes'),
     subtitulo: el('subtitulo'),
@@ -214,7 +213,6 @@ export const iniciarRendaFixa = (secao) => {
       b.classList.toggle('ativo', ativo);
       b.setAttribute('aria-checked', String(ativo));
     }
-    ui.dicaMercado.textContent = DICAS_MERCADO[valor];
     regras.atualizarSelo(valor);
     if (reprocessar && mudou && estado.rows) analisar();
   }
@@ -240,7 +238,7 @@ export const iniciarRendaFixa = (secao) => {
   /* ── Resultado ────────────────────────────────────────────────────────────────────── */
 
   function renderVazio() {
-    ui.subtitulo.textContent = 'Importe uma planilha para começar';
+    ui.subtitulo.textContent = '';
     ui.corpo.innerHTML = htmlVazio();
   }
 
@@ -609,19 +607,18 @@ export const iniciarRendaFixa = (secao) => {
 const MARCACAO = `
 <div class="rf">
   <div class="rf-soltura" aria-hidden="true">
-    <div><strong>Solte para analisar</strong><span>a planilha é lida aqui, sem sair do navegador</span></div>
+    <div><strong>Solte para analisar</strong></div>
   </div>
   <div class="rf-grade">
     <div class="rf-lateral">
       <section class="panel">
         <div class="panel-header-row">
           <h2 class="panel-title">Planilha</h2>
-          <span class="meta-counter">exportação de renda fixa da XP</span>
         </div>
 
         <button type="button" class="rf-soltar" data-rf="soltar" title="Escolher planilha (A)">
           <strong>Arraste a planilha aqui</strong>
-          <span>ou clique para escolher · .xlsx, .xls, .csv</span>
+          <span>ou clique para escolher</span>
         </button>
 
         <div class="rf-arquivo" data-rf="arquivo" hidden>
@@ -634,19 +631,16 @@ const MARCACAO = `
         </div>
 
         <input type="file" accept=".xlsx,.xls,.csv" data-rf="entrada-arquivo" hidden />
-        <p class="rf-nota">A planilha é lida neste navegador e não é enviada a servidor nenhum.</p>
       </section>
 
       <section class="panel">
         <div class="panel-header-row">
           <h2 class="panel-title">Mercado</h2>
-          <span class="meta-counter">M alterna</span>
         </div>
-        <div class="segmentado" role="radiogroup" aria-label="Mercado" data-rf="mercado">
-          <button type="button" class="seg" role="radio" data-mercado="primario">Emissão primária <span class="rf-conta" data-rf="conta-primario" hidden></span></button>
-          <button type="button" class="seg" role="radio" data-mercado="secundario">Mercado secundário <span class="rf-conta" data-rf="conta-secundario" hidden></span></button>
+        <div class="segmentado" role="radiogroup" aria-label="Mercado (M alterna)" data-rf="mercado">
+          <button type="button" class="seg" role="radio" data-mercado="primario" title="${DICAS_MERCADO.primario} (M alterna)">Emissão primária <span class="rf-conta" data-rf="conta-primario" hidden></span></button>
+          <button type="button" class="seg" role="radio" data-mercado="secundario" title="${DICAS_MERCADO.secundario} (M alterna)">Mercado secundário <span class="rf-conta" data-rf="conta-secundario" hidden></span></button>
         </div>
-        <p class="rf-nota" data-rf="dica-mercado"></p>
         <div class="rf-regras-acesso">
           <button type="button" class="copy-btn" data-rf="abrir-regras" title="As regras e a mensagem de cada mercado (R)">Regras</button>
           <button type="button" class="rf-selo-regras" data-rf="selo-regras" hidden></button>
@@ -685,10 +679,9 @@ const MARCACAO = `
 
   <section class="panel rf-historico">
     <div class="panel-header-row">
-      <h2 class="panel-title">Histórico <span class="counter-badge" data-rf="historico-contagem">0</span></h2>
+      <h2 class="panel-title" title="As últimas 20 análises salvas neste navegador. As variações nos cartões comparam com a última salva antes de hoje.">Histórico <span class="counter-badge" data-rf="historico-contagem">0</span></h2>
       <button type="button" class="rf-link" data-rf="abrir-atalhos" title="Atalhos de teclado (?)">Atalhos</button>
     </div>
-    <p class="rf-nota">Últimas 20 análises salvas neste navegador. As variações nos cartões comparam com a última análise salva antes de hoje.</p>
     <div class="rf-historico-lista" data-rf="historico"></div>
   </section>
 

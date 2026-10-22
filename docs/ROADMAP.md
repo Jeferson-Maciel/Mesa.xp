@@ -33,7 +33,8 @@ fase sai publicada quando os testes, o build e o verificador passam.
    min antes nos Enviados), com o contador âmbar; Aprovação e execução em tabela; o histórico do Ordens
    com o estado na Fila e o Reabrir com as correções do cartão.
 4. **Ordens** — a tabela de posições colada (`Ativo / Qtd. Teórica / Qtd. Atual`) não é pedido de
-   ordem: não gera nada e diz isso; o fracionário (`PETR4F`); os exemplos num menu; os emoji dos
+   ordem: não gera nada e diz isso; o fracionário (`PETR4F`); ~~os exemplos num menu~~ (feito em
+   22/10, no corte de texto); os emoji dos
    atalhos de formato viram ícones de traço; o favorito 📥 sai depois de o robô passar no Hub de
    verdade.
 

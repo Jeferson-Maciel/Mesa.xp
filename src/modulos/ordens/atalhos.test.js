@@ -2,21 +2,22 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * F20 (22/10/2026): os atalhos do Ordens à vista na tela, e não só no `title` dos botões. A dica
- * diz só o que o teclado faz de verdade (o `keydown` do index.js).
+ * Os atalhos do Ordens. O F20 (22/10/2026) os pôs numa linha à vista; no mesmo dia o usuário pediu
+ * "tudo menos poluído", e a linha saiu: cada atalho fica no `title` do botão dele. O que o title diz
+ * tem de ser o que o teclado faz de verdade (o `keydown` do index.js).
  */
 const html = readFileSync(new URL('../../../index.html', import.meta.url), 'utf8');
 const codigo = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
-const dica = html.match(/<p class="atalhos-dica"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? '';
+const titulo = (id) => html.match(new RegExp(`id="${id}"[^>]*title="([^"]*)"`))?.[1] ?? '';
 
-describe('os atalhos do Ordens à vista', () => {
-  it('abaixo dos botões, Ctrl+Enter analisa e Alt+H abre o histórico, em teclas', () => {
-    expect(dica).toContain('<kbd>Ctrl</kbd>+<kbd>Enter</kbd> analisa');
-    expect(dica).toContain('<kbd>Alt</kbd>+<kbd>H</kbd> histórico');
-    expect(html.indexOf('class="atalhos-dica"')).toBeGreaterThan(html.indexOf('id="btn-analisar"'));
+describe('os atalhos do Ordens', () => {
+  it('ficam no title dos botões, e não numa linha à vista', () => {
+    expect(titulo('btn-analisar')).toContain('Ctrl + Enter');
+    expect(titulo('btn-historico')).toContain('Alt + H');
+    expect(html).not.toContain('atalhos-dica');
   });
 
-  it('cada tecla da dica tem o atalho no código', () => {
+  it('cada atalho do title tem o atalho no código', () => {
     expect(codigo).toMatch(/\(e\.ctrlKey \|\| e\.metaKey\) && e\.key === 'Enter'\)[\s\S]{0,60}analisar\(\)/);
     expect(codigo).toMatch(/e\.altKey && \(e\.key === 'h'/);
   });

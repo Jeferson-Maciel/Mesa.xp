@@ -132,6 +132,12 @@ const recarregar = async (pagina) => {
   await pagina.reload();
 };
 
+// Os exemplos do Ordens ficam num menu (22/10/2026): abre e escolhe.
+const usarExemplo = async (pagina, nome) => {
+  await pagina.evaluate(() => (document.getElementById('menu-exemplos').open = true));
+  await pagina.click(`#presets [data-exemplo="${nome}"]`);
+};
+
 const semRolagemLateral = (pagina) =>
   pagina.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
@@ -171,10 +177,6 @@ try {
   titulo('Atalhos presos à aba');
   {
     const { pagina, contexto } = await abrir();
-    ok(
-      (await pagina.isVisible('.atalhos-dica')) && (await pagina.innerText('.atalhos-dica')).replace(/\s+/g, '') === 'Ctrl+Enteranalisa·Alt+Hhistórico',
-      'os atalhos do Ordens à vista, abaixo dos botões (F20)'
-    );
     await pagina.fill('#entrada', '1234567\nCOMPRA\nPETR4 100');
     await pagina.keyboard.press(altDe('rendafixa'));
     await pagina.keyboard.press('Control+Enter');
@@ -292,7 +294,7 @@ try {
       const { pagina, contexto, erros } = await abrir({ tema, largura });
       ok((await pagina.evaluate(() => document.documentElement.dataset.tema)) === tema, `${tema} ${largura}px: tema aplicado`);
 
-      await pagina.click('#presets [data-exemplo="Cesta em R$"]');
+      await usarExemplo(pagina, 'Cesta em R$');
       ok(await semRolagemLateral(pagina), `${tema} ${largura}px: Ordens com uma cesta, sem rolagem lateral`);
       // Cada linha do preview: os controles na mesma altura e a borda de baixo inteira. Um
       // `display: flex` direto num <td> tirava a célula da linha e quebrava as duas coisas.
@@ -549,12 +551,12 @@ try {
     const areaDeTransferencia = () => pagina.evaluate(() => navigator.clipboard.readText());
     // A caixa limpa (21/10/2026): o e-mail enviado vai para a pasta Enviados; à vista fica só
     // Aprovação e execução, e o contador da aba conta o que está nela.
-    await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
+    await usarExemplo(pagina, 'Bolsa · compra e venda');
     await pagina.locator('[data-copiar="email"]').first().click();
     await pagina.waitForTimeout(400);
     ok(await pagina.$eval('[data-contador="fila"]', (c) => c.hidden), 'o e-mail copiado vai para Enviados, sem acender a aba Fila: nada para executar ainda');
 
-    await pagina.click('#presets [data-exemplo="Bolsa · compra e venda"]');
+    await usarExemplo(pagina, 'Bolsa · compra e venda');
     await pagina.waitForSelector('.alert-danger');
     ok(
       (await pagina.textContent('#solicitacoes')).includes('já saiu hoje para esta conta'),
@@ -564,7 +566,7 @@ try {
     await pagina.keyboard.press(altDe('fila'));
     await pagina.waitForSelector('[data-pasta="enviados"]');
     ok(
-      (await pagina.textContent('[data-fl="lista"]')).includes('Quando o cliente responder') && (await pagina.$eval('[data-pasta="executar"]', (b) => b.getAttribute('aria-pressed'))) === 'true',
+      (await pagina.textContent('[data-fl="lista"]')).includes('Nada para aprovar e executar agora') && (await pagina.$eval('[data-pasta="executar"]', (b) => b.getAttribute('aria-pressed'))) === 'true',
       'a Fila abre em Aprovação e execução, limpa: o enviado não aparece nela'
     );
     ok(
@@ -643,7 +645,7 @@ try {
       };
     });
     const sons = () => pagina.evaluate(() => window.__sons);
-    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await usarExemplo(pagina, 'E-mail simples');
     await pagina.locator('[data-copiar="email"]').first().click();
     await pagina.waitForSelector('.toast.prazo', { timeout: 5000 }).catch(() => {});
     ok(
@@ -668,7 +670,7 @@ try {
   {
     // "Ver na Fila" leva ao cartão, aceso.
     const { pagina, contexto } = await abrir({ relogio: '2026-10-21T16:30:00-03:00' });
-    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await usarExemplo(pagina, 'E-mail simples');
     await pagina.locator('[data-copiar="email"]').first().click();
     await pagina.waitForSelector('.toast.prazo .toast-acao');
     await pagina.click('.toast.prazo .toast-acao');
@@ -714,7 +716,7 @@ try {
   titulo('Ordens: o histórico com o estado na Fila e o Reabrir com as correções');
   {
     const { pagina, contexto, erros } = await abrir({ relogio: '2026-10-21T11:00:00-03:00' });
-    await pagina.click('#presets [data-exemplo="E-mail simples"]');
+    await usarExemplo(pagina, 'E-mail simples');
     await pagina.fill('[data-solicitacao="0"] [data-ordem="0"] .campo-valor', '9');
     await pagina.press('[data-solicitacao="0"] [data-ordem="0"] .campo-valor', 'Tab');
     await pagina.locator('[data-copiar="email"]').first().click();

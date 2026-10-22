@@ -142,6 +142,7 @@ export const iniciarOrdens = (secao) => {
     const botao = e.target.closest('[data-exemplo]');
     if (!botao) return;
     entrada.value = EXEMPLOS[botao.dataset.exemplo];
+    $('menu-exemplos').open = false;
     analisar();
   });
 
@@ -853,7 +854,7 @@ export const iniciarOrdens = (secao) => {
     for (const fn of ouvintesDaPrateleira) fn();
     const { estoque } = estado;
     if (!estoque) {
-      statusDoEstoque.textContent = 'nenhum arquivo carregado';
+      statusDoEstoque.textContent = 'sem arquivo';
       statusDoEstoque.classList.remove('antiga');
       $('estado-cotacao').dataset.estado = 'vazio';
       return;
@@ -1289,7 +1290,7 @@ export const iniciarOrdens = (secao) => {
     const { assessores } = estado;
     $('estado-assessores').dataset.estado = assessores ? 'pronto' : 'vazio';
     if (!assessores) {
-      statusDosAssessores.textContent = 'não carregada — o assessor fica sem cópia';
+      statusDosAssessores.textContent = 'não carregada';
       return;
     }
     const dia = new Date(assessores.carregadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });

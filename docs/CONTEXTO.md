@@ -58,8 +58,17 @@ vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador 
 
 Pedido do usuário: "tudo menos poluído". O topo fica só com o nome "Mesa XP" (sem o selo XP e sem o
 "back office"), e a busca vira uma cápsula com cara de campo, sem o "Ctrl K" à vista (o atalho segue
-valendo e aparece ao passar o mouse; abaixo de 1500px, só a lupa). O corte dos textos de explicação
-em todas as abas espera as respostas das perguntas Q36 a Q42.
+valendo e aparece ao passar o mouse; abaixo de 1500px, só a lupa).
+
+**Menos texto em todas as abas** (Q36 a Q42, o usuário disse sim a todas): à vista fica o nome, o
+número, o estado e o que bloqueia ou avisa; a explicação vai para o `title` ou para o post "Como a Mesa
+funciona" do Operacional. Saíram os parágrafos de rodapé da Fila, de Fundos e do Renda Fixa, a segunda
+linha das telas vazias, o passo a passo do Renda Fixa vazio, a dica de cada mercado (foi para o title
+do botão), "M alterna", o selo "O" e o subtítulo do Operacional, a descrição dos modelos das Anotações,
+as dicas de Ctrl+S e de colar prints, e os exemplos dentro dos campos ("Cole a solicitação", "Anotar
+rápido", "Título", "Escreva aqui"). No Ordens, os 15 exemplos foram para o menu "Exemplos" (era da Fase
+4), a linha dos atalhos do F20 saiu (o atalho segue no title do botão) e o "Copiar robô" foi para o
+"Sem o robô". Os avisos de conferência na Fila ficaram, curtos ("Confira na boleta antes de enviar").
 
 ## 22/10: a revisão das duas sessões da nuvem
 

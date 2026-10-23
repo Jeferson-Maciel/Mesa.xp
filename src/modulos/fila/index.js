@@ -9,6 +9,7 @@ import { NOMES_DOS_GRUPOS, destinoDaBoleta, diaDe, fichaDeExecucao, inicioDaVist
 import { filaDaPagina } from '../../comum/fila/repositorio.js';
 import { quandoHouver, registrarServico, servico } from '../../comum/servicos.js';
 import { PASTAS, htmlConferir, htmlFicha, htmlLista, htmlLote, htmlPastas, pastaDoEstado } from './render.js';
+import { ligarModalResumo } from './resumo.js';
 import { criarVigiaDoOutlook } from './vigiaOutlook.js';
 import { criarVigiaDePrazos } from './vigiaPrazos.js';
 import './fila.css';
@@ -309,9 +310,18 @@ export const iniciarFila = (secao) => {
     estado.destaque = null;
     render();
   });
-  el('resumo').addEventListener('click', async () => {
+
+  const modalResumo = ligarModalResumo(secao, {
+    obterPedidos: () => estado.pedidos,
+    obterDia: () => estado.dia,
+    aoAvisar: aviso,
+    aoCopiar: copiar
+  });
+
+  el('resumo').addEventListener('click', async (e) => {
     const ok = await copiar(resumoDoDia(estado.pedidos, estado.dia));
     aviso(ok ? 'Resumo do dia copiado.' : 'Não foi possível copiar o resumo.', { tipo: ok ? 'info' : 'erro' });
+    modalResumo.abrir(e.currentTarget);
   });
 
   // A busca da Mesa (Ctrl+K), o aviso de prazo e o histórico do Ordens abrem um pedido: a Fila vai ao dia e à pasta dele, já filtrada pela conta.
@@ -432,7 +442,7 @@ const MARCACAO = `
     <span class="fl-outlook" data-fl="outlook" data-tipo="sem-robo">Outlook</span>
     <div class="fl-ferramentas">
       <input type="search" class="fl-busca" data-fl="busca" placeholder="Buscar conta, cliente ou ativo" aria-label="Buscar na Fila" />
-      <button type="button" class="copy-btn" data-fl="resumo" title="Copiar o resumo do dia, com o que ficou pendente">Resumo do dia</button>
+      <button type="button" class="copy-btn" data-fl="resumo" title="Ver resumo operacional do dia, exportar Excel e PDF">Resumo do dia</button>
     </div>
   </section>
 
@@ -455,4 +465,6 @@ const MARCACAO = `
     </div>
     <div data-fl="janela-corpo"></div>
   </dialog>
+
+  <dialog class="fl-resumo-dialogo" data-fl="resumo-dialogo" aria-label="Resumo Operacional do Dia"></dialog>
 </div>`;

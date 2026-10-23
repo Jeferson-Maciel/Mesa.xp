@@ -1087,3 +1087,460 @@
 .fl .fl-lote .fl-tsv + .fl-nota {
   margin-top: var(--esp-2);
 }
+
+/* ── Resumo Executivo do Dia (Cards, Tabela, Excel e PDF) ───────────────────────────── */
+
+.fl .fl-resumo-dialogo {
+  width: min(1200px, 96vw);
+  max-height: 92vh;
+  margin: auto;
+  padding: 0;
+  background-color: var(--superficie-alta);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta), 0 0 0 1px var(--borda), 0 24px 70px rgba(0, 0, 0, 0.65);
+  color: var(--texto);
+  font-family: inherit;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fl .fl-resumo-dialogo::backdrop {
+  background: rgba(4, 7, 14, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+.fl .fl-resumo-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: 1.1rem 1.6rem;
+  background-color: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  flex-shrink: 0;
+}
+
+.fl .fl-resumo-titulo-grupo {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.fl .fl-resumo-icone-grafico {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--acento-fundo);
+  border: 1px solid var(--acento-borda);
+  display: grid;
+  place-items: center;
+  color: var(--acento);
+  flex-shrink: 0;
+}
+
+.fl .fl-resumo-icone-grafico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.fl .fl-resumo-titulo-grupo h2 {
+  margin: 0;
+  font-size: 1.22rem;
+  font-weight: 700;
+  color: var(--texto-forte);
+}
+
+.fl .fl-resumo-subtitulo {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.82rem;
+  color: var(--texto-fraco);
+}
+
+.fl .fl-resumo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fl .fl-btn-resumo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 34px;
+  padding: 0 0.85rem;
+  background: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--t-rapido), border-color var(--t-rapido), color var(--t-rapido);
+}
+
+.fl .fl-btn-resumo:hover {
+  background: var(--superficie);
+  border-color: var(--borda-forte);
+  color: var(--texto-forte);
+}
+
+.fl .fl-btn-resumo.fl-btn-excel {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
+}
+
+.fl .fl-btn-resumo.fl-btn-excel:hover {
+  background: color-mix(in srgb, var(--positivo-fundo) 160%, transparent);
+}
+
+.fl .fl-btn-resumo.fl-btn-pdf {
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
+}
+
+.fl .fl-btn-resumo.fl-btn-pdf:hover {
+  background: color-mix(in srgb, var(--acento-fundo) 160%, transparent);
+}
+
+.fl .fl-btn-resumo-fechar {
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: var(--r-sm);
+  width: 34px;
+  height: 34px;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--texto);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background var(--t-rapido), color var(--t-rapido);
+}
+
+.fl .fl-btn-resumo-fechar:hover {
+  background: var(--negativo-fundo);
+  border-color: var(--negativo-borda);
+  color: var(--negativo);
+}
+
+.fl .fl-resumo-corpo {
+  padding: 1.6rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  background-color: var(--superficie-afundada);
+}
+
+/* ── KPIs em Cards ────────────────────────────────────────────────────────────────── */
+
+.fl .fl-resumo-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.fl .fl-resumo-kpi-card {
+  padding: 1rem 1.1rem;
+  background-color: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  box-shadow: var(--sombra);
+}
+
+.fl .fl-resumo-kpi-card.destaque {
+  border-top: 3px solid var(--marca);
+}
+
+.fl .fl-resumo-kpi-card.sucesso {
+  border-top: 3px solid var(--positivo);
+}
+
+.fl .fl-resumo-kpi-card.atencao {
+  border-top: 3px solid var(--atencao);
+}
+
+.fl .fl-resumo-kpi-rotulo {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-fraco);
+}
+
+.fl .fl-resumo-kpi-valor {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--texto-forte);
+  letter-spacing: -0.01em;
+}
+
+.fl .fl-resumo-kpi-detalhe {
+  font-size: 0.78rem;
+  color: var(--texto-fraco);
+}
+
+/* ── Tabela Detalhada de Ordens ────────────────────────────────────────────────────── */
+
+.fl .fl-resumo-tabela-secao {
+  background-color: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--sombra);
+}
+
+.fl .fl-resumo-tabela-topo {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--borda);
+  background-color: color-mix(in srgb, var(--superficie) 85%, transparent);
+}
+
+.fl .fl-resumo-tabela-topo h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--texto-forte);
+}
+
+.fl .fl-resumo-tabela-container {
+  overflow-x: auto;
+  max-height: 48vh;
+}
+
+.fl .fl-resumo-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.fl .fl-resumo-tabela th {
+  padding: 0.65rem 0.9rem;
+  background-color: var(--superficie-afundada);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-fraco);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.fl .fl-resumo-tabela td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto);
+  vertical-align: middle;
+}
+
+.fl .fl-resumo-tabela tr:last-child td {
+  border-bottom: 0;
+}
+
+.fl .fl-resumo-tabela tr:hover td {
+  background-color: color-mix(in srgb, var(--superficie-afundada) 50%, transparent);
+}
+
+.fl .fl-resumo-td-hora {
+  font-family: var(--fonte-mono);
+  font-size: 0.8rem;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+}
+
+.fl .fl-resumo-td-conta strong {
+  font-family: var(--fonte-mono);
+  color: var(--texto-forte);
+}
+
+.fl .fl-resumo-td-cliente {
+  font-weight: 600;
+  color: var(--texto-forte);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl .fl-resumo-td-assessor {
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.fl .fl-resumo-td-ativo {
+  white-space: nowrap;
+}
+
+.fl .fl-resumo-chip {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--r-sm);
+  background-color: var(--superficie-afundada);
+  border: 1px solid var(--borda);
+  font-size: 0.75rem;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.fl .fl-resumo-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pilula);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid var(--borda);
+  background: var(--superficie-afundada);
+  color: var(--texto);
+}
+
+.fl .fl-resumo-badge[data-estado='executado'] {
+  background: var(--positivo-fundo);
+  border-color: var(--positivo-borda);
+  color: var(--positivo);
+}
+
+.fl .fl-resumo-badge[data-estado='aprovado'] {
+  background: var(--acento-fundo);
+  border-color: var(--acento-borda);
+  color: var(--acento);
+}
+
+.fl .fl-resumo-badge[data-estado='respondeu'] {
+  background: var(--turmalina);
+  border-color: var(--turmalina);
+  color: #ffffff;
+}
+
+.fl .fl-resumo-badge[data-estado='enviado'] {
+  background: var(--atencao-fundo);
+  border-color: var(--atencao-borda);
+  color: var(--atencao);
+}
+
+.fl .fl-resumo-badge[data-estado='cancelado'] {
+  background: var(--negativo-fundo);
+  border-color: var(--negativo-borda);
+  color: var(--negativo);
+}
+
+.fl .fl-resumo-td-financeiro strong {
+  font-family: var(--fonte-mono);
+  color: var(--texto-forte);
+}
+
+.fl .fl-resumo-vazio {
+  text-align: center;
+  padding: 2.5rem 1rem !important;
+  color: var(--texto-fraco);
+  font-size: 0.95rem;
+}
+
+/* ── Pendências ───────────────────────────────────────────────────────────────────── */
+
+.fl .fl-resumo-pendencias {
+  padding: 1.1rem 1.4rem;
+  background: var(--atencao-fundo);
+  border: 1px solid var(--atencao-borda);
+  border-radius: var(--r-md);
+}
+
+.fl .fl-resumo-pendencias h4 {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--atencao);
+}
+
+.fl .fl-resumo-pendencias ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  color: var(--texto);
+}
+
+/* ── Impressão e PDF do Resumo (@media print) ──────────────────────────────────────── */
+
+@media print {
+  .fl .fl-resumo-dialogo {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .fl .fl-resumo-cabecalho {
+    background: transparent !important;
+    border-bottom: 2px solid #222222 !important;
+    padding: 0 0 1rem 0 !important;
+    margin-bottom: 1.2rem !important;
+  }
+
+  .fl .fl-resumo-cabecalho h2 {
+    color: #000000 !important;
+  }
+
+  .fl .fl-resumo-acoes {
+    display: none !important;
+  }
+
+  .fl .fl-resumo-corpo {
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .fl .fl-resumo-kpi-card {
+    background: #f8f9fa !important;
+    border: 1px solid #cccccc !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+  }
+
+  .fl .fl-resumo-tabela-secao {
+    background: transparent !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+  }
+
+  .fl .fl-resumo-tabela th {
+    background: #eeeeee !important;
+    color: #000000 !important;
+    border-bottom: 1px solid #cccccc !important;
+  }
+
+  .fl .fl-resumo-tabela td {
+    border-bottom: 1px solid #cccccc !important;
+    color: #111111 !important;
+  }
+
+  .fl .fl-resumo-pendencias {
+    background: #fff8e6 !important;
+    border: 1px solid #e0c068 !important;
+    color: #222222 !important;
+  }
+}

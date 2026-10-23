@@ -113,7 +113,7 @@ export const iniciarFila = (secao) => {
   // O vigia das respostas no Outlook: a situação no alto e as respostas a conferir.
   function renderOutlook() {
     const vigia = servico('vigiaDoOutlook');
-    const situacao = vigia?.situacao() ?? { tipo: 'sem-robo', texto: 'Outlook: sem o robô', titulo: 'Instale o robô do Hub (no Ordens, "Copiar robô") para ver as respostas dos clientes aqui.' };
+    const situacao = vigia?.situacao() ?? { tipo: 'sem-robo', texto: 'Outlook: sem o robô', titulo: 'Instale o robô do Hub (no Ordens, "Instalar robô") para ver as respostas dos clientes aqui.' };
     ui.outlook.dataset.tipo = situacao.tipo;
     ui.outlook.textContent = situacao.texto;
     ui.outlook.title = situacao.titulo;

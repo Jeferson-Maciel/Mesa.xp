@@ -1,6 +1,5 @@
 import fonte from './robo-hub.user.js?raw';
-import snapdom from '../../../vendor/snapdom.js?raw';
-import { ENDERECO_DO_ROBO, montarRobo } from './montarRobo.js';
+import { ENDERECO_DO_ROBO } from './montarRobo.js';
 
 export { ENDERECO_DO_ROBO };
 
@@ -21,12 +20,6 @@ export { ENDERECO_DO_ROBO };
  * trazer as imagens da própria página para o print, e é conferida à parte, byte a byte.
  */
 export const fonteDoRobo = fonte;
-
-/**
- * O script que a Mesa oferece para copiar e colar no Tampermonkey (a reserva do "Instalar robô"): o
- * robô, com a SnapDOM no marcador do print — o mesmo arquivo que o site publica (`montarRobo.js`).
- */
-export const scriptDoRobo = montarRobo(fonte, snapdom);
 
 /** A versão mais nova do robô, a do repositório: é a que "Instalar / atualizar robô" instala. */
 export const VERSAO_DO_ROBO = fonte.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? null;

@@ -18,7 +18,7 @@ import { lerPercentual } from './core/util/dinheiro.js';
 import * as guardadoDosAssessores from './platform/assessores.js';
 import { copiar, colar } from './platform/clipboard.js';
 import { enderecoDoFavorito } from './platform/favoritoDoHub.js';
-import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, criarRoboHub, roboAtende, scriptDoRobo } from './platform/roboHub.js';
+import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, criarRoboHub, roboAtende } from './platform/roboHub.js';
 import * as historico from './platform/historico.js';
 import { aplicarCorrecoes, correcoesDoCartao, marcarOrigem } from './ui/correcoes.js';
 import { htmlItemDoHistorico } from './ui/historico.js';
@@ -995,7 +995,6 @@ export const iniciarOrdens = (secao) => {
   let buscando = '';
   const statusDoRobo = $('robo-status');
   const btnAtualizarCotacoes = $('btn-atualizar-cotacoes');
-  const btnCopiarRobo = $('btn-copiar-robo');
   const btnInstalarRobo = $('btn-instalar-robo');
   const btnCopiarTempos = $('btn-copiar-tempos');
 
@@ -1053,7 +1052,6 @@ export const iniciarOrdens = (secao) => {
     statusDoRobo.classList.toggle('buscando', Boolean(buscando));
     btnAtualizarCotacoes.hidden = !robo.presente;
     btnAtualizarCotacoes.disabled = Boolean(buscando);
-    btnCopiarRobo.hidden = robo.presente && !desatualizado;
     btnInstalarRobo.hidden = robo.presente && robo.atualizado;
     btnInstalarRobo.textContent = robo.presente ? 'Atualizar robô' : 'Instalar robô';
   }
@@ -1398,14 +1396,10 @@ export const iniciarOrdens = (secao) => {
     aviso(ok ? 'Tempos copiados: é só colar na conversa.' : 'Não consegui copiar os tempos.');
   });
   // O robô no site (1.13.0): o Tampermonkey abre a tela de instalar ou atualizar, e depois busca as
-  // versões novas sozinho. O "Copiar robô" fica como reserva por uma semana.
+  // versões novas sozinho via @updateURL.
   btnInstalarRobo.addEventListener('click', () => {
     window.open(ENDERECO_DO_ROBO, '_blank', 'noopener');
     aviso('O Tampermonkey abre a tela do robô: clique em Instalar (ou Atualizar). Depois, recarregue as abas do Hub e do Outlook.');
-  });
-  btnCopiarRobo.addEventListener('click', async () => {
-    const ok = await copiar(scriptDoRobo);
-    aviso(ok ? 'Robô copiado: cole no Tampermonkey, em + (novo script), e salve.' : 'Não consegui copiar o robô.');
   });
 
   const arquivoDoEstoque = $('arquivo-estoque');

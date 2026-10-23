@@ -2347,8 +2347,6 @@ try {
       (await semRobo.pagina.isVisible('#btn-instalar-robo')) && (await semRobo.pagina.textContent('#btn-instalar-robo')) === 'Instalar robô',
       'sem o robô, a Mesa oferece "Instalar robô", que abre o robô no site para o Tampermonkey (1.14.0)'
     );
-    await semRobo.pagina.click('#btn-copiar-robo');
-    ok((await semRobo.pagina.evaluate(() => navigator.clipboard.readText())).startsWith('// ==UserScript=='), '"Copiar robô" copia o script do Tampermonkey');
 
     // Na aba Renda Fixa: sem o robô, o botão indica Instalar robô
     await semRobo.pagina.keyboard.press(altDe('rendafixa'));

@@ -95,8 +95,7 @@ Ideias, com o custo grosseiro:
 
 ## Robô do Hub e secundário
 
-- **Tirar o "Copiar robô"** e os 345 KB de texto dele da página depois de 28/10/2026, uma semana depois
-  da instalação pelo site (robô 1.13.0).
+- ~~**Tirar o "Copiar robô"**~~ — **feita em 22/10/2026**: removido o botão legado e os 345 KB de texto bruto embutidos no HTML. A instalação e atualização agora são 100% via "Instalar robô" direto no Tampermonkey pelo arquivo publicado `robo-hub.user.js` com auto-update.
 - **Separar o robô em partes** montadas no build (hoje 1.766 linhas num arquivo), para testar cada uma.
 - **Fundos sem corretagem** (44 na captura de 06/10: os XP CDI Private e FIPs com deságio de 5% a 15%
   e mínimo zero): a captura não dá o teto deles, e o pedido em R$ segura com

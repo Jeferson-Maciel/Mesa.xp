@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, compararVersoes, criarRoboHub, fonteDoRobo, roboAtende, scriptDoRobo } from './roboHub.js';
+import { ENDERECO_DO_ROBO, ErroDoRobo, VERSAO_DO_ROBO, VERSAO_MINIMA_DO_ROBO, compararVersoes, criarRoboHub, fonteDoRobo, roboAtende } from './roboHub.js';
+import { montarRobo } from './montarRobo.js';
 
 /**
  * Uma janela de mentira com um robô de mentira: o que a página manda pelo postMessage chega ao
@@ -286,7 +287,10 @@ describe('o cliente da conta, pelo robô', () => {
   });
 });
 
-describe('o script do robô que a Mesa oferece para copiar', () => {
+const snapdom = readFileSync(new URL('../../../vendor/snapdom.js', import.meta.url), 'utf8');
+const scriptDoRobo = montarRobo(fonteDoRobo, snapdom);
+
+describe('o script do robô publicado para o Tampermonkey (robo-hub.user.js)', () => {
   it('é o script do Tampermonkey, com a versão que a Mesa espera', () => {
     expect(scriptDoRobo).toMatch(/^\/\/ ==UserScript==/);
     expect(scriptDoRobo).toContain(`// @version      ${VERSAO_DO_ROBO}`);
@@ -309,8 +313,7 @@ describe('o script do robô que a Mesa oferece para copiar', () => {
     expect(fonteDoRobo).not.toMatch(/\bfetch\(|XMLHttpRequest\(\)/);
   });
 
-  it('o script copiado é o robô com a SnapDOM vendorizada no marcador, e nada mais', () => {
-    const snapdom = readFileSync(new URL('../../../vendor/snapdom.js', import.meta.url), 'utf8');
+  it('o script publicado é o robô com a SnapDOM vendorizada no marcador, e nada mais', () => {
     expect(fonteDoRobo).toContain('/*@@SNAPDOM@@*/');
     expect(scriptDoRobo).not.toContain('/*@@SNAPDOM@@*/');
     expect(scriptDoRobo).toBe(fonteDoRobo.replace('/*@@SNAPDOM@@*/', () => snapdom));

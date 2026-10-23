@@ -9,13 +9,13 @@
 /* ── Grade principal ────────────────────────────────────────────────────────────────── */
 
 .container {
-  max-width: 1560px;
-  margin: var(--esp-4) auto;
+  max-width: 1540px;
+  margin: var(--esp-5) auto;
   padding: 0 var(--esp-4);
   display: grid;
-  /* Split View balanceado (Fase 2): a coluna de entrada expande para leitura confortável
-     do texto colado e a coluna de preview recebe largura fluida para tabelas e cartões sem rolagem excessiva. */
-  grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr);
+  /* Coluna da solicitação compacta (320px a 370px) para maximizar a amplitude
+     da tabela de ordens, eliminando completamente a rolagem horizontal */
+  grid-template-columns: minmax(320px, 370px) minmax(0, 1fr);
   gap: var(--esp-4);
   align-items: start;
 }
@@ -24,7 +24,7 @@
   grid-column: 1;
   grid-row: 1 / span 3;
   position: sticky;
-  top: calc(59px + var(--esp-4));
+  top: calc(59px + var(--esp-5));
 }
 
 #painel-formatos,
@@ -55,13 +55,13 @@
   animation-delay: 140ms;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .container {
     /* minmax(0, 1fr) pelo mesmo motivo da grade larga. Com 1fr, uma cesta no preview esticava
        a coluna até 2.000px e a página inteira rolava de lado no celular. */
     grid-template-columns: minmax(0, 1fr);
     padding: 0 var(--esp-4);
-    gap: var(--esp-3);
+    gap: var(--esp-4);
   }
 
   #painel-entrada {
@@ -82,8 +82,8 @@
 :where(#modulo-ordens) textarea {
   display: block;
   width: 100%;
-  height: clamp(170px, 26vh, 230px);
-  min-height: 140px;
+  height: 290px;
+  min-height: 180px;
   padding: var(--esp-4);
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
@@ -257,32 +257,27 @@
 
 /* ── Formatos de saída ──────────────────────────────────────────────────────────────── */
 
-#painel-formatos {
-  padding: var(--esp-3) var(--esp-4);
-  margin-bottom: var(--esp-3);
-}
-
 .formatos-presets {
   display: flex;
   flex-wrap: wrap;
   max-width: 100%;
   align-items: center;
   gap: 3px;
-  padding: 2px;
+  padding: 3px;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.75rem;
 }
 
 .formato-preset-btn {
-  padding: 0.18rem 0.52rem;
+  padding: 0.2rem 0.52rem;
   background: transparent;
   border: none;
   border-radius: calc(var(--r-md) - 3px);
   color: var(--texto-fraco);
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -308,12 +303,12 @@
   display: flex;
   align-items: center;
   gap: var(--esp-2);
-  padding: 0.36rem 0.75rem;
+  padding: 0.52rem 0.9rem;
   background: var(--superficie-afundada);
   border: 1px solid var(--borda);
   border-radius: var(--r-md);
   color: var(--texto);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
@@ -555,7 +550,10 @@ table.preview tbody td {
 }
 
 .col-ativo .linha-campos {
-  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-1-5, 6px);
+  white-space: nowrap;
 }
 
 table.preview .campo {

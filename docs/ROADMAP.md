@@ -13,7 +13,7 @@ código.
 Uma sessão de perguntas antes de cada fase (o usuário pediu "sempre faça sessões de grilling"); cada
 fase sai publicada quando os testes, o build e o verificador passam.
 
-1. **Base** — os testes antes de cada publicação (a Vercel roda `npm test`; o GitHub roda também o
+1. ~~**Base**~~ — **feita em 21/10/2026**: os testes antes de cada publicação (a Vercel roda `npm test`; o GitHub roda também o
    verificador); o robô que se atualiza sozinho (1.13.0, o arquivo `robo-hub.user.js` no site e a
    versão mínima compatível na Mesa); a limpeza deste roadmap e do CSS sem uso; o post "Como a Mesa
    funciona" no Operacional.
@@ -33,11 +33,16 @@ fase sai publicada quando os testes, o build e o verificador passam.
    máximo 3 avisos à vista; o aviso de prazo em qualquer aba (15 min antes em Aprovação e execução, 30
    min antes nos Enviados), com o contador âmbar; Aprovação e execução em tabela; o histórico do Ordens
    com o estado na Fila e o Reabrir com as correções do cartão.
-4. **Ordens** — a tabela de posições colada (`Ativo / Qtd. Teórica / Qtd. Atual`) não é pedido de
-   ordem: não gera nada e diz isso; o fracionário (`PETR4F`); ~~os exemplos num menu~~ (feito em
-   22/10, no corte de texto); os emoji dos
-   atalhos de formato viram ícones de traço; o favorito 📥 sai depois de o robô passar no Hub de
-   verdade.
+4. ~~**Auditoria UX/UI — Fases 1 a 3**~~ — **feita em 23/10/2026** (ver `docs/CONTEXTO.md` e `docs/auditoria-ux-ui-fases.md`):
+   - **Fase 1**: Atalhos de teclado no Ordens (`Ctrl+Enter`) e Fila (`J`/`K` navegação, `E` expandir, `L`/`F` lote/ficha, `B` boleta, `M` menu, `T` alternar cartões/tabela, `1`-`4` pastas).
+   - **Fase 2**: HUD compacto no Ordens, restauração do Layout Amplo (`370px` / `1fr`) eliminando rolagem horizontal e mantendo alinhamento estrito das cápsulas (`nowrap`).
+   - **Fase 3**: Fila em tabela de 34px (alta densidade) e Simulador de Renda Fixa com rentabilidade de `% do CDI Líquido` e campo de CDI anual editável.
+   - **Correção de Zoom**: Remoção de breakpoint rígido de 1380px no header, exibindo nomes das 7 abas em 100% de zoom em 1366px.
+5. **Fase 4 (Ordens avançadas e execução rápida)** — a construir mediante autorização:
+   - One-Click Flip (Compra ↔ Venda) para reversão rápida de cesta.
+   - Desmembramento automático de lotes mistos padrão e fracionário (`PETR4` x 100 + `PETR4F` x 50).
+   - Fechamento em lote na Fila do dia.
+   - Detecção e descarte inteligente de tabela de posições colada (`Ativo / Qtd. Teórica / Qtd. Atual`).
 
 ## Decidido não fazer (por enquanto)
 

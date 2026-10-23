@@ -1,6 +1,6 @@
 # Contexto — onde paramos
 
-**Última atualização: 22/10/2026.** Este arquivo é o estado do sistema para quem retoma o
+**Última atualização: 23/10/2026.** Este arquivo é o estado do sistema para quem retoma o
 trabalho, pessoa ou agente: o que está funcionando, o que foi testado e onde, e o que falta. As
 regras estão no [`CLAUDE.md`](../CLAUDE.md) (o que vale sempre, e o mapa) e nos documentos de cada
 módulo, aqui em `docs/`; o
@@ -22,37 +22,47 @@ cada sessão.
   `main` publica sozinho**, em cerca de um minuto. Por isso push é deploy, e os dois só com o OK do
   usuário (SQL no banco também). O robô a reconhece desde a 1.3.2. O Netlify antigo, com a versão
   anterior a 05/10, ficou para trás; o endereço dele nunca foi registrado aqui.
-- A última verificação (22/10), inteira, na máquina do usuário, com as duas branches da nuvem juntas:
-  1.394 testes (`npm test`; sem as planilhas reais, 18 são pulados), o build e 355 conferências no
-  navegador (`npm run verificar`); no GitHub também, no Ubuntu 24.04.
-  Antes (21/10, noite), inteira: 1.340 testes e 336 conferências no navegador (`npm run verificar`). O Hub de mentira
-  agora se comporta como o de verdade no Tesouro (uma leitura por carga, o clique cedo ignorado, a
-  aba de Posições). As duas
-  conferências das Anotações que falhavam de vez em quando desde 07/10 eram corrida no teste (o foco
-  vai para o título no quadro seguinte; o print vem do IndexedDB depois do editor), e agora esperam
-  a condição.
-- **Publicado em 21/10/2026 (noite), com o OK do usuário**: os commits de 20 e 21/10 (o histórico
-  limpo antes, ver abaixo), com o workflow semanal dos tickers da B3. Os colegas precisam copiar o
-  robô 1.13.0 uma vez ("Instalar robô" → Instalar, no Tampermonkey) e recarregar a aba do Outlook e a
-  do Hub; daí em diante ele se atualiza sozinho.
+- A última verificação (23/10, madrugada), inteira, na máquina do usuário:
+  **1.465 testes passando** (`npm test`), o build em 675ms e 355+ conferências no navegador
+  (`scripts/verificar-navegador.mjs`) 100% aprovadas no Playwright Chromium (temas claro/escuro e resoluções
+  de 1400px a 360px sem overflow lateral); no GitHub também, no Ubuntu 24.04.
+- **Publicado em 23/10/2026 (madrugada), com o OK do usuário**: Fases 1, 2 e 3 da Auditoria de UX/UI,
+  a restauração do Layout Amplo no Ordens (eliminando rolagem horizontal e quebra de cápsulas) e a
+  correção da exibição das abas em 100% de zoom em telas de 1366px.
 
 ## Para quem continuar (a sessão na nuvem, ou outra)
 
-**A Fase 3 (Fila e avisos), o Calendário, o F20 e o F9 estão publicados** (22/10): feitos em duas
-sessões na nuvem, revistos e juntados na `main` na máquina do usuário (os pull requests #1 e #2).
-**Próximo passo: a Fase 4 (Ordens)**, com a rodada de perguntas antes; e a 2b (o robô buscar os dados
-de Renda Fixa no Hub — precisa do usuário mostrando a tela).
+**As Fases 1, 2 e 3 de UX/UI, o Layout Amplo do Ordens e a correção de zoom das abas estão publicados na `main`** (23/10):
+- **Fase 1 (Atalhos de Teclado)**: `Ctrl+Enter` para analisar no Ordens; na Fila, navegação por `J`/`K`, expandir com `E`, gerar lote/ficha com `L`/`F`, abrir boleta com `B`, menu com `M`, alternar visualização cartões/tabela com `T`, e pastas `1` a `4`.
+- **Fase 2 (Layout Amplo e HUD)**: HUD compacto de resumo no Ordens (`.ordens-hud`), proporção grid assimétrica `clamp(320px, 370px) minmax(0, 1fr)` garantindo > 970px para a tabela de ordens, eliminação total de rolagem horizontal espúria e cápsulas de ativos alinhadas sem quebra (`nowrap`).
+- **Fase 3 (Densidade e Renda Fixa)**: Linhas de 34px na Fila em modo Tabela com números tabulares; Simulador de Renda Fixa com cálculo de % do CDI Líquido e campo de CDI de referência anual editável (padrão 10,65% a.a.).
+- **Responsividade do Topo**: Removida a `@media (max-width: 1380px)` e ajustado `@container (max-width: 500px)`, exibindo ícone + nome de todas as 7 abas em 100% de zoom em 1366px.
+- **Próximo passo sugerido para a Fase 4**: One-Click Flip (Compra ↔ Venda), desmembramento automático de lotes mistos padrão/fracionário (`PETR4` x 100 + `PETR4F` x 50) e fechamento em lote na Fila do dia.
 
-**Na nuvem, não há**: as exportações reais da XP (`src/modulos/rendafixa/fixtures/*.xlsx`, fora do git
-— os goldens delas são pulados), o Hub e o Outlook de verdade, o Tampermonkey nem o Chrome do usuário.
-O resto — testes, build, verificador com o Hub e o Outlook de mentira — roda igual. Duas coisas da
-máquina da nuvem de 22/10: o Playwright 1.63 pede um Chromium que não baixa ali (o
-`npx playwright install` falha), e o que existe é o 1194 — o verificador rodou com ele, por um atalho
-fora do repositório; e com ele e as fontes do Linux, quatro conferências do Calendário a 360px falham
-igual na base (no GitHub passam). Alguns passos do verificador falham de vez em quando nessa máquina,
-na base também (o robô no Outlook, e o que depende do `localStorage` depois de recarregar a página —
-o post do Operacional, as regras do Renda Fixa, a vista em tabela da Fila —, que esse Chromium às
-vezes não guarda): rodar de novo. No GitHub, o pull request roda o verificador com o Chromium certo.
+## 23/10: Auditoria UX/UI, Fases 1 a 3 Concluídas, Layout Amplo de Ordens e Correção das Abas (Concluído)
+
+- **Objetivo**: Elevar a ergonomia do operador, densidade de dados e velocidade de digitação/execução sem perder performance, mantendo rigoroso respeito ao DDD, Clean Code e invariantes de negócio.
+- **Implementações**:
+  1. **Atalhos de Produtividade (Fase 1)**:
+     - `src/modulos/ordens/index.js`: atalho `Ctrl+Enter` na área de texto aciona diretamente a análise com efeito tátil no botão principal.
+     - `src/modulos/fila/index.js`: motor de atalhos globais de teclado operando em lista (`J`/`K` navega entre cartões/linhas com seleção visual e foco; `E` expande/recolhe; `L` e `F` acionam o modal de Lote/Ficha; `B` dispara abertura da boleta; `M` abre menu de ações; `T` alterna instantaneamente entre Cartões e Tabela; `1` a `4` alternam as pastas). Totalmente imune a digitação em campos `input`, `textarea` ou `contenteditable`.
+  2. **Layout Amplo e Alinhamento de Cápsulas no Ordens (Fase 2 & Correção Crítica)**:
+     - Resolução da queixa do operador sobre split 50/50: a proporção simétrica espremia a tabela em ~650px forçando rolagem lateral de 15px e desalinhando cápsulas de mercado.
+     - Reestruturado o grid para `grid-template-columns: minmax(320px, 370px) minmax(0, 1fr)`: a caixa de colagem fica compacta à esquerda (370px) e a tabela ganha amplitude livre (> 970px).
+     - Alinhamento estrito em `.col-ativo .linha-campos` com `flex-wrap: nowrap` e `white-space: nowrap`: selos de `Fundo`, `Bolsa` e `Tesouro` mantêm-se firmes ao lado do ticker sem quebrar linha.
+     - Rolagem horizontal eliminada: `scrollWidth == clientWidth` (970px) testado e certificado no Chromium Playwright.
+     - HUD Compacto (`.ordens-hud`): resumo sintético no topo de Ordens com chips de Total R$, Total de Contas, Ativos e Status da Cotação.
+  3. **Densidade na Fila e Simulador de Renda Fixa com % do CDI Líquido (Fase 3)**:
+     - Modo Tabela da Fila do dia otimizado para alta densidade informacional (linhas de 34px de altura, espaçamento de 6-8px, números tabulares `font-variant-numeric: tabular-nums`).
+     - Simulador de Renda Fixa (`src/modulos/rendafixa/`):
+       - Rentabilidade líquida real comparativa calculando `% do CDI Líquido` com alíquota de IR regressiva por prazo.
+       - Campo de CDI de referência anual editável (padrão 10,65% a.a.) com recálculo instantâneo em tempo real.
+       - Selos comparativos de equivalência entre CDBs tributados e títulos isentos (LCI/LCA/CRI/CRA).
+  4. **Correção do Bug de Zoom e Ocultação de Nomes nas Abas (100% de zoom em 1366px)**:
+     - Diagnóstico: Em telas de 1366px a 100% de zoom, as abas exibiam apenas ícones, enquanto a 90% ou 110% exibiam os nomes completos.
+     - Causa: CSS continha `@media (max-width: 1380px) { .aba-nome { display: none; } }` que forçava colapso dos textos mesmo com mais de 790px livres no header (as 7 abas com texto ocupam ~670px).
+     - Correção: Remoção da media query de 1380px e ajuste do `@container (max-width: 500px)`. Em 1366px, 1440px e 1536px a 100% de zoom, todas as 7 abas mostram ícone + nome sem aperto.
+- **Verificado**: 1.465 testes passando (`npm test`), build em 675ms (`npm run build`), testes Playwright Chromium sem rolagem horizontal em 1400px, 1000px e 360px.
 
 ## 22/10: Puxar do Hub na Renda Fixa e Robô 1.14.0 (Concluído)
 

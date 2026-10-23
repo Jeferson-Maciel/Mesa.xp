@@ -11,7 +11,9 @@ import {
   htmlFunil,
   htmlMensagem,
   htmlRegistro,
+  htmlResultadoDaSimulacao,
   htmlSemResultado,
+  htmlSimulador,
   mensagemEmHTML,
   nomeDaPuxada,
   quando
@@ -222,4 +224,36 @@ describe('botão Puxar do Hub', () => {
     expect(html).not.toContain('disabled');
   });
 });
+
+describe('simulador de pré-fixado e CDI na UI', () => {
+  it('renderiza o formulário do simulador com campo de título, valor e CDI de referência', () => {
+    const html = htmlSimulador(primario);
+    expect(html).toContain('class="rf-simulador"');
+    expect(html).toContain('data-sim="titulo"');
+    expect(html).toContain('data-sim="valor"');
+    expect(html).toContain('data-sim="cdi"');
+    expect(html).toContain('value="10,65"');
+  });
+
+  it('renderiza o resultado da simulação com bruto, líquido, taxa líquida e % do CDI líquido', () => {
+    const sim = {
+      bruto: 11400,
+      rendimento: 1400,
+      aliquota: 17.5,
+      ir: 245,
+      liquido: 11155,
+      taxaLiquida: 11.55,
+      cdi: 10.65,
+      percCdiLiquido: 108.45
+    };
+    const html = htmlResultadoDaSimulacao(sim, { diasUteis: 252, diasCorridos: 365 });
+    expect(html).toContain('No vencimento, bruto');
+    expect(html).toContain('Líquido');
+    expect(html).toContain('11,55% a.a.');
+    expect(html).toContain('class="rf-simulador-cdi"');
+    expect(html).toContain('108,45% do CDI');
+    expect(html).toContain('CDI ref.: 10,65% a.a.');
+  });
+});
+
 

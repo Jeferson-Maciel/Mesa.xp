@@ -17,6 +17,19 @@ describe('o simulador de pré-fixado', () => {
     expect(simularPre({ valor: 1000, taxa: 12, diasUteis: 100, diasCorridos: 150 }).aliquota).toBe(22.5);
   });
 
+  it('calcula a equivalência de % do CDI líquido com o CDI padrão e customizado', () => {
+    // 10.000 a 14% em 252 dias úteis vira 11.155 líquido (taxa líquida de 11,55%)
+    // Com CDI padrão de 10,65%: 11,55 / 10,65 * 100 = ~108,45% do CDI
+    const rPadrao = simularPre({ valor: 10000, taxa: 14, diasUteis: 252, diasCorridos: 365 });
+    expect(rPadrao.cdi).toBe(10.65);
+    expect(rPadrao.percCdiLiquido).toBeCloseTo(108.4507, 2);
+
+    // Com CDI de referência customizado a 11%: 11,55 / 11,00 * 100 = 105% do CDI
+    const rCustom = simularPre({ valor: 10000, taxa: 14, diasUteis: 252, diasCorridos: 365, cdi: 11 });
+    expect(rCustom.cdi).toBe(11);
+    expect(rCustom.percCdiLiquido).toBeCloseTo(105, 2);
+  });
+
   it('sem valor, sem prazo ou com taxa que não é número, não simula', () => {
     expect(simularPre({ valor: 0, taxa: 12, diasUteis: 252, diasCorridos: 365 })).toBeNull();
     expect(simularPre({ valor: 1000, taxa: NaN, diasUteis: 252, diasCorridos: 365 })).toBeNull();

@@ -489,12 +489,13 @@ export const htmlSimulador = (r) => {
   if (!opcoes.length) return '';
   return `
   <details class="rf-simulador" data-rf-simulador>
-    <summary><span class="rf-simulador-titulo">Simular um pré-fixado</span><span class="rf-nota">quanto vira no vencimento, antes e depois do IR</span></summary>
+    <summary><span class="rf-simulador-titulo">Simular um pré-fixado</span><span class="rf-nota">quanto vira no vencimento, antes e depois do IR e equivalência ao CDI</span></summary>
     <div class="rf-simulador-corpo">
       <label class="rf-simulador-campo"><span>Título</span>
         <select data-sim="titulo">${opcoes.map((opcao, i) => `<option value="${i}">${esc(rotuloDaOpcao(opcao))}</option>`).join('')}</select>
       </label>
       <label class="rf-simulador-campo"><span>Valor aplicado (R$)</span><input data-sim="valor" inputmode="decimal" placeholder="10.000,00" autocomplete="off" /></label>
+      <label class="rf-simulador-campo rf-simulador-cdi-campo"><span>CDI Ref. (% a.a.)</span><input data-sim="cdi" inputmode="decimal" value="10,65" placeholder="10,65" autocomplete="off" /></label>
       <div class="rf-simulador-resultado" data-sim="resultado"><p class="rf-nota">Digite o valor.</p></div>
     </div>
     <p class="rf-nota">Estimativa: taxa ao ano em 252 dias úteis, IR pela tabela regressiva sobre o rendimento. Não entram IOF (até 30 dias), custódia nem o PU do dia no secundário.</p>
@@ -513,6 +514,7 @@ export const htmlResultadoDaSimulacao = (sim, { diasUteis, diasCorridos }) =>
         <div><dt>IR (${String(sim.aliquota).replace('.', ',')}%)</dt><dd>${sim.ir ? `− ${reais(sim.ir)}` : 'isento'}</dd></div>
         <div class="rf-simulador-liquido"><dt>Líquido</dt><dd>${reais(sim.liquido)}</dd></div>
         <div><dt>Taxa líquida</dt><dd>≈ ${fmtTaxa(sim.taxaLiquida)}% a.a.</dd></div>
+        <div class="rf-simulador-cdi"><dt>% CDI Líquido</dt><dd title="Equivale a ${fmtTaxa(sim.percCdiLiquido)}% de um CDI de ${fmtTaxa(sim.cdi)}% a.a.">≈ ${fmtTaxa(sim.percCdiLiquido)}% do CDI</dd></div>
       </dl>
-      <p class="rf-nota">${diasCorridos} dias corridos, ${diasUteis} dias úteis até o vencimento.</p>`
+      <p class="rf-nota">${diasCorridos} dias corridos, ${diasUteis} dias úteis até o vencimento · CDI ref.: ${fmtTaxa(sim.cdi)}% a.a.</p>`
     : '<p class="rf-nota">Digite o valor.</p>';

@@ -657,7 +657,7 @@
 }
 
 .fl .fl-tabela th {
-  padding: 0.45rem var(--esp-3);
+  padding: 0.35rem var(--esp-3);
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
   font-size: 0.7rem;
@@ -668,9 +668,9 @@
 }
 
 .fl .fl-tabela td {
-  padding: 0.5rem var(--esp-3);
+  padding: 0.28rem var(--esp-3);
   border-bottom: 1px solid var(--borda);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .fl .fl-tabela tr:last-child td {
@@ -699,13 +699,14 @@
 .fl .fl-tabela-dito {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 9rem;
+  gap: 1px;
+  min-width: 8.5rem;
 }
 
 .fl .fl-tabela td small {
   color: var(--texto-fraco);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  line-height: 1.2;
 }
 
 .fl .fl-tabela-resposta {
@@ -713,17 +714,56 @@
   overflow: hidden;
   max-width: 18rem;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   color: var(--texto-forte);
+  font-size: 0.8rem;
 }
 
 .fl .fl-tabela-acoes {
   white-space: nowrap;
   text-align: right;
+  vertical-align: middle;
 }
 
 .fl .fl-tabela-acoes > * {
   margin-left: 4px;
+}
+
+.fl .fl-tabela .fl-botao,
+.fl .fl-tabela .fl-boleta {
+  padding: 0.2rem 0.55rem;
+  min-height: 26px;
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.fl .fl-tabela .fl-menu-botao {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+}
+
+.fl .fl-tabela .fl-ordens {
+  gap: 3px;
+}
+
+.fl .fl-tabela .fl-ordens li {
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.fl .fl-tabela .fl-op {
+  min-width: 3.8rem;
+  font-size: 0.68rem;
+}
+
+.fl .fl-tabela .fl-quanto b {
+  font-size: 0.86rem;
+}
+
+.fl .fl-tabela .fl-prazo {
+  padding: 1px 6px;
+  font-size: 0.7rem;
 }
 
 .fl .fl-oculto {

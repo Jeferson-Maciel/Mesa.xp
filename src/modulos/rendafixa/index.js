@@ -630,6 +630,8 @@ export const iniciarRendaFixa = (secao) => {
     if (!caixa || !r) return;
     const opcao = opcoesDoSimulador(r)[Number(caixa.querySelector('[data-sim="titulo"]').value)];
     const valor = lerValor(caixa.querySelector('[data-sim="valor"]').value);
+    const cdiInput = caixa.querySelector('[data-sim="cdi"]');
+    const cdi = cdiInput ? lerValor(cdiInput.value) : undefined;
     const saida = caixa.querySelector('[data-sim="resultado"]');
     if (!opcao || !valor) {
       saida.innerHTML = htmlResultadoDaSimulacao(null, {});
@@ -638,7 +640,7 @@ export const iniciarRendaFixa = (secao) => {
     const hoje = new Date();
     const vencimento = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + opcao.item.dias);
     const diasUteis = diasUteisAte(hoje, vencimento, ehDiaUtil);
-    const sim = simularPre({ valor, taxa: opcao.item.taxa, diasUteis, diasCorridos: opcao.item.dias, isento: opcao.isento });
+    const sim = simularPre({ valor, taxa: opcao.item.taxa, diasUteis, diasCorridos: opcao.item.dias, isento: opcao.isento, cdi });
     saida.innerHTML = htmlResultadoDaSimulacao(sim, { diasUteis, diasCorridos: opcao.item.dias });
   }
   ui.corpo.addEventListener('input', (e) => e.target.closest?.('[data-rf-simulador]') && simular());

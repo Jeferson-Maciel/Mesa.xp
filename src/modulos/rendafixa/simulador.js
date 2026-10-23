@@ -29,12 +29,14 @@ export const diasUteisAte = (hoje, vencimento, ehUtil) => {
   return n;
 };
 
+export const CDI_PADRAO = 10.65;
+
 /**
- * @param {{valor: number, taxa: number, diasUteis: number, diasCorridos: number, isento?: boolean}} p
- *   `taxa` em % ao ano (14,2 → 14.2)
- * @returns {{bruto: number, rendimento: number, aliquota: number, ir: number, liquido: number, taxaLiquida: number}|null}
+ * @param {{valor: number, taxa: number, diasUteis: number, diasCorridos: number, isento?: boolean, cdi?: number}} p
+ *   `taxa` em % ao ano (14,2 → 14.2), `cdi` em % ao ano de referência (ex.: 10.65)
+ * @returns {{bruto: number, rendimento: number, aliquota: number, ir: number, liquido: number, taxaLiquida: number, cdi: number, percCdiLiquido: number}|null}
  */
-export const simularPre = ({ valor, taxa, diasUteis, diasCorridos, isento = false }) => {
+export const simularPre = ({ valor, taxa, diasUteis, diasCorridos, isento = false, cdi = CDI_PADRAO }) => {
   if (!(valor > 0) || !(diasUteis > 0) || !(diasCorridos > 0) || !Number.isFinite(taxa)) return null;
   const bruto = valor * (1 + taxa / 100) ** (diasUteis / 252);
   const rendimento = bruto - valor;
@@ -43,5 +45,7 @@ export const simularPre = ({ valor, taxa, diasUteis, diasCorridos, isento = fals
   const liquido = bruto - ir;
   // A taxa líquida ao ano, na mesma base de 252 dias úteis: para comparar com a bruta de outro título.
   const taxaLiquida = ((liquido / valor) ** (252 / diasUteis) - 1) * 100;
-  return { bruto, rendimento, aliquota, ir, liquido, taxaLiquida };
+  const taxaCdi = Number.isFinite(cdi) && cdi > 0 ? cdi : CDI_PADRAO;
+  const percCdiLiquido = (taxaLiquida / taxaCdi) * 100;
+  return { bruto, rendimento, aliquota, ir, liquido, taxaLiquida, cdi: taxaCdi, percCdiLiquido };
 };

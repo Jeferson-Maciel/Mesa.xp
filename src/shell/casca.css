@@ -188,13 +188,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 0.38rem;
   /* 34px de altura com o trilho: mais que isso cresce o topo, e o painel de entrada do Ordens,
      que gruda a 59px, passa a correr por baixo dele. */
-  padding: 0.28rem 0.8rem;
+  padding: 0.28rem 0.68rem;
   border-radius: var(--r-sm);
   color: var(--texto-fraco);
-  font-size: 0.87rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
@@ -261,10 +261,9 @@
   box-shadow: inset 0 0 0 1px var(--acento-borda);
 }
 
-/* Sete abas com nome não cabem numa linha abaixo de ~1280px: daí para baixo, só a aba ativa mostra o
-   nome, e as outras ficam no ícone — o nome segue no leitor de tela e no title. A pílula desliza e
-   muda de largura junto, e o topo continua com uma linha só (o painel do Ordens gruda a 59px). */
-@media (max-width: 1280px) {
+/* Sete abas com nome cabem perfeitamente acima de ~1160px. Abaixo disso, as abas inativas
+   recolhem para o ícone e a aba ativa continua com o nome à vista para identificação imediata. */
+@media (max-width: 1160px) {
   .aba:not([aria-current='page']) {
     padding-inline: 0.6rem;
   }
@@ -655,9 +654,9 @@
   }
 }
 
-/* Ao encolher a tela ou a barra de ferramentas, as abas viram somente os ícones,
+/* Ao encolher a tela ou a barra de ferramentas abaixo de 500px, as abas viram somente os ícones,
    sem reticências (...) e com alinhamento perfeito. */
-@container (max-width: 760px) {
+@container (max-width: 500px) {
   .aba-nome {
     display: none !important;
   }
@@ -665,17 +664,6 @@
   .aba {
     padding: 0.28rem 0.65rem !important;
     gap: 0 !important;
-  }
-}
-
-@media (max-width: 1380px) {
-  .aba-nome {
-    display: none;
-  }
-
-  .aba {
-    padding: 0.28rem 0.65rem;
-    gap: 0;
   }
 }
 

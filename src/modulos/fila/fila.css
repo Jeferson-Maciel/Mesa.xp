@@ -689,6 +689,12 @@
   background: color-mix(in srgb, var(--atencao) 7%, transparent);
 }
 
+.fl .fl-tabela-linha.fl-destaque {
+  background: color-mix(in srgb, var(--acento) 14%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--acento) 80%, transparent);
+  outline-offset: -2px;
+}
+
 .fl .fl-tabela-quem,
 .fl .fl-tabela-dito {
   display: flex;

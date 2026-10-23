@@ -59,7 +59,7 @@ export const iniciarFila = (secao) => {
     vista: el('vista')
   };
   // Abre sempre em Aprovação e execução: a caixa limpa, com o que falta fazer.
-  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null, pasta: 'executar', vista: lerVista() };
+  const estado = { dia: diaDe(Date.now()), pedidos: [], busca: '', aberto: null, pasta: 'executar', vista: lerVista(), selecionadoId: null };
   const hoje = () => diaDe(Date.now());
 
   /* ── Carregar e mostrar ───────────────────────────────────────────────────────────── */
@@ -101,6 +101,14 @@ export const iniciarFila = (secao) => {
         estado.destaque.visto = true;
         alvo.classList.add('fl-acende');
         alvo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      estado.selecionadoId = estado.destaque.id;
+    } else if (estado.selecionadoId) {
+      const alvo = ui.lista.querySelector(`[data-id="${CSS.escape(estado.selecionadoId)}"]`);
+      if (alvo) {
+        alvo.classList.add('fl-destaque');
+      } else {
+        estado.selecionadoId = null;
       }
     }
     ui.dia.value = estado.dia;
@@ -148,7 +156,6 @@ export const iniciarFila = (secao) => {
   const fecharMenus = (exceto = null) => ui.lista.querySelectorAll('.fl-menu[open]').forEach((m) => m !== exceto && m.removeAttribute('open'));
   ui.lista.addEventListener('toggle', (e) => e.target.matches?.('.fl-menu[open]') && fecharMenus(e.target), true);
   document.addEventListener('click', (e) => !e.target.closest?.('.fl-menu') && fecharMenus());
-  secao.addEventListener('keydown', (e) => e.key === 'Escape' && fecharMenus());
 
   ui.pastas.addEventListener('click', (e) => {
     const pasta = e.target.closest('[data-pasta]')?.dataset.pasta;
@@ -258,6 +265,10 @@ export const iniciarFila = (secao) => {
   }
 
   ui.lista.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-id]');
+    if (item?.dataset?.id) {
+      selecionarPedido(item.dataset.id, { rolar: false });
+    }
     const botao = e.target.closest('[data-acao]');
     if (!botao) return;
     const pedido = doId(botao.closest('[data-id]')?.dataset.id);
@@ -289,6 +300,135 @@ export const iniciarFila = (secao) => {
       aviso(ok ? `${formato === 'twap' ? 'Lote TWAP' : 'Lote Simples'} copiado: cole na planilha.` : 'Não foi possível copiar.', { tipo: ok ? 'info' : 'erro' });
     }
     if (botao.dataset.acao === 'boleta') abrirBoleta(pedido, Number(botao.dataset.indice));
+  });
+
+  /* ── Seleção e Atalhos de Teclado (Fase 1) ─────────────────────────────────────────── */
+
+  function selecionarPedido(id, { rolar = true } = {}) {
+    estado.selecionadoId = id;
+    for (const elItem of ui.lista.querySelectorAll('.fl-destaque')) {
+      if (elItem.dataset.id !== id) elItem.classList.remove('fl-destaque');
+    }
+    if (!id) return;
+    const alvo = ui.lista.querySelector(`[data-id="${CSS.escape(id)}"]`);
+    if (alvo) {
+      alvo.classList.add('fl-destaque');
+      if (rolar) alvo.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  function moverSelecao(direcao) {
+    const itens = Array.from(ui.lista.querySelectorAll('[data-id]'));
+    if (!itens.length) return;
+    const idx = estado.selecionadoId ? itens.findIndex((el) => el.dataset.id === estado.selecionadoId) : -1;
+    let proximoIdx = 0;
+    if (idx === -1) {
+      proximoIdx = direcao > 0 ? 0 : itens.length - 1;
+    } else {
+      proximoIdx = Math.max(0, Math.min(itens.length - 1, idx + direcao));
+    }
+    selecionarPedido(itens[proximoIdx].dataset.id, { rolar: true });
+  }
+
+  function alternarVista() {
+    if (estado.pasta !== 'executar') return;
+    estado.vista = estado.vista === 'cartoes' ? 'tabela' : 'cartoes';
+    gravarVista(estado.vista);
+    render();
+  }
+
+  function mudarPastaPorIndice(indice) {
+    const pastasVisiveis = PASTAS.filter(
+      (p) => p.id !== 'cancelados' || estado.pedidos.some((x) => x.estado === 'cancelado') || estado.pasta === 'cancelados'
+    );
+    const alvo = pastasVisiveis[indice];
+    if (alvo && alvo.id !== estado.pasta) {
+      estado.pasta = alvo.id;
+      estado.destaque = null;
+      estado.selecionadoId = null;
+      render();
+    }
+  }
+
+  function acaoNoPedidoSelecionado(tipo) {
+    if (!estado.selecionadoId) {
+      const primeiro = ui.lista.querySelector('[data-id]');
+      if (!primeiro) return;
+      selecionarPedido(primeiro.dataset.id, { rolar: true });
+    }
+    const elPedido = ui.lista.querySelector(`[data-id="${CSS.escape(estado.selecionadoId)}"]`);
+    const pedido = doId(estado.selecionadoId);
+    if (!elPedido || !pedido) return;
+
+    if (tipo === 'executar') {
+      const btnExecutado = elPedido.querySelector('[data-acao="estado"][data-estado="executado"]');
+      if (btnExecutado) return btnExecutado.click();
+      const btnAprovou = elPedido.querySelector('[data-acao="estado"][data-estado="aprovado"]');
+      if (btnAprovou) return btnAprovou.click();
+      const btnPrimario = elPedido.querySelector('.fl-botao-primario');
+      if (btnPrimario) return btnPrimario.click();
+    } else if (tipo === 'lote') {
+      const btnLote = elPedido.querySelector('[data-acao="lote"]') || elPedido.querySelector('[data-acao="ficha"]');
+      if (btnLote) btnLote.click();
+    } else if (tipo === 'ficha') {
+      const btnFicha = elPedido.querySelector('[data-acao="ficha"]');
+      if (btnFicha) btnFicha.click();
+    } else if (tipo === 'boleta') {
+      const btnBoleta = elPedido.querySelector('[data-acao="boleta"]');
+      if (btnBoleta) btnBoleta.click();
+    } else if (tipo === 'email') {
+      const btnEmail = elPedido.querySelector('[data-acao="email"]');
+      if (btnEmail) btnEmail.click();
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (secao.hidden) return;
+
+    if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+
+    if (ui.janela.open || secao.querySelector('dialog[open]')) {
+      if (e.key === 'Escape') ui.janela.close();
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      fecharMenus();
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const tecla = e.key.toLowerCase();
+
+    if (tecla === 'j' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      moverSelecao(1);
+    } else if (tecla === 'k' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      moverSelecao(-1);
+    } else if (tecla === 'e') {
+      e.preventDefault();
+      acaoNoPedidoSelecionado('executar');
+    } else if (tecla === 'l') {
+      e.preventDefault();
+      acaoNoPedidoSelecionado('lote');
+    } else if (tecla === 'f') {
+      e.preventDefault();
+      acaoNoPedidoSelecionado('ficha');
+    } else if (tecla === 'b') {
+      e.preventDefault();
+      acaoNoPedidoSelecionado('boleta');
+    } else if (tecla === 'm') {
+      e.preventDefault();
+      acaoNoPedidoSelecionado('email');
+    } else if (tecla === 't') {
+      e.preventDefault();
+      alternarVista();
+    } else if (e.key >= '1' && e.key <= '4') {
+      e.preventDefault();
+      mudarPastaPorIndice(Number(e.key) - 1);
+    }
   });
 
   /* ── O dia, a busca e o resumo ─────────────────────────────────────────────────────── */

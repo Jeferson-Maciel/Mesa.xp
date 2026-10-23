@@ -113,9 +113,9 @@ const cartaoParaExecutar = (pedido, agora) => {
     ${htmlPrazo(pedido, agora)}
     <footer class="fl-cartao-acoes">
       ${pedido.estado === 'respondeu' ? botao('estado', 'Aprovou', { estado: 'aprovado', titulo: 'Li a resposta: o cliente aprovou (a hora fica na ficha)' }) : ''}
-      ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado' }) : botao('ficha', 'Ficha de execução')}
+      ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado (tecla L)' }) : botao('ficha', 'Ficha de execução', { titulo: 'Ficha de execução deste pedido (tecla F)' })}
       ${boletasDe(pedido)}
-      ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados' })}
+      ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados (tecla E)' })}
       <span class="fl-mais">
         ${icone('email', '✉', 'Ver o e-mail que saiu')}
         ${icone('anotar', '✎', 'Criar uma anotação deste pedido')}
@@ -151,10 +151,11 @@ const linhaDaPasta = (pedido, pasta, agora) => {
 /** A navegação das pastas, com quantos há em cada uma; a de Enviados avisa do prazo perto. */
 export const htmlPastas = (pedidos, pastaAtual, agora = Date.now()) =>
   PASTAS.filter((p) => p.id !== 'cancelados' || pedidos.some((x) => x.estado === 'cancelado') || pastaAtual === 'cancelados')
-    .map((p) => {
+    .map((p, i) => {
       const daPasta = pedidos.filter((x) => p.estados.includes(x.estado));
       const alerta = p.id === 'enviados' && daPasta.some((x) => pedeAtencao(x, agora));
-      return `<button type="button" class="fl-pasta${p.id === pastaAtual ? ' ativa' : ''}" data-pasta="${p.id}" aria-pressed="${p.id === pastaAtual}"${alerta ? ' title="Há e-mail esperando o cliente com o prazo perto"' : ''}>
+      const tituloDica = alerta ? `Há e-mail esperando o cliente com o prazo perto (tecla ${i + 1})` : `Pasta: ${p.titulo} (tecla ${i + 1})`;
+      return `<button type="button" class="fl-pasta${p.id === pastaAtual ? ' ativa' : ''}" data-pasta="${p.id}" title="${esc(tituloDica)}" aria-pressed="${p.id === pastaAtual}">
         <span class="fl-pasta-nome">${p.titulo}</span>${alerta ? '<span class="fl-pasta-alerta" aria-hidden="true"></span>' : ''}<b>${daPasta.length}</b>
       </button>`;
     })
@@ -179,9 +180,9 @@ const linhaDaTabela = (pedido, agora) => {
       <td>${htmlPrazo(pedido, agora)}</td>
       <td class="fl-tabela-acoes">
         ${pedido.estado === 'respondeu' ? botao('estado', 'Aprovou', { estado: 'aprovado', titulo: 'Li a resposta: o cliente aprovou (a hora fica na ficha)' }) : ''}
-        ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado' }) : botao('ficha', 'Ficha')}
+        ${pedido.grupo === 'bolsa' ? botao('lote', 'Gerar lote', { titulo: 'O Lote Simples e o Lote TWAP deste pedido, com as quantidades do e-mail aprovado (tecla L)' }) : botao('ficha', 'Ficha', { titulo: 'Ficha de execução deste pedido (tecla F)' })}
         ${boletasDe(pedido)}
-        ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados' })}
+        ${botao('estado', 'Executado', { estado: 'executado', tipo: 'primario', titulo: 'Executei no Hub: vai para os Executados (tecla E)' })}
         <details class="fl-menu">
           <summary class="fl-menu-botao" title="Mais ações" aria-label="Mais ações">…</summary>
           <div class="fl-menu-itens">

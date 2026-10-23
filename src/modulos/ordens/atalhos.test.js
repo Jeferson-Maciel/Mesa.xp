@@ -25,4 +25,9 @@ describe('os atalhos do Ordens', () => {
   it('o Limpar não promete um Esc que não existe (o Esc do Ordens só fecha o histórico)', () => {
     expect(html).not.toMatch(/id="btn-limpar"[^>]*Esc/);
   });
+
+  it('o Ctrl+Enter dispara ação rápida se a solicitação já estiver analisada', () => {
+    expect(codigo).toContain('acaoRapida() || analisar()');
+    expect(codigo).toMatch(/function acaoRapida\(\)[\s\S]*?container\.querySelector\('\[data-outlook\], \[data-baixar\], \[data-copiar\]'\)/);
+  });
 });

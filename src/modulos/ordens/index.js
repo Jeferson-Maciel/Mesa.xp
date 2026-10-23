@@ -1614,13 +1614,24 @@ export const iniciarOrdens = (secao) => {
 
   /* ── Atalhos ──────────────────────────────────────────────────────────────────────────── */
 
+  function acaoRapida() {
+    if (estado.solicitacoes.length > 0 && entrada.value.trim() === estado.textoOriginal.trim()) {
+      const btn = container.querySelector('[data-outlook], [data-baixar], [data-copiar]');
+      if (btn) {
+        btn.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
   document.addEventListener('keydown', (e) => {
     // Com outra aba à vista, Ctrl+Enter e Alt+H são de quem está na tela, não do Ordens.
     if (secao.hidden) return;
 
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      analisar();
+      acaoRapida() || analisar();
     } else if (e.altKey && (e.key === 'h' || e.key === 'H')) {
       e.preventDefault();
       drawer.classList.contains('open') ? fecharHistorico() : abrirHistorico();
